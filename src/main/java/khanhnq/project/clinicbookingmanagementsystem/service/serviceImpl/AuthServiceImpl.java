@@ -130,7 +130,8 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public ResponseEntity<String> changePassword(ChangePasswordRequest changePasswordRequest) {
-        User currentUser = getCurrentUser();
+        User currentUser = userRepository.findById(1L).orElse(null);
+//        User currentUser = getCurrentUser();
         BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder();
         if (bCryptPasswordEncoder.matches(changePasswordRequest.getCurrentPassword(), currentUser.getPassword())) {
             if (changePasswordRequest.getNewPassword().equals(changePasswordRequest.getConfirmPassword())) {
@@ -141,7 +142,7 @@ public class AuthServiceImpl implements AuthService {
                 return MessageResponse.getResponseMessage("New password and confirm password is not match. Try again!", HttpStatus.BAD_REQUEST);
             }
         } else {
-            return MessageResponse.getResponseMessage("New password and confirm password is not match. Try again!", HttpStatus.BAD_REQUEST);
+            return MessageResponse.getResponseMessage("Current password is wrong. Try again!", HttpStatus.BAD_REQUEST);
         }
     }
 

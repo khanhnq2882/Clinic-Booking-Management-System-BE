@@ -37,7 +37,8 @@ public class UserServiceImpl implements UserService {
     public ResponseEntity<String> updateProfile(UserProfileRequest userProfileRequest) {
         try {
             DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy");
-            User currentUser = authService.getCurrentUser();
+            User currentUser = userRepository.findById(1L).orElse(null);
+//            User currentUser = authService.getCurrentUser();
             currentUser.setFirstName(userProfileRequest.getFirstName());
             currentUser.setLastName(userProfileRequest.getLastName());
             currentUser.setDateOfBirth(dateFormat.parse(userProfileRequest.getDateOfBirth()));

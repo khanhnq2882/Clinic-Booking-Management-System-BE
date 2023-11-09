@@ -2,14 +2,22 @@ package khanhnq.project.clinicbookingmanagementsystem.controller;
 
 import khanhnq.project.clinicbookingmanagementsystem.dto.CityDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.City;
+import khanhnq.project.clinicbookingmanagementsystem.repository.CityRepository;
+import khanhnq.project.clinicbookingmanagementsystem.response.CityResponse;
+import khanhnq.project.clinicbookingmanagementsystem.response.DistrictResponse;
+import khanhnq.project.clinicbookingmanagementsystem.response.WardResponse;
 import khanhnq.project.clinicbookingmanagementsystem.service.AddressService;
 import khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl.AddressServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+
+import static org.springframework.web.servlet.function.RequestPredicates.contentType;
 
 @CrossOrigin(origins = "http://localhost:4200", maxAge = 3600, allowCredentials = "true")
 @RestController
@@ -17,28 +25,33 @@ import java.util.List;
 public class AddressController {
     private AddressService addressService;
 
-    private AddressServiceImpl addressServiceImpl;
     @Autowired
-    public AddressController(AddressService addressService, AddressServiceImpl addressServiceImpl) {
+    public AddressController(AddressService addressService) {
         this.addressService = addressService;
-        this.addressServiceImpl = addressServiceImpl;
     }
+
     @GetMapping("/insert-data")
     public List<CityDTO> insertData() {
         return addressService.insertData();
     }
-    @GetMapping("/cities")
-    public List<City> getAllCities() {
-        return addressService.getAllCities();
-    }
 
-    @GetMapping( "/listCities")
-    public List<City> getCities()
+    @GetMapping( "/cities")
+    public ResponseEntity<List<CityResponse>> getCities()
     {
-        return addressServiceImpl.listCities();
+        return addressService.getCities();
     }
 
+    @GetMapping( "/districts/{cityId}")
+    public ResponseEntity<List<DistrictResponse>> getDistricts(@PathVariable("cityId") Long cityId)
+    {
+        return addressService.getDistrictsById(cityId);
+    }
 
+    @GetMapping( "/wards/{districtId}")
+    public ResponseEntity<List<WardResponse>> getWards(@PathVariable("districtId") Long districtId)
+    {
+        return addressService.getWardsById(districtId);
+    }
 
 
 }

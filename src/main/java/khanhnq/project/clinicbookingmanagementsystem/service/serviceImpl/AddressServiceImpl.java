@@ -7,9 +7,11 @@ import khanhnq.project.clinicbookingmanagementsystem.entity.Ward;
 import khanhnq.project.clinicbookingmanagementsystem.repository.CityRepository;
 import khanhnq.project.clinicbookingmanagementsystem.repository.DistrictRepository;
 import khanhnq.project.clinicbookingmanagementsystem.repository.WardRepository;
+import khanhnq.project.clinicbookingmanagementsystem.response.CityResponse;
+import khanhnq.project.clinicbookingmanagementsystem.response.DistrictResponse;
+import khanhnq.project.clinicbookingmanagementsystem.response.WardResponse;
 import khanhnq.project.clinicbookingmanagementsystem.service.AddressService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -50,14 +52,42 @@ public class AddressServiceImpl implements AddressService {
         return cityRepository.findAll();
     }
 
-    public List<City> listCities() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
-        HttpEntity<String> entity = new HttpEntity<String>(headers);
-        ResponseEntity<List<City>> response = restTemplate.exchange(
-                "http://localhost:8080/address/cities", HttpMethod.GET,entity,
-                new ParameterizedTypeReference<List<City>>() {});
-        return response.getBody();
+    @Override
+    public ResponseEntity<List<CityResponse>> getCities() {
+        List<CityResponse> cities = new ArrayList<>();
+        for (City city : getAllCities()) {
+            cities.add(CityResponse.builder()
+                    .cityId(city.getCityId())
+                    .cityName(city.getCityName())
+                    .build());
+        }
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(cities);
+    }
+
+    @Override
+    public ResponseEntity<List<DistrictResponse>> getDistrictsById(Long cityId) {
+        List<DistrictResponse> districts = new ArrayList<>();
+        for (District district : districtRepository.getDistrictsByCityId(cityId)) {
+            districts.add(DistrictResponse.builder()
+                    .districtId(district.getDistrictId())
+                    .districtName(district.getDistrictName())
+                    .cityId(cityId)
+                    .build());
+        }
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(districts);
+    }
+
+    @Override
+    public ResponseEntity<List<WardResponse>> getWardsById(Long districtId) {
+        List<WardResponse> wards = new ArrayList<>();
+        for (Ward ward : wardRepository.getWardsByDistrictId(districtId)) {
+            wards.add(WardResponse.builder()
+                    .wardId(ward.getWardId())
+                    .wardName(ward.getWardName())
+                    .districtId(districtId)
+                    .build());
+        }
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(wards);
     }
 
     public List<City> getCities(CityDTO[] cities) {

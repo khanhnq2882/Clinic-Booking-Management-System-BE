@@ -7,7 +7,8 @@ import lombok.*;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class CityResponse {
+public class DistrictResponse {
+    private Long districtId;
+    private String districtName;
     private Long cityId;
-    private String cityName;
 }
