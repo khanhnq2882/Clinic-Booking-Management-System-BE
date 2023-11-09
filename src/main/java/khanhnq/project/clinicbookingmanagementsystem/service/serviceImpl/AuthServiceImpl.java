@@ -1,4 +1,4 @@
-package khanhnq.project.clinicbookingmanagementsystem.service.impl;
+package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
 import khanhnq.project.clinicbookingmanagementsystem.entity.ERole;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Role;
@@ -25,7 +25,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -58,10 +57,10 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public ResponseEntity<String> register(RegisterRequest registerRequest) {
         if (!Objects.isNull(userRepository.findUserByUsername(registerRequest.getUsername()))) {
-            throw new RuntimeException("Username is already exist. Try again!");
+            throw new RuntimeException("Username " + registerRequest.getUsername() + " is already exist. Try again!");
         }
         if (!Objects.isNull(userRepository.findUserByEmail(registerRequest.getEmail()))) {
-            throw new RuntimeException("Email is already exist. Try again!");
+            throw new RuntimeException("Email " + registerRequest.getEmail() + " is already exist. Try again!");
         }
         User user = User.builder()
                 .username(registerRequest.getUsername())
@@ -76,7 +75,7 @@ public class AuthServiceImpl implements AuthService {
             user.setRoles(registerRequest.getRoles().stream().map(r -> roleRepository.findRoleByRoleName(ERole.valueOf(r))).collect(Collectors.toSet()));
         } else {
             registerRequest.getRoles().forEach(role -> {
-                switch (role){
+                switch (role) {
                     case "ROLE_ADMIN":
                         if (roleRepository.findRoleByRoleName(ERole.ROLE_ADMIN) == null) {
                             roleRepository.save(Role.builder().roleName(ERole.ROLE_ADMIN).build());
@@ -101,17 +100,12 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public ResponseEntity<UserInfoResponse> login(LoginRequest loginRequest) {
         Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
-
         SecurityContextHolder.getContext().setAuthentication(authentication);
-
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-
         ResponseCookie jwtCookie = jwtUtils.generateJwtCookie(userDetails);
-
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(item -> item.getAuthority())
                 .collect(Collectors.toList());
-
         return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
                 .body(new UserInfoResponse(
                         userDetails.getUserId(),
@@ -124,10 +118,10 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if(authentication == null){
+        if (authentication == null) {
             return null;
         }
-        if(!authentication.isAuthenticated() || authentication.getName() == null){
+        if (!authentication.isAuthenticated() || authentication.getName() == null) {
             return null;
         }
         User user = userRepository.findUserByUsername(authentication.getName());
@@ -149,6 +143,12 @@ public class AuthServiceImpl implements AuthService {
         } else {
             return MessageResponse.getResponseMessage("New password and confirm password is not match. Try again!", HttpStatus.BAD_REQUEST);
         }
+    }
+
+    @Override
+    public ResponseEntity<MessageResponse> logoutUser() {
+        ResponseCookie cookie = jwtUtils.getCleanJwtCookie();
+        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).body(new MessageResponse("You've been log out."));
     }
 
 
