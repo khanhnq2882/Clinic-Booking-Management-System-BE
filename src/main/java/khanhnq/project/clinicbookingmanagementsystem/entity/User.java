@@ -58,7 +58,11 @@ public class User {
     @Size(max = 10)
     private String phoneNumber;
 
-    @OneToOne
+    @OneToOne(cascade = CascadeType.PERSIST, fetch = FetchType.EAGER)
+    @JoinColumn(name = "file_id")
+    private File avatarFile;
+
+    @OneToOne(cascade = CascadeType.PERSIST, fetch = FetchType.EAGER)
     @JoinColumn(name = "address_id")
     private Address address;
 
@@ -67,4 +71,16 @@ public class User {
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id"))
     private Set<Role> roles = new HashSet<>();
+
+    @Column(length = 50)
+    @Size(max = 50)
+    private String universityName;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private Set<Experience> experiences;
+
+    @OneToOne(cascade = CascadeType.PERSIST, fetch = FetchType.EAGER)
+    @JoinColumn(name = "file_id")
+    private File medicalLicense;
+
 }
