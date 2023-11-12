@@ -1,4 +1,4 @@
-package khanhnq.project.clinicbookingmanagementsystem.entity;
+package khanhnq.project.clinicbookingmanagementsystem.entity.enums;
 
 public enum ERole {
     ROLE_USER,

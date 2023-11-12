@@ -4,7 +4,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 public interface FileService {
     void init();
-    void saveAvatar(MultipartFile file);
+    void save(MultipartFile file);
 
 
 }

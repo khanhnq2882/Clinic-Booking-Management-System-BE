@@ -1,9 +1,11 @@
 package khanhnq.project.clinicbookingmanagementsystem.controller;
 
 import khanhnq.project.clinicbookingmanagementsystem.repository.UserRepository;
+import khanhnq.project.clinicbookingmanagementsystem.request.AddRoleDoctorRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
 import khanhnq.project.clinicbookingmanagementsystem.service.FileService;
 import khanhnq.project.clinicbookingmanagementsystem.service.UserService;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -35,6 +37,9 @@ public class UserController {
         return userService.uploadAvatar(file);
     }
 
-
+    @PostMapping(value = "/add-role-doctor", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
+    public ResponseEntity<String> addRoleDoctor(@ModelAttribute AddRoleDoctorRequest addRoleDoctorRequest) {
+        return userService.addRoleDoctor(addRoleDoctorRequest);
+    }
 
 }

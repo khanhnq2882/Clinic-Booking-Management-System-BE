@@ -1,7 +1,7 @@
 package khanhnq.project.clinicbookingmanagementsystem.request;
 
 import lombok.*;
-import org.springframework.web.multipart.MultipartFile;
+import java.util.Date;
 
 @Data
 @Getter
@@ -11,7 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class UserProfileRequest {
     private String firstName;
     private String lastName;
-    private String dateOfBirth;
+    private Date dateOfBirth;
     private int gender;
     private String phoneNumber;
     private String specificAddress;

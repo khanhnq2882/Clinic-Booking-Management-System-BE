@@ -1,6 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
-import khanhnq.project.clinicbookingmanagementsystem.entity.ERole;
+import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ERole;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Role;
 import khanhnq.project.clinicbookingmanagementsystem.entity.User;
 import khanhnq.project.clinicbookingmanagementsystem.repository.RoleRepository;
@@ -111,8 +111,7 @@ public class AuthServiceImpl implements AuthService {
                         userDetails.getUserId(),
                         userDetails.getUsername(),
                         userDetails.getEmail(),
-                        roles,
-                        jwtUtils.generateTokenFromUsername(userDetails.getUsername())));
+                        roles));
     }
 
     @Override
@@ -130,8 +129,8 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public ResponseEntity<String> changePassword(ChangePasswordRequest changePasswordRequest) {
-        User currentUser = userRepository.findById(1L).orElse(null);
-//        User currentUser = getCurrentUser();
+//        User currentUser = userRepository.findById(1L).orElse(null);
+        User currentUser = getCurrentUser();
         BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder();
         if (bCryptPasswordEncoder.matches(changePasswordRequest.getCurrentPassword(), currentUser.getPassword())) {
             if (changePasswordRequest.getNewPassword().equals(changePasswordRequest.getConfirmPassword())) {

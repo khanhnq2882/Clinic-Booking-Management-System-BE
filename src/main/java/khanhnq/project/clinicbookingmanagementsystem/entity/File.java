@@ -17,4 +17,12 @@ public class File {
 
     @Column(nullable = false)
     private String filePath;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
+
+    @ManyToOne
+    @JoinColumn(name = "clinic_id")
+    private Clinic clinic;
 }

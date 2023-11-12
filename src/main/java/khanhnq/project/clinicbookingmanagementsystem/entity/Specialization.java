@@ -3,6 +3,9 @@ package khanhnq.project.clinicbookingmanagementsystem.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.List;
+import java.util.Set;
+
 @Entity
 @Getter
 @Setter
@@ -18,7 +21,10 @@ public class Specialization {
     @Column(nullable = false)
     private String specializationName;
 
-    @ManyToOne
-    @JoinColumn(name = "experience_id")
-    private Experience experience;
+    @OneToMany(mappedBy = "specialization", cascade = CascadeType.ALL)
+    private Set<ServiceCategory> serviceCategories;
+
+//    @ManyToOne
+//    @JoinColumn(name = "clinic_id")
+//    private Clinic clinic;
 }

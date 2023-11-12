@@ -1,8 +1,9 @@
 package khanhnq.project.clinicbookingmanagementsystem.entity;
 
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
+import java.time.LocalTime;
+import java.util.*;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -49,6 +50,7 @@ public class User {
 
     @DateTimeFormat(pattern = "dd-MM-yyyy")
     @Temporal(TemporalType.DATE)
+    @JsonFormat(pattern="yyyy-MM-dd'T'HH:mm:ss.SSS")
     private Date dateOfBirth;
 
     @Column(length = 1)
@@ -57,10 +59,6 @@ public class User {
     @Column(length = 10)
     @Size(max = 10)
     private String phoneNumber;
-
-    @OneToOne(cascade = CascadeType.PERSIST, fetch = FetchType.EAGER)
-    @JoinColumn(name = "file_id")
-    private File avatarFile;
 
     @OneToOne(cascade = CascadeType.PERSIST, fetch = FetchType.EAGER)
     @JoinColumn(name = "address_id")
@@ -76,11 +74,15 @@ public class User {
     @Size(max = 50)
     private String universityName;
 
+    //    medicalLicense, avatar, medicalDegree;
+    @OneToMany(mappedBy = "user", cascade = CascadeType.PERSIST)
+    private Set<File> files = new HashSet<>();
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private Set<Experience> experiences;
 
-    @OneToOne(cascade = CascadeType.PERSIST, fetch = FetchType.EAGER)
-    @JoinColumn(name = "file_id")
-    private File medicalLicense;
+    @ManyToOne
+    @JoinColumn(name = "clinic_id")
+    private Clinic clinic;
 
 }
