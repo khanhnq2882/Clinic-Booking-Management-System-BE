@@ -111,7 +111,8 @@ public class AuthServiceImpl implements AuthService {
                         userDetails.getUserId(),
                         userDetails.getUsername(),
                         userDetails.getEmail(),
-                        roles));
+                        roles,
+                        jwtUtils.generateTokenFromUsername(userDetails.getUsername())));
     }
 
     @Override
@@ -129,7 +130,6 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public ResponseEntity<String> changePassword(ChangePasswordRequest changePasswordRequest) {
-//        User currentUser = userRepository.findById(1L).orElse(null);
         User currentUser = getCurrentUser();
         BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder();
         if (bCryptPasswordEncoder.matches(changePasswordRequest.getCurrentPassword(), currentUser.getPassword())) {

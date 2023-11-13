@@ -6,6 +6,7 @@ import khanhnq.project.clinicbookingmanagementsystem.repository.*;
 import khanhnq.project.clinicbookingmanagementsystem.request.AddRoleDoctorRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
 import khanhnq.project.clinicbookingmanagementsystem.response.MessageResponse;
+import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import khanhnq.project.clinicbookingmanagementsystem.service.FileService;
 import khanhnq.project.clinicbookingmanagementsystem.service.UserService;
 import org.springframework.boot.autoconfigure.web.format.DateTimeFormatters;
@@ -38,13 +39,16 @@ public class UserServiceImpl implements UserService {
 
     private SkillRepository skillRepository;
 
+    private AuthService authService;
+
     public UserServiceImpl(FileService fileService,
                            UserRepository userRepository,
                            WardRepository wardRepository,
                            AddressRepository addressRepository,
                            FileRepository fileRepository,
                            SpecializationRepository specializationRepository,
-                           SkillRepository skillRepository) {
+                           SkillRepository skillRepository,
+                           AuthService authService) {
         this.fileService = fileService;
         this.userRepository = userRepository;
         this.wardRepository = wardRepository;
@@ -52,24 +56,18 @@ public class UserServiceImpl implements UserService {
         this.fileRepository = fileRepository;
         this.specializationRepository = specializationRepository;
         this.skillRepository = skillRepository;
+        this.authService = authService;
     }
 
     @Override
     public ResponseEntity<String> updateProfile(UserProfileRequest userProfileRequest) {
-//        try {
-            DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy");
-            User currentUser = userRepository.findById(1L).orElse(null);
-//            User currentUser = authService.getCurrentUser();
-            UserMapper.USER_MAPPER.mapToUser(userProfileRequest);
-//            currentUser.setDateOfBirth(dateFormat.parse(userProfileRequest.getDateOfBirth()));
-            Address address = new Address();
-            address.setSpecificAddress(userProfileRequest.getSpecificAddress());
-            address.setWard(wardRepository.findById(userProfileRequest.getWardId()).orElse(null));
-            currentUser.setAddress(address);
-            userRepository.save(currentUser);
-//        } catch (ParseException e) {
-//            throw new RuntimeException(e);
-//        }
+        User currentUser = authService.getCurrentUser();
+        UserMapper.USER_MAPPER.mapToUser(currentUser, userProfileRequest);
+        Address address = new Address();
+        address.setSpecificAddress(userProfileRequest.getSpecificAddress());
+        address.setWard(wardRepository.findById(userProfileRequest.getWardId()).orElse(null));
+        currentUser.setAddress(address);
+        userRepository.save(currentUser);
         return MessageResponse.getResponseMessage("Update profile successfully!", HttpStatus.OK);
     }
 
@@ -77,8 +75,7 @@ public class UserServiceImpl implements UserService {
     public ResponseEntity<String> uploadAvatar(MultipartFile multipartFile) {
         try {
             fileService.save(multipartFile);
-            User currentUser = userRepository.findById(1L).orElse(null);
-//            User currentUser = authService.getCurrentUser();
+            User currentUser = authService.getCurrentUser();
             File file = new File();
             file.setFilePath("avatar/"+currentUser.getUsername()+"/"+multipartFile.getOriginalFilename());
             file.setUser(currentUser);
@@ -94,7 +91,8 @@ public class UserServiceImpl implements UserService {
     public ResponseEntity<String> addRoleDoctor(AddRoleDoctorRequest addRoleDoctorRequest) {
         try {
             DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy");
-            User currentUser = userRepository.findById(1L).orElse(null);
+            User currentUser = authService.getCurrentUser();
+            currentUser.setUniversityName(addRoleDoctorRequest.getUniversityName());
             Set<Skill> skills = addRoleDoctorRequest.getSkillIds().stream().map(id -> skillRepository.findById(id).orElse(null)).collect(Collectors.toSet());
             Experience experience = Experience.builder()
                     .clinicName(addRoleDoctorRequest.getClinicName())
@@ -119,7 +117,6 @@ public class UserServiceImpl implements UserService {
                 fileRepository.save(file);
             }
             currentUser.getExperiences().add(experience);
-            currentUser.setUniversityName(addRoleDoctorRequest.getUniversityName());
             userRepository.save(currentUser);
             return MessageResponse.getResponseMessage("Request to become doctor successfully. Waiting for accept...", HttpStatus.OK);
         } catch (ParseException e) {
