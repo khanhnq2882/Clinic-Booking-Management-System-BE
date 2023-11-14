@@ -15,7 +15,7 @@ public class ExperienceRequest {
     private String position;
     private Date startWork;
     private Date endWork;
-    private Long specializationId;
+    private String specialization;
     private List<Long> skillIds;
     private String jobDescription;
 }

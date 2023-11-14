@@ -15,13 +15,15 @@ import org.springframework.stereotype.Service;
 @Service
 public class AdminServiceImpl implements AdminService {
 
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
-    private AuthService authService;
+    private final AuthService authService;
 
-    private RoleRepository roleRepository;
+    private final RoleRepository roleRepository;
 
-    public AdminServiceImpl(UserRepository userRepository, AuthService authService, RoleRepository roleRepository) {
+    public AdminServiceImpl(UserRepository userRepository,
+                            AuthService authService,
+                            RoleRepository roleRepository) {
         this.userRepository = userRepository;
         this.authService = authService;
         this.roleRepository = roleRepository;
@@ -38,7 +40,7 @@ public class AdminServiceImpl implements AdminService {
             }
             user.getRoles().add(role);
             userRepository.save(user);
-            return MessageResponse.getResponseMessage("Update successfully .User "+user.getFirstName()+" "+user.getLastName()+" is became a doctor!", HttpStatus.OK);
+            return MessageResponse.getResponseMessage("Update successfully .User "+user.getFirstName()+" "+user.getLastName()+" is became a doctor in the system.", HttpStatus.OK);
         }
         return MessageResponse.getResponseMessage("You do not have permission to update user roles.", HttpStatus.OK);
     }

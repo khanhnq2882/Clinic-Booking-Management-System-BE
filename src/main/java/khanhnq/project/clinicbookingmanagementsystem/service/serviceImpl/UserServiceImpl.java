@@ -1,45 +1,41 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
+import khanhnq.project.clinicbookingmanagementsystem.mapper.ExperienceMapper;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.UserMapper;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
 import khanhnq.project.clinicbookingmanagementsystem.request.AddRoleDoctorRequest;
+import khanhnq.project.clinicbookingmanagementsystem.request.FileRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
 import khanhnq.project.clinicbookingmanagementsystem.response.MessageResponse;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import khanhnq.project.clinicbookingmanagementsystem.service.FileService;
 import khanhnq.project.clinicbookingmanagementsystem.service.UserService;
-import org.springframework.boot.autoconfigure.web.format.DateTimeFormatters;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
 public class UserServiceImpl implements UserService {
 
-    private FileService fileService;
+    private final FileService fileService;
 
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
-    private WardRepository wardRepository;
+    private final WardRepository wardRepository;
 
-    private AddressRepository addressRepository;
+    private final AddressRepository addressRepository;
 
-    private FileRepository fileRepository;
+    private final FileRepository fileRepository;
 
-    private SpecializationRepository specializationRepository;
+    private final SpecializationRepository specializationRepository;
 
-    private SkillRepository skillRepository;
+    private final SkillRepository skillRepository;
 
-    private AuthService authService;
+    private final AuthService authService;
 
     public UserServiceImpl(FileService fileService,
                            UserRepository userRepository,
@@ -88,43 +84,40 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public ResponseEntity<String> addRoleDoctor(AddRoleDoctorRequest addRoleDoctorRequest) {
-//        try {
-//            DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy");
-            User currentUser = authService.getCurrentUser();
-            currentUser.setUniversityName(addRoleDoctorRequest.getUniversityName());
-            Set<Experience> experiences = addRoleDoctorRequest.getExperiences().stream()
-                    .map(experienceRequest -> Experience.builder()
-                            .clinicName(experienceRequest.getClinicName())
-                            .position(experienceRequest.getPosition())
-                            .startWork(experienceRequest.getStartWork())
-                            .endWork(experienceRequest.getEndWork())
-                            .jobDescription(experienceRequest.getJobDescription())
-                            .specialization(specializationRepository.findById(experienceRequest.getSpecializationId()).orElse(null))
-                            .skills(experienceRequest.getSkillIds().stream()
-                                    .map(ids -> skillRepository.findById(ids).orElse(null))
-                                    .collect(Collectors.toSet()))
-                            .user(currentUser)
-                            .build())
-                    .collect(Collectors.toSet());
-
-            currentUser.setExperiences(experiences);
-            fileService.save(addRoleDoctorRequest.getMedicalLicense());
-            fileService.save(addRoleDoctorRequest.getMedicalDegree());
-            currentUser.getFiles().add(File.builder()
-                    .filePath("medical-degree/"+currentUser.getUsername()+"/"+addRoleDoctorRequest.getMedicalDegree().getOriginalFilename())
-                    .build());
-            currentUser.getFiles().add(File.builder()
-                    .filePath("medical-license/"+currentUser.getUsername()+"/"+addRoleDoctorRequest.getMedicalLicense().getOriginalFilename())
-                    .build());
-            for (File file : currentUser.getFiles()) {
-                file.setUser(currentUser);
-                fileRepository.save(file);
-            }
-            userRepository.save(currentUser);
-            return MessageResponse.getResponseMessage("Request to become doctor successfully. Waiting for accept...", HttpStatus.OK);
-//        } catch (ParseException e) {
-//            throw new RuntimeException(e);
-//        }
+    public ResponseEntity<String> requestBecomeDoctor(AddRoleDoctorRequest addRoleDoctorRequest) {
+        User currentUser = authService.getCurrentUser();
+        currentUser.setUniversityName(addRoleDoctorRequest.getUniversityName());
+        Set<Experience> experiences = addRoleDoctorRequest.getExperiences().stream()
+                .map(experienceRequest -> {
+                    Experience experience = ExperienceMapper.EXPERIENCE_MAPPER.mapToExperience(experienceRequest);
+                    experience.setSkills(experienceRequest.getSkillIds().stream()
+                            .map(ids -> skillRepository.findById(ids).orElse(null))
+                            .collect(Collectors.toSet()));
+                    experience.setUser(currentUser);
+                    return experience;
+                }).collect(Collectors.toSet());
+        currentUser.setExperiences(experiences);
+        userRepository.save(currentUser);
+        return MessageResponse.getResponseMessage("Request to become doctor successfully. Waiting for accept...", HttpStatus.OK);
     }
+
+    @Override
+    public ResponseEntity<String> uploadLicenseDegree(FileRequest fileRequest) {
+        User currentUser = authService.getCurrentUser();
+        fileService.save(fileRequest.getMedicalDegree());
+        fileService.save(fileRequest.getMedicalLicense());
+        currentUser.getFiles().add(File.builder()
+                .filePath("medical-degree/"+currentUser.getUsername()+"/"+fileRequest.getMedicalDegree().getOriginalFilename())
+                .build());
+        currentUser.getFiles().add(File.builder()
+                .filePath("medical-license/"+currentUser.getUsername()+"/"+fileRequest.getMedicalLicense().getOriginalFilename())
+                .build());
+        for (File file : currentUser.getFiles()) {
+            file.setUser(currentUser);
+            fileRepository.save(file);
+        }
+        userRepository.save(currentUser);
+        return MessageResponse.getResponseMessage("Upload file successfully!", HttpStatus.OK);
+    }
+
 }

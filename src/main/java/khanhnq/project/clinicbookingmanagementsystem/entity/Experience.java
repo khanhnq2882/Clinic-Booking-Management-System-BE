@@ -30,9 +30,8 @@ public class Experience {
     @Column(nullable = false)
     private Date endWork;
 
-    @OneToOne(cascade = CascadeType.PERSIST, fetch = FetchType.EAGER)
-    @JoinColumn(name = "specialization_id")
-    private Specialization specialization;
+    @Column(nullable = false)
+    private String specialization;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "experiences_skills",
