@@ -89,21 +89,26 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public ResponseEntity<String> addRoleDoctor(AddRoleDoctorRequest addRoleDoctorRequest) {
-        try {
-            DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy");
+//        try {
+//            DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy");
             User currentUser = authService.getCurrentUser();
             currentUser.setUniversityName(addRoleDoctorRequest.getUniversityName());
-            Set<Skill> skills = addRoleDoctorRequest.getSkillIds().stream().map(id -> skillRepository.findById(id).orElse(null)).collect(Collectors.toSet());
-            Experience experience = Experience.builder()
-                    .clinicName(addRoleDoctorRequest.getClinicName())
-                    .position(addRoleDoctorRequest.getPosition())
-                    .specialization(specializationRepository.findById(addRoleDoctorRequest.getSpecializationId()).orElse(null))
-                    .startWork(dateFormat.parse(addRoleDoctorRequest.getStartWork()))
-                    .endWork(dateFormat.parse(addRoleDoctorRequest.getEndWork()))
-                    .skills(skills)
-                    .jobDescription(addRoleDoctorRequest.getJobDescription())
-                    .user(currentUser)
-                    .build();
+            Set<Experience> experiences = addRoleDoctorRequest.getExperiences().stream()
+                    .map(experienceRequest -> Experience.builder()
+                            .clinicName(experienceRequest.getClinicName())
+                            .position(experienceRequest.getPosition())
+                            .startWork(experienceRequest.getStartWork())
+                            .endWork(experienceRequest.getEndWork())
+                            .jobDescription(experienceRequest.getJobDescription())
+                            .specialization(specializationRepository.findById(experienceRequest.getSpecializationId()).orElse(null))
+                            .skills(experienceRequest.getSkillIds().stream()
+                                    .map(ids -> skillRepository.findById(ids).orElse(null))
+                                    .collect(Collectors.toSet()))
+                            .user(currentUser)
+                            .build())
+                    .collect(Collectors.toSet());
+
+            currentUser.setExperiences(experiences);
             fileService.save(addRoleDoctorRequest.getMedicalLicense());
             fileService.save(addRoleDoctorRequest.getMedicalDegree());
             currentUser.getFiles().add(File.builder()
@@ -116,11 +121,10 @@ public class UserServiceImpl implements UserService {
                 file.setUser(currentUser);
                 fileRepository.save(file);
             }
-            currentUser.getExperiences().add(experience);
             userRepository.save(currentUser);
             return MessageResponse.getResponseMessage("Request to become doctor successfully. Waiting for accept...", HttpStatus.OK);
-        } catch (ParseException e) {
-            throw new RuntimeException(e);
-        }
+//        } catch (ParseException e) {
+//            throw new RuntimeException(e);
+//        }
     }
 }

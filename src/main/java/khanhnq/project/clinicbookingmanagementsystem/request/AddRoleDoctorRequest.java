@@ -1,5 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.request;
 
+import khanhnq.project.clinicbookingmanagementsystem.entity.Experience;
 import lombok.*;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
@@ -14,12 +15,5 @@ public class AddRoleDoctorRequest {
     private String universityName;
     private MultipartFile medicalDegree;
     private MultipartFile medicalLicense;
-    //experience
-    private String clinicName;
-    private String position;
-    private String startWork;
-    private String endWork;
-    private Long specializationId;
-    private List<Long> skillIds;
-    private String jobDescription;
+    private List<ExperienceRequest> experiences;
 }
