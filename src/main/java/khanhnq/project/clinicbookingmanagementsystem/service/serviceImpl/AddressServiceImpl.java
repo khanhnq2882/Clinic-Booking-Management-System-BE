@@ -11,7 +11,6 @@ import khanhnq.project.clinicbookingmanagementsystem.response.CityResponse;
 import khanhnq.project.clinicbookingmanagementsystem.response.DistrictResponse;
 import khanhnq.project.clinicbookingmanagementsystem.response.WardResponse;
 import khanhnq.project.clinicbookingmanagementsystem.service.AddressService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -23,17 +22,14 @@ import java.util.stream.Collectors;
 @Service
 public class AddressServiceImpl implements AddressService {
 
-    private CityRepository cityRepository;
-    private DistrictRepository districtRepository;
-    private WardRepository wardRepository;
-    private RestTemplate restTemplate;
+    private final CityRepository cityRepository;
+    private final DistrictRepository districtRepository;
+    private final WardRepository wardRepository;
 
-    @Autowired
-    public AddressServiceImpl(CityRepository cityRepository, DistrictRepository districtRepository, WardRepository wardRepository, RestTemplate restTemplate) {
+    public AddressServiceImpl(CityRepository cityRepository, DistrictRepository districtRepository, WardRepository wardRepository) {
         this.cityRepository = cityRepository;
         this.districtRepository = districtRepository;
         this.wardRepository = wardRepository;
-        this.restTemplate = restTemplate;
     }
 
     @Override

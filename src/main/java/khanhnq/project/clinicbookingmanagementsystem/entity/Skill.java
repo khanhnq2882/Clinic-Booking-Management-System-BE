@@ -1,7 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.entity;
 
 import jakarta.persistence.*;
-import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ERole;
 import lombok.*;
 
 @Entity
@@ -9,14 +8,14 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "roles")
+@Table(name = "skill")
 @Builder
-public class Role {
+public class Skill {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer roleId;
+    private Long skillId;
 
-    @Enumerated(EnumType.STRING)
-    @Column(length = 20)
-    private ERole roleName;
+    @Column(nullable = false)
+    private String skillName;
+
 }
