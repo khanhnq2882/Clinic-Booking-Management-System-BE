@@ -91,7 +91,7 @@ public class UserServiceImpl implements UserService {
                 .map(experienceRequest -> {
                     Experience experience = ExperienceMapper.EXPERIENCE_MAPPER.mapToExperience(experienceRequest);
                     experience.setSkills(experienceRequest.getSkillIds().stream()
-                            .map(ids -> skillRepository.findById(ids).orElse(null))
+                            .map(id -> skillRepository.findById(id).orElse(null))
                             .collect(Collectors.toSet()));
                     experience.setUser(currentUser);
                     return experience;

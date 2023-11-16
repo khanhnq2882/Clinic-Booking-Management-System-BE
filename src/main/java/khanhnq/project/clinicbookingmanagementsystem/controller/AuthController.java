@@ -3,6 +3,7 @@ package khanhnq.project.clinicbookingmanagementsystem.controller;
 import khanhnq.project.clinicbookingmanagementsystem.request.ChangePasswordRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.LoginRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.RegisterRequest;
+import khanhnq.project.clinicbookingmanagementsystem.response.JwtResponse;
 import khanhnq.project.clinicbookingmanagementsystem.response.MessageResponse;
 import khanhnq.project.clinicbookingmanagementsystem.response.UserInfoResponse;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
@@ -28,7 +29,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<UserInfoResponse> login(@RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<JwtResponse> login(@RequestBody LoginRequest loginRequest) {
         return authService.login(loginRequest);
     }
 
@@ -37,9 +38,15 @@ public class AuthController {
         return authService.changePassword(changePasswordRequest);
     }
 
+    @GetMapping("/get-user-info")
+    public ResponseEntity<UserInfoResponse> getUserInfo() {
+        return authService.getUserInfo();
+    }
+
     @PostMapping("/logout")
     public ResponseEntity<MessageResponse> logoutUser() {
         return authService.logoutUser();
     }
+
 
 }
