@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EUserStatus;
 import lombok.*;
 import org.springframework.format.annotation.DateTimeFormat;
 
@@ -26,16 +27,24 @@ public class User {
     private Long userId;
 
     @NotBlank
+    @Size(max = 10)
+    @Column(nullable = false)
+    private String userCode;
+
+    @NotBlank
     @Size(max = 20)
+    @Column(nullable = false)
     private String username;
 
     @NotBlank
     @Size(max = 50)
     @Email
+    @Column(nullable = false)
     private String email;
 
     @NotBlank
     @Size(max = 120)
+    @Column(nullable = false)
     private String password;
 
     @Column(length = 50)
@@ -61,6 +70,10 @@ public class User {
     @OneToOne(cascade = CascadeType.PERSIST, fetch = FetchType.EAGER)
     @JoinColumn(name = "address_id")
     private Address address;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private EUserStatus status;
 
     @ManyToMany(fetch = FetchType.EAGER, cascade = CascadeType.PERSIST)
     @JoinTable(name = "users_roles",

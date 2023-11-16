@@ -3,21 +3,20 @@ package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ERole;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Role;
 import khanhnq.project.clinicbookingmanagementsystem.entity.User;
+import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EUserStatus;
 import khanhnq.project.clinicbookingmanagementsystem.repository.RoleRepository;
 import khanhnq.project.clinicbookingmanagementsystem.repository.UserRepository;
 import khanhnq.project.clinicbookingmanagementsystem.request.ChangePasswordRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.LoginRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.RegisterRequest;
+import khanhnq.project.clinicbookingmanagementsystem.response.JwtResponse;
 import khanhnq.project.clinicbookingmanagementsystem.response.MessageResponse;
 import khanhnq.project.clinicbookingmanagementsystem.response.UserInfoResponse;
 import khanhnq.project.clinicbookingmanagementsystem.security.jwt.JwtUtils;
 import khanhnq.project.clinicbookingmanagementsystem.security.services.UserDetailsImpl;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseCookie;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -25,6 +24,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -62,10 +63,19 @@ public class AuthServiceImpl implements AuthService {
         if (!Objects.isNull(userRepository.findUserByEmail(registerRequest.getEmail()))) {
             throw new RuntimeException("Email " + registerRequest.getEmail() + " is already exist. Try again!");
         }
+        String userCode = "";
+        if (userRepository.findAll().size() == 0) {
+            userCode = "US1";
+        } else {
+            Long nextId = Collections.max(userRepository.findAll().stream().map(user -> user.getUserId()).collect(Collectors.toList()));
+            userCode = "US" + nextId;
+        }
         User user = User.builder()
+                .userCode(userCode)
                 .username(registerRequest.getUsername())
                 .email(registerRequest.getEmail())
                 .password(passwordEncoder.encode(registerRequest.getPassword()))
+                .status(EUserStatus.ACTIVE)
                 .build();
         if (roleRepository.findRoleByRoleName(ERole.ROLE_USER) == null) {
             roleRepository.save(Role.builder().roleName(ERole.ROLE_USER).build());
@@ -98,21 +108,14 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public ResponseEntity<UserInfoResponse> login(LoginRequest loginRequest) {
-        Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
+    public ResponseEntity<JwtResponse> login(LoginRequest loginRequest) {
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
         SecurityContextHolder.getContext().setAuthentication(authentication);
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
         ResponseCookie jwtCookie = jwtUtils.generateJwtCookie(userDetails);
-        List<String> roles = userDetails.getAuthorities().stream()
-                .map(item -> item.getAuthority())
-                .collect(Collectors.toList());
         return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
-                .body(new UserInfoResponse(
-                        userDetails.getUserId(),
-                        userDetails.getUsername(),
-                        userDetails.getEmail(),
-                        roles,
-                        jwtUtils.generateTokenFromUsername(userDetails.getUsername())));
+                .body(new JwtResponse(jwtUtils.generateTokenFromUsername(userDetails.getUsername())));
     }
 
     @Override
@@ -146,10 +149,22 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    public ResponseEntity<UserInfoResponse> getUserInfo() {
+        User user = getCurrentUser();
+        List<String> roles = user.getRoles().stream().map(role -> role.getRoleName().name()).collect(Collectors.toList());
+        UserInfoResponse userInfoResponse = UserInfoResponse.builder()
+                .id(user.getUserId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .roles(roles)
+                .build();
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(userInfoResponse);
+    }
+
+    @Override
     public ResponseEntity<MessageResponse> logoutUser() {
         ResponseCookie cookie = jwtUtils.getCleanJwtCookie();
         return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).body(new MessageResponse("You've been log out."));
     }
-
 
 }
