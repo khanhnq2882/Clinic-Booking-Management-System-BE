@@ -5,8 +5,6 @@ import java.util.List;
 import java.util.Date;
 
 @Data
-@Getter
-@Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
