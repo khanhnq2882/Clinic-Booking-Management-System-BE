@@ -1,8 +1,10 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
+import khanhnq.project.clinicbookingmanagementsystem.entity.Address;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Role;
 import khanhnq.project.clinicbookingmanagementsystem.entity.User;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ERole;
+import khanhnq.project.clinicbookingmanagementsystem.repository.AddressRepository;
 import khanhnq.project.clinicbookingmanagementsystem.repository.RoleRepository;
 import khanhnq.project.clinicbookingmanagementsystem.repository.UserRepository;
 import khanhnq.project.clinicbookingmanagementsystem.response.MessageResponse;
@@ -13,9 +15,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,12 +27,16 @@ public class AdminServiceImpl implements AdminService {
 
     private final RoleRepository roleRepository;
 
+    private final AddressRepository addressRepository;
+
     public AdminServiceImpl(UserRepository userRepository,
                             AuthService authService,
-                            RoleRepository roleRepository) {
+                            RoleRepository roleRepository,
+                            AddressRepository addressRepository) {
         this.userRepository = userRepository;
         this.authService = authService;
         this.roleRepository = roleRepository;
+        this.addressRepository = addressRepository;
     }
 
     @Override
@@ -54,22 +57,27 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public ResponseEntity<List<UserResponse>> getAllUsers() {
-        DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy");
         List<UserResponse> userList = userRepository.getAllUsers().stream().map(user -> {
-            UserResponse userResponse = UserResponse.builder()
-                    .userCode(user.getUserCode())
-                    .email(user.getEmail())
-                    .firstName(user.getFirstName())
-                    .lastName(user.getLastName())
-                    .dateOfBirth(user.getDateOfBirth())
-                    .gender(user.getGender())
-                    .phoneNumber(user.getPhoneNumber())
-                    .address(user.getAddress())
-                    .roles(user.getRoles().stream()
-                            .map(role -> role.getRoleName().name())
-                            .collect(Collectors.toList()))
-                    .status(user.getStatus().name())
-                    .build();
+            UserResponse userResponse = new UserResponse();
+            userResponse.setUserId(user.getUserId());
+            userResponse.setUserCode(user.getUserCode());
+            userResponse.setEmail(user.getEmail());
+            userResponse.setFirstName(user.getFirstName());
+            userResponse.setLastName(user.getLastName());
+            userResponse.setDateOfBirth(user.getDateOfBirth());
+            userResponse.setGender(user.getGender());
+            userResponse.setPhoneNumber(user.getPhoneNumber());
+            userResponse.setRoles(user.getRoles().stream()
+                    .map(role -> role.getRoleName().name())
+                    .collect(Collectors.toList()));
+            userResponse.setStatus(user.getStatus().name());
+            if (user.getAddress() != null) {
+                Address address = addressRepository.findById(user.getAddress().getAddressId()).orElse(null);
+                userResponse.setSpecificAddress(address.getSpecificAddress());
+                userResponse.setWardName(address.getWard().getWardName());
+                userResponse.setDistrictName(address.getWard().getDistrict().getDistrictName());
+                userResponse.setCityName(address.getWard().getDistrict().getCity().getCityName());
+            }
             return userResponse;
         }).collect(Collectors.toList());
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(userList);

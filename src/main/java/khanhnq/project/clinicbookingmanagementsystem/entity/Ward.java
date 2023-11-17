@@ -1,5 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.List;
@@ -19,6 +20,7 @@ public class Ward {
     @Column(nullable = false)
     private String wardName;
 
+    @JsonBackReference
     @ManyToOne
     @JoinColumn(name = "district_id")
     private District district;

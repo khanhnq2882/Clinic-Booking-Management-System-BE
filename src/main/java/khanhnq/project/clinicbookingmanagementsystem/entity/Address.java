@@ -1,5 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
 import lombok.*;
@@ -20,6 +21,7 @@ public class Address {
     @Size(max = 255)
     private String specificAddress;
 
+    @JsonBackReference
     @ManyToOne
     @JoinColumn(name = "ward_id")
     private Ward ward;

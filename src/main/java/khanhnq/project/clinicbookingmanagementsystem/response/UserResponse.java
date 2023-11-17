@@ -12,6 +12,7 @@ import java.util.Date;
 @NoArgsConstructor
 @Builder
 public class UserResponse {
+    private Long userId;
     private String userCode;
     private String email;
     private String firstName;
@@ -19,7 +20,10 @@ public class UserResponse {
     private Date dateOfBirth;
     private int gender;
     private String phoneNumber;
-    private Address address;
+    private String specificAddress;
+    private String wardName;
+    private String districtName;
+    private String cityName;
     private List<String> roles;
     private String status;
 }

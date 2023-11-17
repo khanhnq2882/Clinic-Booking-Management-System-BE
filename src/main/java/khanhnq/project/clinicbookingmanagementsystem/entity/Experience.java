@@ -2,6 +2,7 @@ package khanhnq.project.clinicbookingmanagementsystem.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.format.annotation.DateTimeFormat;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
@@ -25,9 +26,13 @@ public class Experience {
     private String position;
 
     @Column(nullable = false)
+    @DateTimeFormat(pattern = "dd-MM-yyyy")
+    @Temporal(TemporalType.DATE)
     private Date startWork;
 
     @Column(nullable = false)
+    @DateTimeFormat(pattern = "dd-MM-yyyy")
+    @Temporal(TemporalType.DATE)
     private Date endWork;
 
     @Column(nullable = false)
