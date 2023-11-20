@@ -8,6 +8,7 @@ import lombok.*;
 @NoArgsConstructor
 @Builder
 public class FileResponse {
+    private String fileType;
     private String fileName;
     private String fileUrl;
 }

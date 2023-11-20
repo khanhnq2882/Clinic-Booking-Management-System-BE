@@ -5,7 +5,6 @@ import khanhnq.project.clinicbookingmanagementsystem.mapper.ExperienceMapper;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.UserMapper;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
 import khanhnq.project.clinicbookingmanagementsystem.request.AddRoleDoctorRequest;
-import khanhnq.project.clinicbookingmanagementsystem.request.FileRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
 import khanhnq.project.clinicbookingmanagementsystem.response.MessageResponse;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
@@ -14,6 +13,7 @@ import khanhnq.project.clinicbookingmanagementsystem.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -69,18 +69,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public ResponseEntity<String> uploadAvatar(MultipartFile multipartFile) {
-        try {
-            fileService.save(multipartFile);
-            User currentUser = authService.getCurrentUser();
-            File file = new File();
-            file.setFilePath("avatar/"+currentUser.getUsername()+"/"+multipartFile.getOriginalFilename());
-            file.setUser(currentUser);
-            fileRepository.save(file);
-            userRepository.save(currentUser);
-            return MessageResponse.getResponseMessage("Uploaded the file successfully: " + multipartFile.getOriginalFilename(), HttpStatus.OK);
-        } catch (Exception e) {
-            return MessageResponse.getResponseMessage("Could not upload the file: " + multipartFile.getOriginalFilename() + ". Error: " + e.getMessage(), HttpStatus.EXPECTATION_FAILED);
-        }
+        return uploadFile(multipartFile, "avatar");
     }
 
     @Override
@@ -102,22 +91,30 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public ResponseEntity<String> uploadLicenseDegree(FileRequest fileRequest) {
-        User currentUser = authService.getCurrentUser();
-        fileService.save(fileRequest.getMedicalDegree());
-        fileService.save(fileRequest.getMedicalLicense());
-        currentUser.getFiles().add(File.builder()
-                .filePath("medical-degree/"+currentUser.getUsername()+"/"+fileRequest.getMedicalDegree().getOriginalFilename())
-                .build());
-        currentUser.getFiles().add(File.builder()
-                .filePath("medical-license/"+currentUser.getUsername()+"/"+fileRequest.getMedicalLicense().getOriginalFilename())
-                .build());
-        for (File file : currentUser.getFiles()) {
-            file.setUser(currentUser);
+    public ResponseEntity<String> uploadMedicalLicense(MultipartFile multipartFile) {
+        return uploadFile(multipartFile, "medical-license");
+    }
+
+    @Override
+    public ResponseEntity<String> uploadMedicalDegree(MultipartFile multipartFile) {
+        return uploadFile(multipartFile, "medical-degree");
+    }
+
+    public ResponseEntity<String> uploadFile(MultipartFile multipartFile, String typeImage) {
+        try {
+            User currentUser = authService.getCurrentUser();
+            File file = File.builder()
+                    .filePath(typeImage+"/"+currentUser.getUsername()+"/"+StringUtils.cleanPath(multipartFile.getOriginalFilename()))
+                    .data(multipartFile.getBytes())
+                    .user(currentUser)
+                    .build();
+            currentUser.getFiles().add(file);
             fileRepository.save(file);
+            userRepository.save(currentUser);
+            return MessageResponse.getResponseMessage("Uploaded the file" +typeImage+ " successfully: " + multipartFile.getOriginalFilename(), HttpStatus.OK);
+        } catch (Exception e) {
+            return MessageResponse.getResponseMessage("Could not upload the file"+ typeImage+ " : " + multipartFile.getOriginalFilename() + ". Error: " + e.getMessage(), HttpStatus.EXPECTATION_FAILED);
         }
-        userRepository.save(currentUser);
-        return MessageResponse.getResponseMessage("Upload file successfully!", HttpStatus.OK);
     }
 
 }

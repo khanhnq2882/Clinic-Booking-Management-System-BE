@@ -1,8 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.response;
 
-import khanhnq.project.clinicbookingmanagementsystem.entity.Address;
 import lombok.*;
-
 import java.util.List;
 import java.util.Date;
 
@@ -24,6 +22,6 @@ public class UserResponse {
     private String wardName;
     private String districtName;
     private String cityName;
-    private List<String> roles;
+    private List<String> roleNames;
     private String status;
 }

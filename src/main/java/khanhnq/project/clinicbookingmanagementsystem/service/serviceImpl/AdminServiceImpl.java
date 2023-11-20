@@ -1,14 +1,13 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
-import khanhnq.project.clinicbookingmanagementsystem.controller.AdminController;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Address;
+import khanhnq.project.clinicbookingmanagementsystem.entity.File;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Role;
 import khanhnq.project.clinicbookingmanagementsystem.entity.User;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ERole;
-import khanhnq.project.clinicbookingmanagementsystem.repository.AddressRepository;
-import khanhnq.project.clinicbookingmanagementsystem.repository.ExperienceRepository;
-import khanhnq.project.clinicbookingmanagementsystem.repository.RoleRepository;
-import khanhnq.project.clinicbookingmanagementsystem.repository.UserRepository;
+import khanhnq.project.clinicbookingmanagementsystem.mapper.ExperienceMapper;
+import khanhnq.project.clinicbookingmanagementsystem.mapper.UserMapper;
+import khanhnq.project.clinicbookingmanagementsystem.repository.*;
 import khanhnq.project.clinicbookingmanagementsystem.response.FileResponse;
 import khanhnq.project.clinicbookingmanagementsystem.response.MessageResponse;
 import khanhnq.project.clinicbookingmanagementsystem.response.RequestDoctorResponse;
@@ -20,24 +19,17 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.servlet.mvc.method.annotation.MvcUriComponentsBuilder;
-
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 public class AdminServiceImpl implements AdminService {
-
     private final UserRepository userRepository;
-
     private final AuthService authService;
-
     private final FileService fileService;
-
     private final RoleRepository roleRepository;
-
     private final AddressRepository addressRepository;
-
     private final ExperienceRepository experienceRepository;
 
     public AdminServiceImpl(UserRepository userRepository,
@@ -73,18 +65,8 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public ResponseEntity<List<UserResponse>> getAllUsers() {
         List<UserResponse> userList = userRepository.getAllUsers().stream().map(user -> {
-            UserResponse userResponse = new UserResponse();
-            userResponse.setUserId(user.getUserId());
-            userResponse.setUserCode(user.getUserCode());
-            userResponse.setEmail(user.getEmail());
-            userResponse.setFirstName(user.getFirstName());
-            userResponse.setLastName(user.getLastName());
-            userResponse.setDateOfBirth(user.getDateOfBirth());
-            userResponse.setGender(user.getGender());
-            userResponse.setPhoneNumber(user.getPhoneNumber());
-            userResponse.setRoles(user.getRoles().stream()
-                    .map(role -> role.getRoleName().name())
-                    .collect(Collectors.toList()));
+            UserResponse userResponse = UserMapper.USER_MAPPER.mapToUserResponse(user);
+            userResponse.setRoleNames(user.roleNames());
             userResponse.setStatus(user.getStatus().name());
             if (user.getAddress() != null) {
                 Address address = addressRepository.findById(user.getAddress().getAddressId()).orElse(null);
@@ -101,31 +83,23 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public ResponseEntity<List<RequestDoctorResponse>> getAllRequestDoctors() {
         List<RequestDoctorResponse> requestList = experienceRepository.findAll().stream().map(experience -> {
-            RequestDoctorResponse requestDoctorResponse = new RequestDoctorResponse();
+            RequestDoctorResponse requestDoctorResponse = ExperienceMapper.EXPERIENCE_MAPPER.mapToRequestDoctorResponse(experience);
             requestDoctorResponse.setUserId(experience.getUser().getUserId());
             requestDoctorResponse.setUserCode(experience.getUser().getUserCode());
             requestDoctorResponse.setEmail(experience.getUser().getEmail());
             requestDoctorResponse.setUniversityName(experience.getUser().getUniversityName());
-            requestDoctorResponse.setClinicName(experience.getClinicName());
-            requestDoctorResponse.setPosition(experience.getPosition());
-            requestDoctorResponse.setSpecialization(experience.getSpecialization());
-            requestDoctorResponse.setStartWork(experience.getStartWork());
-            requestDoctorResponse.setEndWork(experience.getEndWork());
-            requestDoctorResponse.setJobDescription(experience.getJobDescription());
-            requestDoctorResponse.setSkills(experience.getSkills().stream()
-                    .map(skill -> skill.getSkillName())
-                    .collect(Collectors.toSet()));
-            requestDoctorResponse.setFileResponses(getAllFiles().stream().collect(Collectors.toSet()));
+            requestDoctorResponse.setSkillNames(experience.skillNames());
+            requestDoctorResponse.setFileResponses(getAllFiles(requestDoctorResponse.getUserId()).stream().collect(Collectors.toSet()));
             return requestDoctorResponse;
         }).collect(Collectors.toList());
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(requestList);
     }
 
-    public List<FileResponse> getAllFiles() {
-        return fileService.loadFiles().map(path -> {
-            String fileName = path.getFileName().toString();
-            String fileUrl = MvcUriComponentsBuilder.fromMethodName(AdminController.class, "getFile", fileName).build().toString();
-            return new FileResponse(fileName, fileUrl);
+    public List<FileResponse> getAllFiles(Long userId) {
+        List<FileResponse> fileResponses = fileService.loadFilesByUserId(userId).map(file -> {
+            String fileUrl = ServletUriComponentsBuilder.fromCurrentContextPath().path("/admin/files/").path(file.getFileId().toString()).toUriString();
+            return new FileResponse(file.getFilePath().split("/")[0], file.getFilePath().split("/")[2], fileUrl);
         }).collect(Collectors.toList());
+        return fileResponses;
     }
 }

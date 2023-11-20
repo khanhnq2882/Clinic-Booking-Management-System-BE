@@ -6,11 +6,9 @@ import khanhnq.project.clinicbookingmanagementsystem.repository.SkillRepository;
 import khanhnq.project.clinicbookingmanagementsystem.repository.SpecializationRepository;
 import khanhnq.project.clinicbookingmanagementsystem.repository.UserRepository;
 import khanhnq.project.clinicbookingmanagementsystem.request.AddRoleDoctorRequest;
-import khanhnq.project.clinicbookingmanagementsystem.request.FileRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
 import khanhnq.project.clinicbookingmanagementsystem.service.FileService;
 import khanhnq.project.clinicbookingmanagementsystem.service.UserService;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -65,9 +63,15 @@ public class UserController {
         return userService.requestBecomeDoctor(addRoleDoctorRequest);
     }
 
-    @PostMapping(value = "/upload-license-degree", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
-    public ResponseEntity<String> uploadLicenseDegree(@ModelAttribute FileRequest fileRequest) {
-        return userService.uploadLicenseDegree(fileRequest);
+    @PostMapping("/upload-medical-license")
+    public ResponseEntity<String> uploadMedicalLicense(@RequestParam("medicalLicense") MultipartFile file) {
+        return userService.uploadMedicalLicense(file);
     }
+
+    @PostMapping("/upload-medical-degree")
+    public ResponseEntity<String> uploadMedicalDegree(@RequestParam("medicalDegree") MultipartFile file) {
+        return userService.uploadMedicalDegree(file);
+    }
+
 
 }

@@ -18,6 +18,10 @@ public class File {
     @Column(nullable = false)
     private String filePath;
 
+    @Lob
+    @Column(columnDefinition = "LONGBLOB")
+    private byte[] data;
+
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
@@ -25,4 +29,5 @@ public class File {
     @ManyToOne
     @JoinColumn(name = "clinic_id")
     private Clinic clinic;
+
 }

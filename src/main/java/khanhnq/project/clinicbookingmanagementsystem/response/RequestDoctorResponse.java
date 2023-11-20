@@ -20,6 +20,6 @@ public class RequestDoctorResponse {
     private Date startWork;
     private Date endWork;
     private String jobDescription;
-    private Set<String> skills;
+    private Set<String> skillNames;
     private Set<FileResponse> fileResponses;
 }

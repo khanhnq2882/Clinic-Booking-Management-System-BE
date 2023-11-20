@@ -1,6 +1,7 @@
 package khanhnq.project.clinicbookingmanagementsystem.entity;
 
 import java.util.*;
+import java.util.stream.Collectors;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
@@ -95,5 +96,9 @@ public class User {
     @ManyToOne
     @JoinColumn(name = "clinic_id")
     private Clinic clinic;
+
+    public List<String> roleNames() {
+        return roles.stream().map(role -> role.getRoleName().name()).collect(Collectors.toList());
+    }
 
 }
