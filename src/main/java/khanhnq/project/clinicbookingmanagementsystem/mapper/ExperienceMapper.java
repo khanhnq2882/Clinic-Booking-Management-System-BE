@@ -2,7 +2,7 @@ package khanhnq.project.clinicbookingmanagementsystem.mapper;
 
 import khanhnq.project.clinicbookingmanagementsystem.entity.Experience;
 import khanhnq.project.clinicbookingmanagementsystem.request.ExperienceRequest;
-import khanhnq.project.clinicbookingmanagementsystem.response.RequestDoctorResponse;
+import khanhnq.project.clinicbookingmanagementsystem.response.ExperienceResponse;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
@@ -10,5 +10,5 @@ import org.mapstruct.factory.Mappers;
 public interface ExperienceMapper {
     ExperienceMapper EXPERIENCE_MAPPER = Mappers.getMapper(ExperienceMapper.class);
     Experience mapToExperience(ExperienceRequest experienceRequest);
-    RequestDoctorResponse mapToRequestDoctorResponse(Experience experience);
+    ExperienceResponse mapToExperienceResponse(Experience experience);
 }

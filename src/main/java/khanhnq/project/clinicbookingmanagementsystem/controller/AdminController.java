@@ -10,7 +10,6 @@ import khanhnq.project.clinicbookingmanagementsystem.response.UserResponse;
 import khanhnq.project.clinicbookingmanagementsystem.service.AdminService;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import khanhnq.project.clinicbookingmanagementsystem.service.FileService;
-import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -58,7 +57,7 @@ public class AdminController {
 
     @PostMapping("/update-user-roles/{userId}")
     public ResponseEntity<String> updateUserRoles(@PathVariable("userId") Long userId) {
-        return adminService.updateUserRoles(userId);
+        return adminService.approveRequestDoctor(userId);
     }
 
     @GetMapping("/get-all-users")
