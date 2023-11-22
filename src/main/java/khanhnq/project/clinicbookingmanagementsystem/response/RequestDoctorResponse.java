@@ -3,6 +3,7 @@ package khanhnq.project.clinicbookingmanagementsystem.response;
 import lombok.*;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -18,6 +19,7 @@ public class RequestDoctorResponse {
     private Date dateOfBirth;
     private int gender;
     private String phoneNumber;
+    private Set<String> roleNames;
     private String universityName;
     private String status;
     // medical degree, medical license
@@ -28,5 +30,5 @@ public class RequestDoctorResponse {
     private String medicalLicenseName;
     private String medicalLicenseUrl;
     // experiences
-    private List<ExperienceResponse> experiences;
+    private List<ExperienceResponse> doctorExperiences;
 }

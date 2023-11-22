@@ -18,9 +18,8 @@ public class Clinic {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long clinicId;
 
-    @OneToOne(cascade = CascadeType.PERSIST, fetch = FetchType.EAGER)
-    @JoinColumn(name = "address_id")
-    private Address address;
+    @OneToMany(mappedBy = "clinic", cascade = CascadeType.PERSIST)
+    private Set<Address> addresses = new HashSet<>();
 
     @Column(nullable = false)
     private String phoneNumber;
@@ -30,9 +29,6 @@ public class Clinic {
 
     @Column(nullable = false)
     private LocalTime endWorkingHours;
-
-//    @OneToMany(mappedBy = "clinic", cascade = CascadeType.ALL)
-//    private Set<Specialization> specializations;
 
     @OneToMany(mappedBy = "clinic", cascade = CascadeType.PERSIST)
     private Set<File> files = new HashSet<>();

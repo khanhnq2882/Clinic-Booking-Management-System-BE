@@ -59,7 +59,7 @@ public class AdminServiceImpl implements AdminService {
             userRepository.save(user);
             return MessageResponse.getResponseMessage("Update successfully .User "+user.getFirstName()+" "+user.getLastName()+" is became a doctor in the system.", HttpStatus.OK);
         }
-        return MessageResponse.getResponseMessage("You do not have permission to update user roles.", HttpStatus.OK);
+        return MessageResponse.getResponseMessage("You do not have permission to update user roles.", HttpStatus.BAD_REQUEST);
     }
 
     @Override
@@ -68,13 +68,7 @@ public class AdminServiceImpl implements AdminService {
             UserResponse userResponse = UserMapper.USER_MAPPER.mapToUserResponse(user);
             userResponse.setRoleNames(user.roleNames());
             userResponse.setStatus(user.getStatus().name());
-            if (user.getAddress() != null) {
-                Address address = addressRepository.findById(user.getAddress().getAddressId()).orElse(null);
-                userResponse.setSpecificAddress(address.getSpecificAddress());
-                userResponse.setWardName(address.getWard().getWardName());
-                userResponse.setDistrictName(address.getWard().getDistrict().getDistrictName());
-                userResponse.setCityName(address.getWard().getDistrict().getCity().getCityName());
-            }
+            userResponse.setUserAddress(getAddress(user));
             return userResponse;
         }).collect(Collectors.toList());
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(userList);
@@ -92,21 +86,28 @@ public class AdminServiceImpl implements AdminService {
                 experienceResponse.setSkillNames(experience.skillNames());
                 return experienceResponse;
             }).collect(Collectors.toList());
-            requestDoctorResponse.setExperiences(experiences);
-            for (FileResponse fileResponse : getAllFiles(userId)) {
-                if (fileResponse.getFileType().equals("medical-degree")) {
-                    requestDoctorResponse.setMedicalDegreeType(fileResponse.getFileType());
-                    requestDoctorResponse.setMedicalDegreeName(fileResponse.getFileName());
-                    requestDoctorResponse.setMedicalDegreeUrl(fileResponse.getFileUrl());
-                } else {
-                    requestDoctorResponse.setMedicalLicenseType(fileResponse.getFileType());
-                    requestDoctorResponse.setMedicalLicenseName(fileResponse.getFileName());
-                    requestDoctorResponse.setMedicalLicenseUrl(fileResponse.getFileUrl());
-                }
-            }
+            requestDoctorResponse.setDoctorExperiences(experiences);
+            requestDoctorResponse.setRoleNames(user.roleNames());
+            getMedicalLicenseDegree(requestDoctorResponse, userId);
             requestList.add(requestDoctorResponse);
         }
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(requestList);
+    }
+
+    @Override
+    public ResponseEntity<List<DoctorResponse>> getAllDoctors() {
+        List<DoctorResponse> responseList = userRepository.getAllDoctors()
+                .stream()
+                .map(user -> {
+                    DoctorResponse doctorResponse = UserMapper.USER_MAPPER.mapToDoctorResponse(user);
+                    if (user.getSpecialization() != null) {
+                        doctorResponse.setSpecializationName(user.specializationName());
+                    }
+                    doctorResponse.setDoctorAddress(getAddress(user));
+                    return doctorResponse;
+                })
+                .collect(Collectors.toList());
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(responseList);
     }
 
     public Map<Long, List<Experience>> groupExperiencesByUserId() {
@@ -118,6 +119,33 @@ public class AdminServiceImpl implements AdminService {
             }
         }
         return map;
+    }
+
+    public AddressResponse getAddress(User user) {
+        AddressResponse addressResponse = new AddressResponse();
+        if (user.getAddress() != null) {
+            Address address = addressRepository.findById(user.getAddress().getAddressId()).orElse(null);
+            addressResponse.setAddressId(address.getAddressId());
+            addressResponse.setSpecificAddress(address.getSpecificAddress());
+            addressResponse.setWardName(address.getWard().getWardName());
+            addressResponse.setDistrictName(address.getWard().getDistrict().getDistrictName());
+            addressResponse.setCityName(address.getWard().getDistrict().getCity().getCityName());
+        }
+        return addressResponse;
+    }
+
+    public void getMedicalLicenseDegree(RequestDoctorResponse requestDoctorResponse, Long userId) {
+        for (FileResponse fileResponse : getAllFiles(userId)) {
+            if (fileResponse.getFileType().equals("medical-degree")) {
+                requestDoctorResponse.setMedicalDegreeType(fileResponse.getFileType());
+                requestDoctorResponse.setMedicalDegreeName(fileResponse.getFileName());
+                requestDoctorResponse.setMedicalDegreeUrl(fileResponse.getFileUrl());
+            } else {
+                requestDoctorResponse.setMedicalLicenseType(fileResponse.getFileType());
+                requestDoctorResponse.setMedicalLicenseName(fileResponse.getFileName());
+                requestDoctorResponse.setMedicalLicenseUrl(fileResponse.getFileUrl());
+            }
+        }
     }
 
     public List<FileResponse> getAllFiles(Long userId) {

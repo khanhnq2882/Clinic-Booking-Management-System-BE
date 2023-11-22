@@ -25,4 +25,9 @@ public class Address {
     @ManyToOne
     @JoinColumn(name = "ward_id")
     private Ward ward;
+
+    @JsonBackReference
+    @ManyToOne
+    @JoinColumn(name = "clinic_id")
+    private Clinic clinic;
 }

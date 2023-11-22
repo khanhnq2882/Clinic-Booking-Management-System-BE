@@ -2,6 +2,7 @@ package khanhnq.project.clinicbookingmanagementsystem.mapper;
 
 import khanhnq.project.clinicbookingmanagementsystem.entity.User;
 import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
+import khanhnq.project.clinicbookingmanagementsystem.response.DoctorResponse;
 import khanhnq.project.clinicbookingmanagementsystem.response.RequestDoctorResponse;
 import khanhnq.project.clinicbookingmanagementsystem.response.UserResponse;
 import org.mapstruct.Mapper;
@@ -14,4 +15,5 @@ public interface UserMapper {
     void mapToUser(@MappingTarget User currentUser, UserProfileRequest userProfileRequest);
     UserResponse mapToUserResponse(User user);
     void mapToRequestDoctorResponse(@MappingTarget RequestDoctorResponse requestDoctorResponse, User user);
+    DoctorResponse mapToDoctorResponse(User user);
 }

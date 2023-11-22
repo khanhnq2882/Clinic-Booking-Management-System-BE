@@ -1,6 +1,7 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
+import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ERole;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.ExperienceMapper;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.UserMapper;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
@@ -57,19 +58,24 @@ public class UserServiceImpl implements UserService {
     @Override
     public ResponseEntity<String> requestBecomeDoctor(AddRoleDoctorRequest addRoleDoctorRequest) {
         User currentUser = authService.getCurrentUser();
-        currentUser.setUniversityName(addRoleDoctorRequest.getUniversityName());
-        Set<Experience> experiences = addRoleDoctorRequest.getExperiences().stream()
-                .map(experienceRequest -> {
-                    Experience experience = ExperienceMapper.EXPERIENCE_MAPPER.mapToExperience(experienceRequest);
-                    experience.setSkills(experienceRequest.getSkillIds().stream()
-                            .map(id -> skillRepository.findById(id).orElse(null))
-                            .collect(Collectors.toSet()));
-                    experience.setUser(currentUser);
-                    return experience;
-                }).collect(Collectors.toSet());
-        currentUser.setExperiences(experiences);
-        userRepository.save(currentUser);
-        return MessageResponse.getResponseMessage("Request to become doctor successfully. Waiting for accept...", HttpStatus.OK);
+        if (!currentUser.getRoles().stream().filter(role -> role.getRoleName().equals(ERole.ROLE_DOCTOR)).findAny().isPresent()) {
+            currentUser.setUniversityName(addRoleDoctorRequest.getUniversityName());
+            Set<Experience> experiences = addRoleDoctorRequest.getExperiences().stream()
+                    .map(experienceRequest -> {
+                        Experience experience = ExperienceMapper.EXPERIENCE_MAPPER.mapToExperience(experienceRequest);
+                        experience.setSkills(experienceRequest.getSkillIds()
+                                .stream()
+                                .map(id -> skillRepository.findById(id).orElse(null))
+                                .collect(Collectors.toSet()));
+                        experience.setUser(currentUser);
+                        return experience;
+                    }).collect(Collectors.toSet());
+            currentUser.setExperiences(experiences);
+            userRepository.save(currentUser);
+            return MessageResponse.getResponseMessage("Request to become doctor successfully. Waiting for accept...", HttpStatus.OK);
+        } else {
+            return MessageResponse.getResponseMessage("There is no need to submit a request because you are already a doctor in the system.", HttpStatus.BAD_REQUEST);
+        }
     }
 
     @Override

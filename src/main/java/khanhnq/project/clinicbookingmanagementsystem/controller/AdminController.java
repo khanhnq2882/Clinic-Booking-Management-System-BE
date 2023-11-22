@@ -5,6 +5,7 @@ import khanhnq.project.clinicbookingmanagementsystem.entity.Skill;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Specialization;
 import khanhnq.project.clinicbookingmanagementsystem.repository.SkillRepository;
 import khanhnq.project.clinicbookingmanagementsystem.repository.SpecializationRepository;
+import khanhnq.project.clinicbookingmanagementsystem.response.DoctorResponse;
 import khanhnq.project.clinicbookingmanagementsystem.response.RequestDoctorResponse;
 import khanhnq.project.clinicbookingmanagementsystem.response.UserResponse;
 import khanhnq.project.clinicbookingmanagementsystem.service.AdminService;
@@ -55,7 +56,7 @@ public class AdminController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(specializationRepository.findAll());
     }
 
-    @PostMapping("/update-user-roles/{userId}")
+    @PostMapping("/approve-request-doctor/{userId}")
     public ResponseEntity<String> updateUserRoles(@PathVariable("userId") Long userId) {
         return adminService.approveRequestDoctor(userId);
     }
@@ -78,4 +79,10 @@ public class AdminController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
                 .body(file.getData());
     }
+
+    @GetMapping("/get-all-doctors")
+    public ResponseEntity<List<DoctorResponse>> getAllDoctors() {
+        return adminService.getAllDoctors();
+    }
+
 }

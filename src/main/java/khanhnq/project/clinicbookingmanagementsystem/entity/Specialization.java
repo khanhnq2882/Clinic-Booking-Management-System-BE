@@ -2,8 +2,7 @@ package khanhnq.project.clinicbookingmanagementsystem.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-
-import java.util.List;
+import java.util.HashSet;
 import java.util.Set;
 
 @Entity
@@ -24,7 +23,7 @@ public class Specialization {
     @OneToMany(mappedBy = "specialization", cascade = CascadeType.ALL)
     private Set<ServiceCategory> serviceCategories;
 
-//    @ManyToOne
-//    @JoinColumn(name = "clinic_id")
-//    private Clinic clinic;
+    @OneToMany(mappedBy = "specialization", cascade = CascadeType.PERSIST)
+    private Set<User> users = new HashSet<>();
+
 }

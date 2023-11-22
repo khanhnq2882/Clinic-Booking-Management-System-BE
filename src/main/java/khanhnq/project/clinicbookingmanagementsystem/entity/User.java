@@ -2,7 +2,6 @@ package khanhnq.project.clinicbookingmanagementsystem.entity;
 
 import java.util.*;
 import java.util.stream.Collectors;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -58,7 +57,6 @@ public class User {
 
     @DateTimeFormat(pattern = "dd-MM-yyyy")
     @Temporal(TemporalType.DATE)
-    @JsonFormat(pattern="yyyy-MM-dd'T'HH:mm:ss.SSS")
     private Date dateOfBirth;
 
     @Column(length = 1)
@@ -94,11 +92,22 @@ public class User {
     private Set<Experience> experiences;
 
     @ManyToOne
+    @JoinColumn(name = "specialization_id")
+    private Specialization specialization;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private Set<WorkSchedule> workSchedules;
+
+    @ManyToOne
     @JoinColumn(name = "clinic_id")
     private Clinic clinic;
 
-    public List<String> roleNames() {
-        return roles.stream().map(role -> role.getRoleName().name()).collect(Collectors.toList());
+    public Set<String> roleNames() {
+        return roles.stream().map(role -> role.getRoleName().name()).collect(Collectors.toSet());
+    }
+
+    public String specializationName() {
+        return specialization.getSpecializationName();
     }
 
 }
