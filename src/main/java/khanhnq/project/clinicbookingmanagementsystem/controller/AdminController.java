@@ -2,12 +2,11 @@ package khanhnq.project.clinicbookingmanagementsystem.controller;
 
 import khanhnq.project.clinicbookingmanagementsystem.entity.File;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Skill;
-import khanhnq.project.clinicbookingmanagementsystem.entity.Specialization;
 import khanhnq.project.clinicbookingmanagementsystem.repository.SkillRepository;
 import khanhnq.project.clinicbookingmanagementsystem.repository.SpecializationRepository;
-import khanhnq.project.clinicbookingmanagementsystem.response.DoctorResponse;
-import khanhnq.project.clinicbookingmanagementsystem.response.RequestDoctorResponse;
-import khanhnq.project.clinicbookingmanagementsystem.response.UserResponse;
+import khanhnq.project.clinicbookingmanagementsystem.request.ServiceCategoryRequest;
+import khanhnq.project.clinicbookingmanagementsystem.request.ServiceRequest;
+import khanhnq.project.clinicbookingmanagementsystem.response.*;
 import khanhnq.project.clinicbookingmanagementsystem.service.AdminService;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import khanhnq.project.clinicbookingmanagementsystem.service.FileService;
@@ -51,11 +50,6 @@ public class AdminController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(skillRepository.findAll());
     }
 
-    @GetMapping("/specializations")
-    public ResponseEntity<List<Specialization>> getAllSpecializations() {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(specializationRepository.findAll());
-    }
-
     @PostMapping("/approve-request-doctor/{userId}")
     public ResponseEntity<String> updateUserRoles(@PathVariable("userId") Long userId) {
         return adminService.approveRequestDoctor(userId);
@@ -83,6 +77,26 @@ public class AdminController {
     @GetMapping("/get-all-doctors")
     public ResponseEntity<List<DoctorResponse>> getAllDoctors() {
         return adminService.getAllDoctors();
+    }
+
+    @GetMapping("/get-all-specializations")
+    public ResponseEntity<List<SpecializationResponse>> getAllSpecializations() {
+        return adminService.getAllSpecializations();
+    }
+
+    @GetMapping("/get-all-service-categories")
+    public ResponseEntity<List<ServiceCategoryResponse>> getAllServiceCategories() {
+        return adminService.getAllServiceCategories();
+    }
+
+    @PostMapping("/add-service-category")
+    public ResponseEntity<String> addServiceCategory(@RequestBody ServiceCategoryRequest serviceCategoryRequest) {
+        return adminService.addServiceCategory(serviceCategoryRequest);
+    }
+
+    @PostMapping("/add-service")
+    public ResponseEntity<String> addService(@RequestBody ServiceRequest serviceRequest) {
+        return adminService.addService(serviceRequest);
     }
 
 }

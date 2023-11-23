@@ -12,7 +12,6 @@ import khanhnq.project.clinicbookingmanagementsystem.service.DoctorService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -34,7 +33,7 @@ public class DoctorServiceImpl implements DoctorService {
     @Override
     public ResponseEntity<String> addDoctorInformation(DoctorInformationRequest doctorInformationRequest) {
         User currentUser = authService.getCurrentUser();
-        Specialization specialization = specializationRepository.findSpecializationBySpecializationName(doctorInformationRequest.getSpecialization());
+        Specialization specialization = specializationRepository.findById(doctorInformationRequest.getSpecializationId()).orElse(null);
         Set<WorkSchedule> workSchedules = doctorInformationRequest.getWorkSchedules()
                 .stream()
                 .map(workScheduleRequest -> {

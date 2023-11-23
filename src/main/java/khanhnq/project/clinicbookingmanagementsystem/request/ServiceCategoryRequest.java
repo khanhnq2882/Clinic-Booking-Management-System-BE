@@ -4,13 +4,14 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import java.util.Set;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class DoctorInformationRequest {
+public class ServiceCategoryRequest {
     private Long specializationId;
-    private Set<WorkScheduleRequest> workSchedules;
+//    private Set<ServiceCategoryDTO> serviceCategories;
+    private String serviceCategoryName;
+    private String description;
 }

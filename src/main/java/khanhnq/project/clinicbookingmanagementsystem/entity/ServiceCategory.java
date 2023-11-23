@@ -1,6 +1,8 @@
 package khanhnq.project.clinicbookingmanagementsystem.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 import java.util.Set;
 
@@ -19,11 +21,16 @@ public class ServiceCategory {
     @Column(nullable = false)
     private String serviceCategoryName;
 
+    @NotBlank
+    @Size(max = 255)
+    @Column(nullable = false, length = 255)
+    private String description;
+
     @ManyToOne
     @JoinColumn(name = "specialization_id")
     private Specialization specialization;
 
     @OneToMany(mappedBy = "serviceCategory", cascade = CascadeType.ALL)
-    private Set<Service> services;
+    private Set<Services> services;
 
 }

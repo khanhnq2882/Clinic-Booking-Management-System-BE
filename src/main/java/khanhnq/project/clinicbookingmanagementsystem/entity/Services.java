@@ -1,6 +1,8 @@
 package khanhnq.project.clinicbookingmanagementsystem.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EServiceStatus;
 import lombok.*;
 
@@ -11,10 +13,13 @@ import lombok.*;
 @AllArgsConstructor
 @Table(name = "service")
 @Builder
-public class Service {
+public class Services {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long serviceId;
+
+    @Column(nullable = true)
+    private String serviceCode;
 
     @Column(nullable = false)
     private String serviceName;
@@ -22,7 +27,9 @@ public class Service {
     @Column(nullable = false)
     private Double price;
 
-    @Column(nullable = false)
+    @NotBlank
+    @Size(max = 255)
+    @Column(nullable = false, length = 255)
     private String description;
 
     @Enumerated(EnumType.STRING)
@@ -32,6 +39,5 @@ public class Service {
     @ManyToOne
     @JoinColumn(name = "service_category_id")
     private ServiceCategory serviceCategory;
-
 
 }
