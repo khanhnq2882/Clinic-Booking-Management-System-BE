@@ -84,9 +84,9 @@ public class AdminController {
         return adminService.getAllSpecializations();
     }
 
-    @GetMapping("/get-all-service-categories")
-    public ResponseEntity<List<ServiceCategoryResponse>> getAllServiceCategories() {
-        return adminService.getAllServiceCategories();
+    @GetMapping("/get-all-service-categories/{specializationId}")
+    public ResponseEntity<List<ServiceCategoryResponse>> getAllServiceCategories(@PathVariable("specializationId") Long specializationId) {
+        return adminService.getAllServiceCategories(specializationId);
     }
 
     @PostMapping("/add-service-category")
@@ -97,6 +97,11 @@ public class AdminController {
     @PostMapping("/add-service")
     public ResponseEntity<String> addService(@RequestBody ServiceRequest serviceRequest) {
         return adminService.addService(serviceRequest);
+    }
+
+    @GetMapping("/get-all-services")
+    public ResponseEntity<List<ServicesResponse>> getAllServices() {
+        return adminService.getAllServices();
     }
 
 }

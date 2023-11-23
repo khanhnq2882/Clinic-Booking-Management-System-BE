@@ -40,4 +40,8 @@ public class Services {
     @JoinColumn(name = "service_category_id")
     private ServiceCategory serviceCategory;
 
+    public String serviceCategoryName(){
+        return serviceCategory.getServiceCategoryName();
+    }
+
 }

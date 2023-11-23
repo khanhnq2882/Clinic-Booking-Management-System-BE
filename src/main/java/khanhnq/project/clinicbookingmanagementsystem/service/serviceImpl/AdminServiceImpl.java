@@ -4,6 +4,7 @@ import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ERole;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EServiceStatus;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.ExperienceMapper;
+import khanhnq.project.clinicbookingmanagementsystem.mapper.ServicesMapper;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.UserMapper;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
 import khanhnq.project.clinicbookingmanagementsystem.request.ServiceCategoryRequest;
@@ -164,15 +165,28 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public ResponseEntity<List<ServiceCategoryResponse>> getAllServiceCategories() {
-        List<ServiceCategoryResponse> serviceCategories = serviceCategoryRepository.findAll()
+    public ResponseEntity<List<ServiceCategoryResponse>> getAllServiceCategories(Long specializationId) {
+        List<ServiceCategoryResponse> serviceCategories = serviceCategoryRepository.getServiceCategoriesBySpecializationId(specializationId)
                 .stream()
                 .map(serviceCategory -> ServiceCategoryResponse.builder()
                         .serviceCategoryId(serviceCategory.getServiceCategoryId())
                         .serviceCategoryName(serviceCategory.getServiceCategoryName())
+                        .specializationId(specializationId)
                         .build())
                 .collect(Collectors.toList());
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(serviceCategories);
+    }
+
+    @Override
+    public ResponseEntity<List<ServicesResponse>> getAllServices() {
+        List<ServicesResponse> servicesResponses = servicesRepository.findAll()
+                .stream()
+                .map(services -> {
+                    ServicesResponse servicesResponse = ServicesMapper.SERVICES_MAPPER.mapToServicesResponse(services);
+                    servicesResponse.setServiceCategoryName(services.serviceCategoryName());
+                    return servicesResponse;
+                }).collect(Collectors.toList());
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(servicesResponses);
     }
 
     public Map<Long, List<Experience>> groupExperiencesByUserId() {

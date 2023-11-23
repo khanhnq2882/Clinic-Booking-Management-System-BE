@@ -14,6 +14,7 @@ public interface AdminService {
     ResponseEntity<String> addServiceCategory(ServiceCategoryRequest serviceCategoryRequest);
     ResponseEntity<String> addService(ServiceRequest serviceRequest);
     ResponseEntity<List<SpecializationResponse>> getAllSpecializations();
-    ResponseEntity<List<ServiceCategoryResponse>> getAllServiceCategories();
+    ResponseEntity<List<ServiceCategoryResponse>> getAllServiceCategories(Long specializationId);
+    ResponseEntity<List<ServicesResponse>> getAllServices();
 
 }

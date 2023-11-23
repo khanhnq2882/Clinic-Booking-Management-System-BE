@@ -10,4 +10,5 @@ import lombok.*;
 public class ServiceCategoryResponse {
     private Long serviceCategoryId;
     private String serviceCategoryName;
+    private Long specializationId;
 }
