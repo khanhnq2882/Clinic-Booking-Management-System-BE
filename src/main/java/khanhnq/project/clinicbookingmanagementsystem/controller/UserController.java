@@ -9,6 +9,7 @@ import khanhnq.project.clinicbookingmanagementsystem.request.AddRoleDoctorReques
 import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
 import khanhnq.project.clinicbookingmanagementsystem.service.FileService;
 import khanhnq.project.clinicbookingmanagementsystem.service.UserService;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -40,7 +41,7 @@ public class UserController {
 
     @GetMapping("/skills")
     public ResponseEntity<List<Skill>> getAllSkills() {
-        return ResponseEntity.ok().body(skillRepository.findAll());
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(skillRepository.findAll());
     }
 
     @GetMapping("/specializations")

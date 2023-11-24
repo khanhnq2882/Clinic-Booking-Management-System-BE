@@ -20,6 +20,7 @@ import java.util.List;
 @CrossOrigin(origins = "http://localhost:4200", maxAge = 3600, allowCredentials = "true")
 @RestController
 @RequestMapping("/admin")
+@PreAuthorize("hasRole('ROLE_ADMIN')")
 public class AdminController {
     private final AdminService adminService;
     private final AuthService authService;
@@ -39,20 +40,14 @@ public class AdminController {
         this.fileService = fileService;
     }
 
-    @GetMapping("")
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public String adminHome(){
-        return "Welcome Admin";
-    }
-
-    @GetMapping("/skills")
-    public ResponseEntity<List<Skill>> getAllSkills() {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(skillRepository.findAll());
-    }
-
     @PostMapping("/approve-request-doctor/{userId}")
-    public ResponseEntity<String> updateUserRoles(@PathVariable("userId") Long userId) {
+    public ResponseEntity<String> approveRequestDoctor(@PathVariable("userId") Long userId) {
         return adminService.approveRequestDoctor(userId);
+    }
+
+    @PostMapping("/reject-request-doctor/{userId}")
+    public ResponseEntity<String> rejectRequestDoctor(@PathVariable("userId") Long userId) {
+        return adminService.rejectRequestDoctor(userId);
     }
 
     @GetMapping("/get-all-users")

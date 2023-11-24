@@ -11,7 +11,6 @@ import lombok.NoArgsConstructor;
 @Builder
 public class ServiceCategoryRequest {
     private Long specializationId;
-//    private Set<ServiceCategoryDTO> serviceCategories;
     private String serviceCategoryName;
     private String description;
 }

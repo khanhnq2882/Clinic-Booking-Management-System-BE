@@ -4,6 +4,7 @@ import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ERole;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EServiceStatus;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.ExperienceMapper;
+import khanhnq.project.clinicbookingmanagementsystem.mapper.ServiceCategoryMapper;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.ServicesMapper;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.UserMapper;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
@@ -13,6 +14,7 @@ import khanhnq.project.clinicbookingmanagementsystem.response.*;
 import khanhnq.project.clinicbookingmanagementsystem.service.AdminService;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import khanhnq.project.clinicbookingmanagementsystem.service.FileService;
+import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +24,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 @Service
+@AllArgsConstructor
 public class AdminServiceImpl implements AdminService {
     private final UserRepository userRepository;
     private final AuthService authService;
@@ -32,27 +35,6 @@ public class AdminServiceImpl implements AdminService {
     private final SpecializationRepository specializationRepository;
     private final ServiceCategoryRepository serviceCategoryRepository;
     private final ServicesRepository servicesRepository;
-
-    public AdminServiceImpl(UserRepository userRepository,
-                            AuthService authService,
-                            RoleRepository roleRepository,
-                            AddressRepository addressRepository,
-                            ExperienceRepository experienceRepository,
-                            FileService fileService,
-                            SpecializationRepository specializationRepository,
-                            ServiceCategoryRepository serviceCategoryRepository,
-                            ServicesRepository servicesRepository) {
-        this.userRepository = userRepository;
-        this.authService = authService;
-        this.roleRepository = roleRepository;
-        this.addressRepository = addressRepository;
-        this.experienceRepository = experienceRepository;
-        this.fileService = fileService;
-        this.specializationRepository = specializationRepository;
-        this.serviceCategoryRepository = serviceCategoryRepository;
-        this.servicesRepository = servicesRepository;
-    }
-
     @Override
     public ResponseEntity<String> approveRequestDoctor(Long userId) {
         User currentUser = authService.getCurrentUser();
@@ -70,7 +52,25 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    public ResponseEntity<String> rejectRequestDoctor(Long userId) {
+        User currentUser = authService.getCurrentUser();
+        if (currentUser.getRoles().stream().filter(role -> role.getRoleName().equals(ERole.ROLE_ADMIN)).findAny().isPresent()) {
+            Map<Long, List<Experience>> experiences = groupExperiencesByUserId();
+            for (Experience experience : experiences.get(userId)) {
+                experienceRepository.deleteExperiencesSkills(experience.getExperienceId());
+                experienceRepository.deleteExperiences(experience.getExperienceId());
+            }
+
+            // dung constant
+            return MessageResponse.getResponseMessage("Reject request successfully.", HttpStatus.OK);
+        }
+        // constant
+        return MessageResponse.getResponseMessage("You do not have permission to update user roles.", HttpStatus.BAD_REQUEST);
+    }
+
+    @Override
     public ResponseEntity<List<UserResponse>> getAllUsers() {
+        // phan trang
         List<UserResponse> userList = userRepository.getAllUsers().stream().map(user -> {
             UserResponse userResponse = UserMapper.USER_MAPPER.mapToUserResponse(user);
             userResponse.setRoleNames(user.roleNames());
@@ -78,6 +78,8 @@ public class AdminServiceImpl implements AdminService {
             userResponse.setUserAddress(getAddress(user));
             return userResponse;
         }).collect(Collectors.toList());
+
+        // ResponseEntity chi xuat hien tren controller
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(userList);
     }
 
@@ -86,7 +88,10 @@ public class AdminServiceImpl implements AdminService {
         List<RequestDoctorResponse> requestList = new ArrayList<>();
         for (Long userId : groupExperiencesByUserId().keySet()) {
             RequestDoctorResponse requestDoctorResponse = new RequestDoctorResponse();
+
+            // phai sua luon
             User user = userRepository.findById(userId).orElse(null);
+
             UserMapper.USER_MAPPER.mapToRequestDoctorResponse(requestDoctorResponse, user);
             List<ExperienceResponse> experiences = groupExperiencesByUserId().get(userId).stream().map(experience -> {
                 ExperienceResponse experienceResponse = ExperienceMapper.EXPERIENCE_MAPPER.mapToExperienceResponse(experience);
@@ -122,11 +127,8 @@ public class AdminServiceImpl implements AdminService {
         User currentUser = authService.getCurrentUser();
         if (currentUser.getRoles().stream().filter(role -> role.getRoleName().name().equals("ROLE_ADMIN")).findAny().isPresent()) {
             Specialization specialization = specializationRepository.findById(serviceCategoryRequest.getSpecializationId()).orElse(null);
-            ServiceCategory serviceCategory = ServiceCategory.builder()
-                    .serviceCategoryName(serviceCategoryRequest.getServiceCategoryName())
-                    .description(serviceCategoryRequest.getDescription())
-                    .specialization(specialization)
-                    .build();
+            ServiceCategory serviceCategory = ServiceCategoryMapper.SERVICE_CATEGORY_MAPPER.mapToServiceCategory(serviceCategoryRequest);
+            serviceCategory.setSpecialization(specialization);
             serviceCategoryRepository.save(serviceCategory);
             return MessageResponse.getResponseMessage("Add service category successfully.", HttpStatus.OK);
         }
@@ -138,16 +140,12 @@ public class AdminServiceImpl implements AdminService {
         User currentUser = authService.getCurrentUser();
         if (currentUser.getRoles().stream().filter(role -> role.getRoleName().name().equals("ROLE_ADMIN")).findAny().isPresent()) {
             ServiceCategory serviceCategory = serviceCategoryRepository.findById(serviceRequest.getServiceCategoryId()).orElse(null);
-            Services services = Services.builder()
-                    .serviceName(serviceRequest.getServiceName())
-                    .price(serviceRequest.getPrice())
-                    .description(serviceRequest.getDescription())
-                    .serviceCategory(serviceCategory)
-                    .status(EServiceStatus.ACTIVE)
-                    .build();
+            Services services = ServicesMapper.SERVICES_MAPPER.mapToServices(serviceRequest);
+            services.setStatus(EServiceStatus.ACTIVE);
+            services.setServiceCategory(serviceCategory);
             serviceCode(services, serviceCategory);
             servicesRepository.save(services);
-            return MessageResponse.getResponseMessage("Add service category successfully.", HttpStatus.OK);
+            return MessageResponse.getResponseMessage("Add service successfully.", HttpStatus.OK);
         }
         return MessageResponse.getResponseMessage("You do not have permission to add service.", HttpStatus.BAD_REQUEST);
     }
@@ -203,6 +201,7 @@ public class AdminServiceImpl implements AdminService {
     public AddressResponse getAddress(User user) {
         AddressResponse addressResponse = new AddressResponse();
         if (user.getAddress() != null) {
+            // can hoc them mapper
             Address address = addressRepository.findById(user.getAddress().getAddressId()).orElse(null);
             addressResponse.setAddressId(address.getAddressId());
             addressResponse.setSpecificAddress(address.getSpecificAddress());
@@ -246,6 +245,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     public List<FileResponse> getAllFiles(Long userId) {
+        // tim hieu java NIO -> try with resource
         List<FileResponse> fileResponses = fileService.loadFilesByUserId(userId).map(file -> {
             String fileUrl = ServletUriComponentsBuilder.fromCurrentContextPath().path("/admin/files/").path(file.getFileId().toString()).toUriString();
             return new FileResponse(file.getFilePath().split("/")[1], file.getFilePath().split("/")[2], fileUrl);

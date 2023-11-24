@@ -8,6 +8,7 @@ import java.util.List;
 
 public interface AdminService {
     ResponseEntity<String> approveRequestDoctor(Long userId);
+    ResponseEntity<String> rejectRequestDoctor(Long userId);
     ResponseEntity<List<UserResponse>> getAllUsers();
     ResponseEntity<List<RequestDoctorResponse>> getAllRequestDoctors();
     ResponseEntity<List<DoctorResponse>> getAllDoctors();
