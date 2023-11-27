@@ -3,6 +3,7 @@ package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 import khanhnq.project.clinicbookingmanagementsystem.entity.File;
 import khanhnq.project.clinicbookingmanagementsystem.repository.FileRepository;
 import khanhnq.project.clinicbookingmanagementsystem.service.FileService;
+import lombok.AllArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
@@ -14,13 +15,9 @@ import java.nio.file.Paths;
 import java.util.stream.Stream;
 
 @Service
+@AllArgsConstructor
 public class FileServiceImpl implements FileService {
-
     private final FileRepository fileRepository;
-
-    public FileServiceImpl(FileRepository fileRepository) {
-        this.fileRepository = fileRepository;
-    }
 
     private final Path root = Paths.get("uploads");
 

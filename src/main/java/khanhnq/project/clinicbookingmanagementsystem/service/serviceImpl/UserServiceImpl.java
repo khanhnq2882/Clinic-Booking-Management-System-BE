@@ -10,6 +10,7 @@ import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
 import khanhnq.project.clinicbookingmanagementsystem.response.MessageResponse;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import khanhnq.project.clinicbookingmanagementsystem.service.UserService;
+import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -19,24 +20,13 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
+@AllArgsConstructor
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final WardRepository wardRepository;
     private final FileRepository fileRepository;
     private final SkillRepository skillRepository;
     private final AuthService authService;
-
-    public UserServiceImpl(UserRepository userRepository,
-                           WardRepository wardRepository,
-                           FileRepository fileRepository,
-                           SkillRepository skillRepository,
-                           AuthService authService) {
-        this.userRepository = userRepository;
-        this.wardRepository = wardRepository;
-        this.fileRepository = fileRepository;
-        this.skillRepository = skillRepository;
-        this.authService = authService;
-    }
 
     @Override
     public ResponseEntity<String> updateProfile(UserProfileRequest userProfileRequest) {

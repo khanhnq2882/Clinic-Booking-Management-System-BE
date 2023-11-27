@@ -9,8 +9,8 @@ import java.util.List;
 public interface AdminService {
     ResponseEntity<String> approveRequestDoctor(Long userId);
     ResponseEntity<String> rejectRequestDoctor(Long userId);
-    ResponseEntity<List<UserResponse>> getAllUsers();
-    ResponseEntity<List<RequestDoctorResponse>> getAllRequestDoctors();
+    UserPageResponse getAllUsers(int page, int size, String[] sorts);
+    List<RequestDoctorResponse> getAllRequestDoctors();
     ResponseEntity<List<DoctorResponse>> getAllDoctors();
     ResponseEntity<String> addServiceCategory(ServiceCategoryRequest serviceCategoryRequest);
     ResponseEntity<String> addService(ServiceRequest serviceRequest);

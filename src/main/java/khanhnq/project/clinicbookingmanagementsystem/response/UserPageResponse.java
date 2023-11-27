@@ -9,8 +9,8 @@ import java.util.List;
 @NoArgsConstructor
 @Builder
 public class UserPageResponse {
-    private int totalItems;
+    private long totalItems;
     private List<UserResponse> users;
-    private int totalPages;
-    private int currentPage;
+    private long totalPages;
+    private long currentPage;
 }

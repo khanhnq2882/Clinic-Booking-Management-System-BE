@@ -11,7 +11,7 @@ import khanhnq.project.clinicbookingmanagementsystem.response.CityResponse;
 import khanhnq.project.clinicbookingmanagementsystem.response.DistrictResponse;
 import khanhnq.project.clinicbookingmanagementsystem.response.WardResponse;
 import khanhnq.project.clinicbookingmanagementsystem.service.AddressService;
-import org.springframework.http.*;
+import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import java.util.ArrayList;
@@ -20,17 +20,12 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@AllArgsConstructor
 public class AddressServiceImpl implements AddressService {
 
     private final CityRepository cityRepository;
     private final DistrictRepository districtRepository;
     private final WardRepository wardRepository;
-
-    public AddressServiceImpl(CityRepository cityRepository, DistrictRepository districtRepository, WardRepository wardRepository) {
-        this.cityRepository = cityRepository;
-        this.districtRepository = districtRepository;
-        this.wardRepository = wardRepository;
-    }
 
     @Override
     public List<CityDTO> insertData() {
@@ -49,7 +44,7 @@ public class AddressServiceImpl implements AddressService {
     }
 
     @Override
-    public ResponseEntity<List<CityResponse>> getCities() {
+    public List<CityResponse> getCities() {
         List<CityResponse> cities = new ArrayList<>();
         for (City city : getAllCities()) {
             cities.add(CityResponse.builder()
@@ -57,11 +52,11 @@ public class AddressServiceImpl implements AddressService {
                     .cityName(city.getCityName())
                     .build());
         }
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(cities);
+        return cities;
     }
 
     @Override
-    public ResponseEntity<List<DistrictResponse>> getDistrictsById(Long cityId) {
+    public List<DistrictResponse> getDistrictsById(Long cityId) {
         List<DistrictResponse> districts = new ArrayList<>();
         for (District district : districtRepository.getDistrictsByCityId(cityId)) {
             districts.add(DistrictResponse.builder()
@@ -70,11 +65,11 @@ public class AddressServiceImpl implements AddressService {
                     .cityId(cityId)
                     .build());
         }
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(districts);
+        return districts;
     }
 
     @Override
-    public ResponseEntity<List<WardResponse>> getWardsById(Long districtId) {
+    public List<WardResponse> getWardsById(Long districtId) {
         List<WardResponse> wards = new ArrayList<>();
         for (Ward ward : wardRepository.getWardsByDistrictId(districtId)) {
             wards.add(WardResponse.builder()
@@ -83,7 +78,7 @@ public class AddressServiceImpl implements AddressService {
                     .districtId(districtId)
                     .build());
         }
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(wards);
+        return wards;
     }
 
     public List<City> getCities(CityDTO[] cities) {

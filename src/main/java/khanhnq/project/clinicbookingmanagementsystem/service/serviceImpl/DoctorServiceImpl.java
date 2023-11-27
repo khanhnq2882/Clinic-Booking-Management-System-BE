@@ -9,6 +9,7 @@ import khanhnq.project.clinicbookingmanagementsystem.request.DoctorInformationRe
 import khanhnq.project.clinicbookingmanagementsystem.response.MessageResponse;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import khanhnq.project.clinicbookingmanagementsystem.service.DoctorService;
+import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -16,19 +17,12 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
+@AllArgsConstructor
 public class DoctorServiceImpl implements DoctorService {
 
     private final AuthService authService;
     private final SpecializationRepository specializationRepository;
     private final UserRepository userRepository;
-
-    public DoctorServiceImpl(AuthService authService,
-                             SpecializationRepository specializationRepository,
-                             UserRepository userRepository) {
-        this.authService = authService;
-        this.specializationRepository = specializationRepository;
-        this.userRepository = userRepository;
-    }
 
     @Override
     public ResponseEntity<String> addDoctorInformation(DoctorInformationRequest doctorInformationRequest) {

@@ -1,5 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
+import khanhnq.project.clinicbookingmanagementsystem.dto.UserDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ERole;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EServiceStatus;
@@ -15,6 +16,10 @@ import khanhnq.project.clinicbookingmanagementsystem.service.AdminService;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import khanhnq.project.clinicbookingmanagementsystem.service.FileService;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -35,6 +40,7 @@ public class AdminServiceImpl implements AdminService {
     private final SpecializationRepository specializationRepository;
     private final ServiceCategoryRepository serviceCategoryRepository;
     private final ServicesRepository servicesRepository;
+
     @Override
     public ResponseEntity<String> approveRequestDoctor(Long userId) {
         User currentUser = authService.getCurrentUser();
@@ -69,22 +75,33 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public ResponseEntity<List<UserResponse>> getAllUsers() {
-        // phan trang
-        List<UserResponse> userList = userRepository.getAllUsers().stream().map(user -> {
-            UserResponse userResponse = UserMapper.USER_MAPPER.mapToUserResponse(user);
-            userResponse.setRoleNames(user.roleNames());
-            userResponse.setStatus(user.getStatus().name());
-            userResponse.setUserAddress(getAddress(user));
-            return userResponse;
+    public UserPageResponse getAllUsers(int page, int size, String[] sorts) {
+        List<Sort.Order> orders = new ArrayList<>();
+        if (sorts[0].contains(",")) {
+            for (String sortOrder : sorts) {
+                String[] sort = sortOrder.split(",");
+                orders.add(new Sort.Order(getSortDirection(sort[1]), sort[0]));
+            }
+        } else {
+            orders.add(new Sort.Order(getSortDirection(sorts[1]), sorts[0]));
+        }
+        Pageable pagingSort = PageRequest.of(page, size, Sort.by(orders));
+        Page<User> userPage = userRepository.getAllUsers(pagingSort);
+        List<UserResponse> users = userPage.getContent().stream().map(user -> {
+            UserResponse userDTO = UserMapper.USER_MAPPER.mapToUserResponse(user);
+            userDTO.setUserAddress(getAddress(user));
+            return userDTO;
         }).collect(Collectors.toList());
-
-        // ResponseEntity chi xuat hien tren controller
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(userList);
+        return new UserPageResponse().builder()
+                .totalItems(userPage.getTotalElements())
+                .totalPages(userPage.getTotalPages())
+                .currentPage(userPage.getNumber())
+                .users(users)
+                .build();
     }
 
     @Override
-    public ResponseEntity<List<RequestDoctorResponse>> getAllRequestDoctors() {
+    public List<RequestDoctorResponse> getAllRequestDoctors() {
         List<RequestDoctorResponse> requestList = new ArrayList<>();
         for (Long userId : groupExperiencesByUserId().keySet()) {
             RequestDoctorResponse requestDoctorResponse = new RequestDoctorResponse();
@@ -99,11 +116,11 @@ public class AdminServiceImpl implements AdminService {
                 return experienceResponse;
             }).collect(Collectors.toList());
             requestDoctorResponse.setDoctorExperiences(experiences);
-            requestDoctorResponse.setRoleNames(user.roleNames());
+//            requestDoctorResponse.setRoleNames(user.roleNames());
             getMedicalLicenseDegree(requestDoctorResponse, userId);
             requestList.add(requestDoctorResponse);
         }
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(requestList);
+        return requestList;
     }
 
     @Override
@@ -251,5 +268,14 @@ public class AdminServiceImpl implements AdminService {
             return new FileResponse(file.getFilePath().split("/")[1], file.getFilePath().split("/")[2], fileUrl);
         }).collect(Collectors.toList());
         return fileResponses;
+    }
+
+    private Sort.Direction getSortDirection(String direction) {
+        if (direction.equals("asc")) {
+            return Sort.Direction.ASC;
+        } else if (direction.equals("desc")) {
+            return Sort.Direction.DESC;
+        }
+        return Sort.Direction.ASC;
     }
 }

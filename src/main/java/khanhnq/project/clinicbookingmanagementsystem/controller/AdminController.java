@@ -1,15 +1,12 @@
 package khanhnq.project.clinicbookingmanagementsystem.controller;
 
 import khanhnq.project.clinicbookingmanagementsystem.entity.File;
-import khanhnq.project.clinicbookingmanagementsystem.entity.Skill;
-import khanhnq.project.clinicbookingmanagementsystem.repository.SkillRepository;
-import khanhnq.project.clinicbookingmanagementsystem.repository.SpecializationRepository;
 import khanhnq.project.clinicbookingmanagementsystem.request.ServiceCategoryRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.ServiceRequest;
 import khanhnq.project.clinicbookingmanagementsystem.response.*;
 import khanhnq.project.clinicbookingmanagementsystem.service.AdminService;
-import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import khanhnq.project.clinicbookingmanagementsystem.service.FileService;
+import lombok.AllArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -19,26 +16,12 @@ import java.util.List;
 
 @CrossOrigin(origins = "http://localhost:4200", maxAge = 3600, allowCredentials = "true")
 @RestController
+@AllArgsConstructor
 @RequestMapping("/admin")
-@PreAuthorize("hasRole('ROLE_ADMIN')")
+
 public class AdminController {
     private final AdminService adminService;
-    private final AuthService authService;
     private final FileService fileService;
-    private final SkillRepository skillRepository;
-    private final SpecializationRepository specializationRepository;
-
-    public AdminController(AdminService adminService,
-                           SkillRepository skillRepository,
-                           SpecializationRepository specializationRepository,
-                           AuthService authService,
-                           FileService fileService) {
-        this.adminService = adminService;
-        this.skillRepository = skillRepository;
-        this.specializationRepository = specializationRepository;
-        this.authService = authService;
-        this.fileService = fileService;
-    }
 
     @PostMapping("/approve-request-doctor/{userId}")
     public ResponseEntity<String> approveRequestDoctor(@PathVariable("userId") Long userId) {
@@ -51,13 +34,15 @@ public class AdminController {
     }
 
     @GetMapping("/get-all-users")
-    public ResponseEntity<List<UserResponse>> getAllUsers() {
-        return adminService.getAllUsers();
+    public ResponseEntity<UserPageResponse> getAllUsers(@RequestParam(defaultValue = "0") int page,
+                                                        @RequestParam(defaultValue = "3") int size,
+                                                        @RequestParam(defaultValue = "userId,asc") String[] sort) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllUsers(page, size, sort));
     }
 
     @GetMapping("/get-all-request-doctors")
     public ResponseEntity<List<RequestDoctorResponse>> getAllRequestDoctors() {
-        return adminService.getAllRequestDoctors();
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllRequestDoctors());
     }
 
     @GetMapping("/files/{fileId}")

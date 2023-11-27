@@ -4,11 +4,10 @@ import khanhnq.project.clinicbookingmanagementsystem.entity.Skill;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Specialization;
 import khanhnq.project.clinicbookingmanagementsystem.repository.SkillRepository;
 import khanhnq.project.clinicbookingmanagementsystem.repository.SpecializationRepository;
-import khanhnq.project.clinicbookingmanagementsystem.repository.UserRepository;
 import khanhnq.project.clinicbookingmanagementsystem.request.AddRoleDoctorRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
-import khanhnq.project.clinicbookingmanagementsystem.service.FileService;
 import khanhnq.project.clinicbookingmanagementsystem.service.UserService;
+import lombok.AllArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,26 +17,12 @@ import java.util.List;
 
 @CrossOrigin(origins = "http://localhost:4200", maxAge = 3600, allowCredentials="true")
 @RestController
+@AllArgsConstructor
 @RequestMapping("/user")
 public class UserController {
     private final UserService userService;
-    private final FileService fileService;
-    private final UserRepository userRepository;
     private final SkillRepository skillRepository;
     private final SpecializationRepository specializationRepository;
-
-
-    public UserController(UserService userService,
-                          FileService fileService,
-                          UserRepository userRepository,
-                          SkillRepository skillRepository,
-                          SpecializationRepository specializationRepository) {
-        this.userService = userService;
-        this.fileService = fileService;
-        this.userRepository = userRepository;
-        this.skillRepository = skillRepository;
-        this.specializationRepository = specializationRepository;
-    }
 
     @GetMapping("/skills")
     public ResponseEntity<List<Skill>> getAllSkills() {
