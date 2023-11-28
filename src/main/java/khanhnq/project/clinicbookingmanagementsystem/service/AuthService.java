@@ -11,9 +11,8 @@ import org.springframework.http.ResponseEntity;
 
 public interface AuthService {
     ResponseEntity<String> register(RegisterRequest registerRequest);
-    ResponseEntity<JwtResponse> login(LoginRequest loginRequest);
+    JwtResponse login(LoginRequest loginRequest);
     User getCurrentUser();
     ResponseEntity<String> changePassword(ChangePasswordRequest changePasswordRequest);
-    ResponseEntity<UserInfoResponse> getUserInfo();
-    ResponseEntity<MessageResponse> logoutUser();
+    UserInfoResponse getUserInfo();
 }

@@ -95,14 +95,12 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public ResponseEntity<JwtResponse> login(LoginRequest loginRequest) {
+    public JwtResponse login(LoginRequest loginRequest) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
         SecurityContextHolder.getContext().setAuthentication(authentication);
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        ResponseCookie jwtCookie = jwtUtils.generateJwtCookie(userDetails);
-        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
-                .body(new JwtResponse(jwtUtils.generateTokenFromUsername(userDetails.getUsername())));
+        return new JwtResponse(jwtUtils.generateTokenFromUsername(userDetails.getUsername()));
     }
 
     @Override
@@ -136,22 +134,19 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public ResponseEntity<UserInfoResponse> getUserInfo() {
+    public UserInfoResponse getUserInfo() {
         User user = getCurrentUser();
-        List<String> roles = user.getRoles().stream().map(role -> role.getRoleName().name()).collect(Collectors.toList());
-        UserInfoResponse userInfoResponse = UserInfoResponse.builder()
+        List<String> roles = user.getRoles()
+                .stream()
+                .map(role -> role.getRoleName().name())
+                .collect(Collectors.toList());
+        return UserInfoResponse.builder()
                 .id(user.getUserId())
                 .username(user.getUsername())
                 .email(user.getEmail())
                 .roles(roles)
                 .build();
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(userInfoResponse);
     }
 
-    @Override
-    public ResponseEntity<MessageResponse> logoutUser() {
-        ResponseCookie cookie = jwtUtils.getCleanJwtCookie();
-        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).body(new MessageResponse("You've been log out."));
-    }
 
 }

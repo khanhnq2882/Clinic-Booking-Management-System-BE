@@ -1,5 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.service;
 
+import khanhnq.project.clinicbookingmanagementsystem.dto.ServiceCategoryDTO;
 import khanhnq.project.clinicbookingmanagementsystem.request.ServiceCategoryRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.ServiceRequest;
 import khanhnq.project.clinicbookingmanagementsystem.response.*;
@@ -9,13 +10,14 @@ import java.util.List;
 public interface AdminService {
     ResponseEntity<String> approveRequestDoctor(Long userId);
     ResponseEntity<String> rejectRequestDoctor(Long userId);
-    UserPageResponse getAllUsers(int page, int size, String[] sorts);
+    UserResponse getAllUsers(int page, int size, String[] sorts);
     List<RequestDoctorResponse> getAllRequestDoctors();
-    ResponseEntity<List<DoctorResponse>> getAllDoctors();
+    DoctorResponse getAllDoctors(int page, int size, String[] sorts);
     ResponseEntity<String> addServiceCategory(ServiceCategoryRequest serviceCategoryRequest);
     ResponseEntity<String> addService(ServiceRequest serviceRequest);
-    ResponseEntity<List<SpecializationResponse>> getAllSpecializations();
-    ResponseEntity<List<ServiceCategoryResponse>> getAllServiceCategories(Long specializationId);
-    ResponseEntity<List<ServicesResponse>> getAllServices();
+    List<SpecializationResponse> getAllSpecializations();
+    List<ServiceCategoryDTO> getServiceCategories(Long specializationId);
+    ServiceCategoryResponse getAllServiceCategories(int page, int size, String[] sorts);
+    ServicesResponse getAllServices(int page, int size, String[] sorts);
 
 }

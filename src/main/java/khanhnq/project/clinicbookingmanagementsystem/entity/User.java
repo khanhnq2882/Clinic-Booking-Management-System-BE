@@ -102,6 +102,10 @@ public class User {
     @JoinColumn(name = "clinic_id")
     private Clinic clinic;
 
+    public Set<String> roleNames() {
+        return roles.stream().map(role -> role.getRoleName().name()).collect(Collectors.toSet());
+    }
+
     public String specializationName() {
         return specialization.getSpecializationName();
     }

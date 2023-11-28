@@ -1,5 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.response;
 
+import khanhnq.project.clinicbookingmanagementsystem.dto.ExperienceDTO;
 import lombok.*;
 import java.util.Date;
 import java.util.List;
@@ -22,13 +23,11 @@ public class RequestDoctorResponse {
     private Set<String> roleNames;
     private String universityName;
     private String status;
-    // medical degree, medical license
     private String medicalDegreeType;
     private String medicalDegreeName;
     private String medicalDegreeUrl;
     private String medicalLicenseType;
     private String medicalLicenseName;
     private String medicalLicenseUrl;
-    // experiences
-    private List<ExperienceResponse> doctorExperiences;
+    private List<ExperienceDTO> doctorExperiences;
 }

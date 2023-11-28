@@ -1,6 +1,8 @@
 package khanhnq.project.clinicbookingmanagementsystem.response;
 
+import khanhnq.project.clinicbookingmanagementsystem.dto.ServicesDTO;
 import lombok.*;
+import java.util.List;
 
 @Getter
 @Setter
@@ -8,11 +10,8 @@ import lombok.*;
 @NoArgsConstructor
 @Builder
 public class ServicesResponse {
-    private Long serviceId;
-    private String serviceCode;
-    private String serviceName;
-    private Double price;
-    private String description;
-    private String status;
-    private String serviceCategoryName;
+    private long totalItems;
+    private List<ServicesDTO> services;
+    private long totalPages;
+    private long currentPage;
 }

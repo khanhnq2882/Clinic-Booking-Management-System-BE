@@ -1,6 +1,8 @@
 package khanhnq.project.clinicbookingmanagementsystem.response;
 
+import khanhnq.project.clinicbookingmanagementsystem.dto.ServiceCategoryDTO;
 import lombok.*;
+import java.util.List;
 
 @Getter
 @Setter
@@ -8,7 +10,8 @@ import lombok.*;
 @NoArgsConstructor
 @Builder
 public class ServiceCategoryResponse {
-    private Long serviceCategoryId;
-    private String serviceCategoryName;
-    private Long specializationId;
+    private long totalItems;
+    private List<ServiceCategoryDTO> serviceCategories;
+    private long totalPages;
+    private long currentPage;
 }

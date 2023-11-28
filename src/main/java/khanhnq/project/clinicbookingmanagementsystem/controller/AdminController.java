@@ -1,5 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.controller;
 
+import khanhnq.project.clinicbookingmanagementsystem.dto.ServiceCategoryDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.File;
 import khanhnq.project.clinicbookingmanagementsystem.request.ServiceCategoryRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.ServiceRequest;
@@ -10,7 +11,6 @@ import lombok.AllArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
@@ -34,9 +34,9 @@ public class AdminController {
     }
 
     @GetMapping("/get-all-users")
-    public ResponseEntity<UserPageResponse> getAllUsers(@RequestParam(defaultValue = "0") int page,
-                                                        @RequestParam(defaultValue = "3") int size,
-                                                        @RequestParam(defaultValue = "userId,asc") String[] sort) {
+    public ResponseEntity<UserResponse> getAllUsers(@RequestParam(defaultValue = "0") int page,
+                                                    @RequestParam(defaultValue = "3") int size,
+                                                    @RequestParam(defaultValue = "userId,asc") String[] sort) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllUsers(page, size, sort));
     }
 
@@ -55,23 +55,32 @@ public class AdminController {
     }
 
     @GetMapping("/get-all-doctors")
-    public ResponseEntity<List<DoctorResponse>> getAllDoctors() {
-        return adminService.getAllDoctors();
+    public ResponseEntity<DoctorResponse> getAllDoctors(@RequestParam(defaultValue = "0") int page,
+                                                        @RequestParam(defaultValue = "3") int size,
+                                                        @RequestParam(defaultValue = "userId,asc") String[] sort) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllDoctors(page, size, sort));
     }
 
     @GetMapping("/get-all-specializations")
     public ResponseEntity<List<SpecializationResponse>> getAllSpecializations() {
-        return adminService.getAllSpecializations();
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllSpecializations());
     }
 
     @GetMapping("/get-all-service-categories/{specializationId}")
-    public ResponseEntity<List<ServiceCategoryResponse>> getAllServiceCategories(@PathVariable("specializationId") Long specializationId) {
-        return adminService.getAllServiceCategories(specializationId);
+    public ResponseEntity<List<ServiceCategoryDTO>> getAllServiceCategories(@PathVariable("specializationId") Long specializationId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getServiceCategories(specializationId));
     }
 
     @PostMapping("/add-service-category")
     public ResponseEntity<String> addServiceCategory(@RequestBody ServiceCategoryRequest serviceCategoryRequest) {
         return adminService.addServiceCategory(serviceCategoryRequest);
+    }
+
+    @GetMapping("/get-all-service-categories")
+    public ResponseEntity<ServiceCategoryResponse> getAllServiceCategories(@RequestParam(defaultValue = "0") int page,
+                                                                           @RequestParam(defaultValue = "3") int size,
+                                                                           @RequestParam(defaultValue = "serviceCategoryId,asc") String[] sort) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllServiceCategories(page, size, sort));
     }
 
     @PostMapping("/add-service")
@@ -80,8 +89,10 @@ public class AdminController {
     }
 
     @GetMapping("/get-all-services")
-    public ResponseEntity<List<ServicesResponse>> getAllServices() {
-        return adminService.getAllServices();
+    public ResponseEntity<ServicesResponse> getAllServices(@RequestParam(defaultValue = "0") int page,
+                                                           @RequestParam(defaultValue = "3") int size,
+                                                           @RequestParam(defaultValue = "serviceId,asc") String[] sort) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllServices(page, size, sort));
     }
 
 }

@@ -1,4 +1,4 @@
-package khanhnq.project.clinicbookingmanagementsystem.response;
+package khanhnq.project.clinicbookingmanagementsystem.dto;
 
 import lombok.*;
 
@@ -7,7 +7,7 @@ import lombok.*;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class WorkScheduleResponse {
+public class WorkScheduleDTO {
     private String startTime;
     private String endTime;
 }

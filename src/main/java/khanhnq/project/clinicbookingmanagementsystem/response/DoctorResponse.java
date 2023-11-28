@@ -1,7 +1,8 @@
 package khanhnq.project.clinicbookingmanagementsystem.response;
 
+import khanhnq.project.clinicbookingmanagementsystem.dto.DoctorDTO;
 import lombok.*;
-import java.util.Set;
+import java.util.List;
 
 @Getter
 @Setter
@@ -9,14 +10,8 @@ import java.util.Set;
 @NoArgsConstructor
 @Builder
 public class DoctorResponse {
-    private Long userId;
-    private String userCode;
-    private String email;
-    private String firstName;
-    private String lastName;
-    private String phoneNumber;
-    private AddressResponse doctorAddress;
-    private String specializationName;
-    private Set<WorkScheduleResponse> workSchedules;
-    private String status;
+    private long totalItems;
+    private List<DoctorDTO> doctors;
+    private long totalPages;
+    private long currentPage;
 }

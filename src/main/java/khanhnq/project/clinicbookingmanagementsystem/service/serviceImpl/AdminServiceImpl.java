@@ -1,6 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
-import khanhnq.project.clinicbookingmanagementsystem.dto.UserDTO;
+import khanhnq.project.clinicbookingmanagementsystem.dto.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ERole;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EServiceStatus;
@@ -66,33 +66,22 @@ public class AdminServiceImpl implements AdminService {
                 experienceRepository.deleteExperiencesSkills(experience.getExperienceId());
                 experienceRepository.deleteExperiences(experience.getExperienceId());
             }
-
-            // dung constant
             return MessageResponse.getResponseMessage("Reject request successfully.", HttpStatus.OK);
         }
-        // constant
         return MessageResponse.getResponseMessage("You do not have permission to update user roles.", HttpStatus.BAD_REQUEST);
     }
 
     @Override
-    public UserPageResponse getAllUsers(int page, int size, String[] sorts) {
-        List<Sort.Order> orders = new ArrayList<>();
-        if (sorts[0].contains(",")) {
-            for (String sortOrder : sorts) {
-                String[] sort = sortOrder.split(",");
-                orders.add(new Sort.Order(getSortDirection(sort[1]), sort[0]));
-            }
-        } else {
-            orders.add(new Sort.Order(getSortDirection(sorts[1]), sorts[0]));
-        }
-        Pageable pagingSort = PageRequest.of(page, size, Sort.by(orders));
-        Page<User> userPage = userRepository.getAllUsers(pagingSort);
-        List<UserResponse> users = userPage.getContent().stream().map(user -> {
-            UserResponse userDTO = UserMapper.USER_MAPPER.mapToUserResponse(user);
-            userDTO.setUserAddress(getAddress(user));
-            return userDTO;
-        }).collect(Collectors.toList());
-        return new UserPageResponse().builder()
+    public UserResponse getAllUsers(int page, int size, String[] sorts) {
+        Page<User> userPage = userRepository.getAllUsers(pagingSort(page, size, sorts));
+        List<UserDTO> users = userPage.getContent()
+                .stream()
+                .map(user -> {
+                    UserDTO userDTO = UserMapper.USER_MAPPER.mapToUserDTO(user);
+                    userDTO.setUserAddress(getAddress(user));
+                    return userDTO;
+                }).collect(Collectors.toList());
+        return new UserResponse().builder()
                 .totalItems(userPage.getTotalElements())
                 .totalPages(userPage.getTotalPages())
                 .currentPage(userPage.getNumber())
@@ -105,18 +94,15 @@ public class AdminServiceImpl implements AdminService {
         List<RequestDoctorResponse> requestList = new ArrayList<>();
         for (Long userId : groupExperiencesByUserId().keySet()) {
             RequestDoctorResponse requestDoctorResponse = new RequestDoctorResponse();
-
-            // phai sua luon
             User user = userRepository.findById(userId).orElse(null);
-
             UserMapper.USER_MAPPER.mapToRequestDoctorResponse(requestDoctorResponse, user);
-            List<ExperienceResponse> experiences = groupExperiencesByUserId().get(userId).stream().map(experience -> {
-                ExperienceResponse experienceResponse = ExperienceMapper.EXPERIENCE_MAPPER.mapToExperienceResponse(experience);
-                experienceResponse.setSkillNames(experience.skillNames());
-                return experienceResponse;
+            List<ExperienceDTO> experiences = groupExperiencesByUserId().get(userId).stream().map(experience -> {
+                ExperienceDTO experienceDTO = ExperienceMapper.EXPERIENCE_MAPPER.mapToExperienceResponse(experience);
+                experienceDTO.setSkillNames(experience.skillNames());
+                return experienceDTO;
             }).collect(Collectors.toList());
             requestDoctorResponse.setDoctorExperiences(experiences);
-//            requestDoctorResponse.setRoleNames(user.roleNames());
+            requestDoctorResponse.setRoleNames(user.roleNames());
             getMedicalLicenseDegree(requestDoctorResponse, userId);
             requestList.add(requestDoctorResponse);
         }
@@ -124,19 +110,22 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public ResponseEntity<List<DoctorResponse>> getAllDoctors() {
-        List<DoctorResponse> responseList = userRepository.getAllDoctors()
-                .stream()
-                .map(user -> {
-                    DoctorResponse doctorResponse = UserMapper.USER_MAPPER.mapToDoctorResponse(user);
+    public DoctorResponse getAllDoctors(int page, int size, String[] sorts) {
+        Page<User> doctorPage = userRepository.getAllDoctors(pagingSort(page, size, sorts));
+        List<DoctorDTO> doctors = doctorPage.getContent().stream().map(user -> {
+                    DoctorDTO doctorDTO = UserMapper.USER_MAPPER.mapToDoctorResponse(user);
                     if (user.getSpecialization() != null) {
-                        doctorResponse.setSpecializationName(user.specializationName());
+                        doctorDTO.setSpecializationName(user.specializationName());
                     }
-                    doctorResponse.setDoctorAddress(getAddress(user));
-                    return doctorResponse;
-                })
-                .collect(Collectors.toList());
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(responseList);
+                    doctorDTO.setDoctorAddress(getAddress(user));
+                    return doctorDTO;
+                }).collect(Collectors.toList());
+        return new DoctorResponse().builder()
+                .totalItems(doctorPage.getTotalElements())
+                .totalPages(doctorPage.getTotalPages())
+                .currentPage(doctorPage.getNumber())
+                .doctors(doctors)
+                .build();
     }
 
     @Override
@@ -168,7 +157,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public ResponseEntity<List<SpecializationResponse>> getAllSpecializations() {
+    public List<SpecializationResponse> getAllSpecializations() {
         List<SpecializationResponse> specializations = specializationRepository.findAll()
                 .stream()
                 .map(specialization -> SpecializationResponse.builder()
@@ -176,32 +165,59 @@ public class AdminServiceImpl implements AdminService {
                         .specializationName(specialization.getSpecializationName())
                         .build())
                 .collect(Collectors.toList());
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(specializations);
+        return specializations;
     }
 
     @Override
-    public ResponseEntity<List<ServiceCategoryResponse>> getAllServiceCategories(Long specializationId) {
-        List<ServiceCategoryResponse> serviceCategories = serviceCategoryRepository.getServiceCategoriesBySpecializationId(specializationId)
+    public List<ServiceCategoryDTO> getServiceCategories(Long specializationId) {
+        List<ServiceCategoryDTO> serviceCategories = serviceCategoryRepository.getServiceCategoriesBySpecializationId(specializationId)
                 .stream()
-                .map(serviceCategory -> ServiceCategoryResponse.builder()
+                .map(serviceCategory -> ServiceCategoryDTO.builder()
                         .serviceCategoryId(serviceCategory.getServiceCategoryId())
                         .serviceCategoryName(serviceCategory.getServiceCategoryName())
                         .specializationId(specializationId)
                         .build())
                 .collect(Collectors.toList());
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(serviceCategories);
+        return serviceCategories;
     }
 
     @Override
-    public ResponseEntity<List<ServicesResponse>> getAllServices() {
-        List<ServicesResponse> servicesResponses = servicesRepository.findAll()
+    public ServiceCategoryResponse getAllServiceCategories(int page, int size, String[] sorts) {
+        Page<ServiceCategory> serviceCategoryPage = serviceCategoryRepository.findAll(pagingSort(page, size, sorts));
+        List<ServiceCategoryDTO> serviceCategories = serviceCategoryPage.getContent()
+                .stream()
+                .map(serviceCategory -> new ServiceCategoryDTO().builder()
+                        .serviceCategoryId(serviceCategory.getServiceCategoryId())
+                        .serviceCategoryName(serviceCategory.getServiceCategoryName())
+                        .description(serviceCategory.getDescription())
+                        .specializationId(serviceCategory.getSpecialization().getSpecializationId())
+                        .specializationName(serviceCategory.getSpecialization().getSpecializationName())
+                        .build())
+                .collect(Collectors.toList());
+        return new ServiceCategoryResponse().builder()
+                .totalItems(serviceCategoryPage.getTotalElements())
+                .totalPages(serviceCategoryPage.getTotalPages())
+                .currentPage(serviceCategoryPage.getNumber())
+                .serviceCategories(serviceCategories)
+                .build();
+    }
+
+    @Override
+    public ServicesResponse getAllServices(int page, int size, String[] sorts) {
+        Page<Services> servicesPage = servicesRepository.findAll(pagingSort(page, size, sorts));
+        List<ServicesDTO> servicesResponses = servicesPage.getContent()
                 .stream()
                 .map(services -> {
-                    ServicesResponse servicesResponse = ServicesMapper.SERVICES_MAPPER.mapToServicesResponse(services);
+                    ServicesDTO servicesResponse = ServicesMapper.SERVICES_MAPPER.mapToServicesResponse(services);
                     servicesResponse.setServiceCategoryName(services.serviceCategoryName());
                     return servicesResponse;
                 }).collect(Collectors.toList());
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(servicesResponses);
+        return new ServicesResponse().builder()
+                .totalItems(servicesPage.getTotalElements())
+                .totalPages(servicesPage.getTotalPages())
+                .currentPage(servicesPage.getNumber())
+                .services(servicesResponses)
+                .build();
     }
 
     public Map<Long, List<Experience>> groupExperiencesByUserId() {
@@ -277,5 +293,18 @@ public class AdminServiceImpl implements AdminService {
             return Sort.Direction.DESC;
         }
         return Sort.Direction.ASC;
+    }
+
+    private Pageable pagingSort(int page, int size, String[] sorts) {
+        List<Sort.Order> orders = new ArrayList<>();
+        if (sorts[0].contains(",")) {
+            for (String sortOrder : sorts) {
+                String[] sort = sortOrder.split(",");
+                orders.add(new Sort.Order(getSortDirection(sort[1]), sort[0]));
+            }
+        } else {
+            orders.add(new Sort.Order(getSortDirection(sorts[1]), sorts[0]));
+        }
+        return PageRequest.of(page, size, Sort.by(orders));
     }
 }
