@@ -96,7 +96,19 @@ public class User {
     private Specialization specialization;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-    private Set<WorkSchedule> workSchedules;
+    private Set<WorkSchedule> workSchedules = new TreeSet<>();
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(name = "users_skills",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "skill_id"))
+    private Set<Skill> skills = new HashSet<>();
+
+    @Column
+    private String describeExperiences;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private Set<Booking> bookings;
 
     @ManyToOne
     @JoinColumn(name = "clinic_id")

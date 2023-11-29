@@ -2,7 +2,6 @@ package khanhnq.project.clinicbookingmanagementsystem.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.time.LocalTime;
 
 @Entity
@@ -17,10 +16,10 @@ public class WorkSchedule {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long workScheduleId;
 
-    @Column(name = "start_work", columnDefinition = "TIME")
+    @Column(name = "start_time", columnDefinition = "TIME")
     private LocalTime startTime;
 
-    @Column(name = "end_work", columnDefinition = "TIME")
+    @Column(name = "end_time", columnDefinition = "TIME")
     private LocalTime endTime;
 
     @ManyToOne

@@ -1,18 +1,19 @@
 package khanhnq.project.clinicbookingmanagementsystem.controller;
 
-import khanhnq.project.clinicbookingmanagementsystem.entity.Skill;
+import khanhnq.project.clinicbookingmanagementsystem.dto.SkillDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Specialization;
-import khanhnq.project.clinicbookingmanagementsystem.repository.SkillRepository;
 import khanhnq.project.clinicbookingmanagementsystem.repository.SpecializationRepository;
 import khanhnq.project.clinicbookingmanagementsystem.request.AddRoleDoctorRequest;
+import khanhnq.project.clinicbookingmanagementsystem.request.BookingAppointmentRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
+import khanhnq.project.clinicbookingmanagementsystem.response.MessageResponse;
 import khanhnq.project.clinicbookingmanagementsystem.service.UserService;
 import lombok.AllArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.util.List;
 
 @CrossOrigin(origins = "http://localhost:4200", maxAge = 3600, allowCredentials="true")
@@ -21,17 +22,16 @@ import java.util.List;
 @RequestMapping("/user")
 public class UserController {
     private final UserService userService;
-    private final SkillRepository skillRepository;
     private final SpecializationRepository specializationRepository;
 
     @GetMapping("/skills")
-    public ResponseEntity<List<Skill>> getAllSkills() {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(skillRepository.findAll());
+    public ResponseEntity<List<SkillDTO>> getAllSkills() {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(userService.getAllSkills());
     }
 
     @GetMapping("/specializations")
     public ResponseEntity<List<Specialization>> getAllSpecializations() {
-        return ResponseEntity.ok().body(specializationRepository.findAll());
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(specializationRepository.findAll());
     }
 
     @PostMapping("/update-profile")
@@ -59,5 +59,9 @@ public class UserController {
         return userService.uploadMedicalDegree(file);
     }
 
+    @PostMapping("/booking-appointment")
+    public ResponseEntity<String> bookingAppointment(@RequestBody BookingAppointmentRequest bookingAppointmentRequest) {
+        return MessageResponse.getResponseMessage(userService.bookingAppointment(bookingAppointmentRequest), HttpStatus.OK);
+    }
 
 }

@@ -4,6 +4,7 @@ import khanhnq.project.clinicbookingmanagementsystem.dto.DoctorDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.UserDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Role;
 import khanhnq.project.clinicbookingmanagementsystem.entity.User;
+import khanhnq.project.clinicbookingmanagementsystem.request.DoctorInformationRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
 import khanhnq.project.clinicbookingmanagementsystem.response.RequestDoctorResponse;
 import org.mapstruct.Mapper;
@@ -22,4 +23,5 @@ public interface UserMapper {
     default String mapRolesToString(Role role) {
         return role.getRoleName().name();
     }
+    void mapToDoctor(@MappingTarget User currentUser, DoctorInformationRequest doctorInformationRequest);
 }

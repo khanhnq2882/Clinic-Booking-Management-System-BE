@@ -1,8 +1,10 @@
 package khanhnq.project.clinicbookingmanagementsystem.controller;
 
 import khanhnq.project.clinicbookingmanagementsystem.request.DoctorInformationRequest;
+import khanhnq.project.clinicbookingmanagementsystem.response.MessageResponse;
 import khanhnq.project.clinicbookingmanagementsystem.service.DoctorService;
 import lombok.AllArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,6 +16,6 @@ public class DoctorController {
     private final DoctorService doctorService;
     @PostMapping("/add-doctor-information")
     public ResponseEntity<String> addDoctorInformation(@RequestBody DoctorInformationRequest doctorInformationRequest) {
-        return doctorService.addDoctorInformation(doctorInformationRequest);
+        return MessageResponse.getResponseMessage(doctorService.addDoctorInformation(doctorInformationRequest), HttpStatus.OK);
     }
 }

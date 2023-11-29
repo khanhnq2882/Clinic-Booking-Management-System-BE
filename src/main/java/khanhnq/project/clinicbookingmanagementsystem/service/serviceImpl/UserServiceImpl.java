@@ -1,11 +1,15 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
+import khanhnq.project.clinicbookingmanagementsystem.dto.SkillDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
+import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EBookingStatus;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ERole;
+import khanhnq.project.clinicbookingmanagementsystem.mapper.BookingMapper;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.ExperienceMapper;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.UserMapper;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
 import khanhnq.project.clinicbookingmanagementsystem.request.AddRoleDoctorRequest;
+import khanhnq.project.clinicbookingmanagementsystem.request.BookingAppointmentRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
 import khanhnq.project.clinicbookingmanagementsystem.response.MessageResponse;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
@@ -16,6 +20,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -25,17 +31,20 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final WardRepository wardRepository;
     private final FileRepository fileRepository;
+    private final SpecializationRepository specializationRepository;
+    private final WorkScheduleRepository workScheduleRepository;
     private final SkillRepository skillRepository;
+    private final BookingRepository bookingRepository;
     private final AuthService authService;
 
     @Override
     public ResponseEntity<String> updateProfile(UserProfileRequest userProfileRequest) {
         User currentUser = authService.getCurrentUser();
         UserMapper.USER_MAPPER.mapToUser(currentUser, userProfileRequest);
-        Address address = new Address();
-        address.setSpecificAddress(userProfileRequest.getSpecificAddress());
-        address.setWard(wardRepository.findById(userProfileRequest.getWardId()).orElse(null));
-        currentUser.setAddress(address);
+        currentUser.setAddress(Address.builder()
+                .specificAddress(userProfileRequest.getSpecificAddress())
+                .ward(wardRepository.findById(userProfileRequest.getWardId()).orElse(null))
+                .build());
         userRepository.save(currentUser);
         return MessageResponse.getResponseMessage("Update profile successfully!", HttpStatus.OK);
     }
@@ -76,6 +85,33 @@ public class UserServiceImpl implements UserService {
     @Override
     public ResponseEntity<String> uploadMedicalDegree(MultipartFile multipartFile) {
         return uploadFile(multipartFile, "medical-degree");
+    }
+
+    @Override
+    public List<SkillDTO> getAllSkills() {
+        return skillRepository.findAll()
+                .stream()
+                .map(skill -> SkillDTO.builder()
+                        .skillId(skill.getSkillId())
+                        .skillName(skill.getSkillName())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public String bookingAppointment(BookingAppointmentRequest bookingAppointmentRequest) {
+        User currentUser = authService.getCurrentUser();
+        Booking booking = BookingMapper.BOOKING_MAPPER.mapToBooking(bookingAppointmentRequest);
+        booking.setAddress(Address.builder()
+                .specificAddress(bookingAppointmentRequest.getSpecificAddress())
+                .ward(wardRepository.findById(bookingAppointmentRequest.getWardId()).orElse(null))
+                .build());
+        booking.setSpecialization(specializationRepository.findById(bookingAppointmentRequest.getSpecializationId()).orElse(null));
+        booking.setWorkSchedule(workScheduleRepository.findById(bookingAppointmentRequest.getWorkScheduleId()).orElse(null));
+        booking.setStatus(EBookingStatus.PENDING);
+        booking.setUser(currentUser);
+        bookingRepository.save(booking);
+        return "Booking appointment successfully.";
     }
 
     public ResponseEntity<String> uploadFile(MultipartFile multipartFile, String typeImage) {

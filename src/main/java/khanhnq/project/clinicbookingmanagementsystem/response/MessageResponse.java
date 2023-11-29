@@ -11,8 +11,8 @@ public class MessageResponse {
         this.responseMessage = responseMessage;
     }
 
-    public static ResponseEntity<String>getResponseMessage(String responseMessage, HttpStatus httpStatus) {
-        return new ResponseEntity<String>("{\"message\":\""+responseMessage+"\"}", httpStatus);
+    public static ResponseEntity<String> getResponseMessage (String responseMessage, HttpStatus httpStatus) {
+        return new ResponseEntity<>(responseMessage, httpStatus);
     }
 
 }
