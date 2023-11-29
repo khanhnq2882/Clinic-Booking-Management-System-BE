@@ -18,7 +18,6 @@ public class BookingAppointmentRequest {
     private String phoneNumber;
     private String specificAddress;
     private Long wardId;
-    private Long specializationId;
     private Date appointmentDate;
     private Long workScheduleId;
     private String describeSymptoms;

@@ -1,6 +1,8 @@
 package khanhnq.project.clinicbookingmanagementsystem.controller;
 
+import khanhnq.project.clinicbookingmanagementsystem.dto.DoctorDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.SkillDTO;
+import khanhnq.project.clinicbookingmanagementsystem.dto.WorkScheduleDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Specialization;
 import khanhnq.project.clinicbookingmanagementsystem.repository.SpecializationRepository;
 import khanhnq.project.clinicbookingmanagementsystem.request.AddRoleDoctorRequest;
@@ -9,6 +11,7 @@ import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
 import khanhnq.project.clinicbookingmanagementsystem.response.MessageResponse;
 import khanhnq.project.clinicbookingmanagementsystem.service.UserService;
 import lombok.AllArgsConstructor;
+import org.springframework.data.repository.query.Param;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -57,6 +60,16 @@ public class UserController {
     @PostMapping("/upload-medical-degree")
     public ResponseEntity<String> uploadMedicalDegree(@RequestParam("medicalDegree") MultipartFile file) {
         return userService.uploadMedicalDegree(file);
+    }
+
+    @GetMapping("/get-doctors-by-specialization/{specializationId}")
+    public ResponseEntity<List<DoctorDTO>> getDoctorsBySpecialization (@PathVariable("specializationId") Long specializationId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(userService.getDoctorsBySpecialization(specializationId));
+    }
+
+    @GetMapping("/get-work-schedules-by-doctor/{userId}")
+    public ResponseEntity<List<WorkScheduleDTO>> getWorkSchedulesByDoctor (@PathVariable("userId") Long userId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(userService.getWorkSchedulesByDoctor(userId));
     }
 
     @PostMapping("/booking-appointment")

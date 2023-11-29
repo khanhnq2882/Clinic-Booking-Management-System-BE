@@ -1,6 +1,9 @@
 package khanhnq.project.clinicbookingmanagementsystem.service;
 
+import khanhnq.project.clinicbookingmanagementsystem.dto.DoctorDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.SkillDTO;
+import khanhnq.project.clinicbookingmanagementsystem.dto.WorkScheduleDTO;
+import khanhnq.project.clinicbookingmanagementsystem.entity.User;
 import khanhnq.project.clinicbookingmanagementsystem.request.AddRoleDoctorRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.BookingAppointmentRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
@@ -16,6 +19,8 @@ public interface UserService {
     ResponseEntity<String> uploadMedicalLicense(MultipartFile multipartFile);
     ResponseEntity<String> uploadMedicalDegree(MultipartFile multipartFile);
     List<SkillDTO> getAllSkills();
+    List<DoctorDTO> getDoctorsBySpecialization(Long specializationId);
+    List<WorkScheduleDTO> getWorkSchedulesByDoctor(Long userId);
     String bookingAppointment(BookingAppointmentRequest bookingAppointmentRequest);
 
 }

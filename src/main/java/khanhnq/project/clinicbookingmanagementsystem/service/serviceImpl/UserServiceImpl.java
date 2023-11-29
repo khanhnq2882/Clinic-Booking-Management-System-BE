@@ -1,6 +1,8 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
+import khanhnq.project.clinicbookingmanagementsystem.dto.DoctorDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.SkillDTO;
+import khanhnq.project.clinicbookingmanagementsystem.dto.WorkScheduleDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EBookingStatus;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ERole;
@@ -99,6 +101,33 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public List<DoctorDTO> getDoctorsBySpecialization(Long specializationId) {
+        List<DoctorDTO> doctors = userRepository.getDoctorsBySpecializationId(specializationId)
+                .stream()
+                .map(user -> DoctorDTO.builder()
+                        .userId(user.getUserId())
+                        .userCode(user.getUserCode())
+                        .firstName(user.getFirstName())
+                        .lastName(user.getLastName())
+                        .build())
+                .collect(Collectors.toList());
+        return doctors;
+    }
+
+    @Override
+    public List<WorkScheduleDTO> getWorkSchedulesByDoctor(Long userId) {
+        List<WorkScheduleDTO> workSchedules = workScheduleRepository.getWorkSchedulesByUserId(userId)
+                .stream()
+                .map(workSchedule -> WorkScheduleDTO.builder()
+                        .workScheduleId(workSchedule.getWorkScheduleId())
+                        .startTime(workSchedule.getStartTime())
+                        .endTime(workSchedule.getEndTime())
+                        .build())
+                .toList();
+        return workSchedules;
+    }
+
+    @Override
     public String bookingAppointment(BookingAppointmentRequest bookingAppointmentRequest) {
         User currentUser = authService.getCurrentUser();
         Booking booking = BookingMapper.BOOKING_MAPPER.mapToBooking(bookingAppointmentRequest);
@@ -106,8 +135,8 @@ public class UserServiceImpl implements UserService {
                 .specificAddress(bookingAppointmentRequest.getSpecificAddress())
                 .ward(wardRepository.findById(bookingAppointmentRequest.getWardId()).orElse(null))
                 .build());
-        booking.setSpecialization(specializationRepository.findById(bookingAppointmentRequest.getSpecializationId()).orElse(null));
-        booking.setWorkSchedule(workScheduleRepository.findById(bookingAppointmentRequest.getWorkScheduleId()).orElse(null));
+        WorkSchedule workSchedule = workScheduleRepository.findById(bookingAppointmentRequest.getWorkScheduleId()).orElse(null);
+        booking.setWorkSchedule(workSchedule);
         booking.setStatus(EBookingStatus.PENDING);
         booking.setUser(currentUser);
         bookingRepository.save(booking);

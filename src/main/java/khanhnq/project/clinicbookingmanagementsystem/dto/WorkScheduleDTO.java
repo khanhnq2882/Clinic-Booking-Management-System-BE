@@ -9,6 +9,7 @@ import java.time.LocalTime;
 @NoArgsConstructor
 @Builder
 public class WorkScheduleDTO {
+    private Long workScheduleId;
     private LocalTime startTime;
     private LocalTime endTime;
 }

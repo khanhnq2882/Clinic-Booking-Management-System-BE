@@ -31,13 +31,14 @@ public class DoctorServiceImpl implements DoctorService {
                         .user(currentUser)
                         .build())
                 .collect(Collectors.toSet());
-        if (currentUser.getRoles().stream().filter(role -> role.getRoleName().name().equals("ROLE_DOCTOR")).findAny().isPresent()) {
+        if (currentUser.getRoles().stream().anyMatch(role -> role.getRoleName().name().equals("ROLE_DOCTOR"))) {
             UserMapper.USER_MAPPER.mapToDoctor(currentUser, doctorInformationRequest);
             currentUser.setAddress(Address.builder()
                     .specificAddress(doctorInformationRequest.getSpecificAddress())
                     .ward(wardRepository.findById(doctorInformationRequest.getWardId()).orElse(null))
                     .build());
-            currentUser.setWorkSchedules(addWorkSchedules(workSchedules, currentUser.getSpecialization().getSpecializationId()));
+            Set<WorkSchedule> sortWorkSchedules = new LinkedHashSet<>(addWorkSchedules(workSchedules, currentUser.getSpecialization().getSpecializationId()));
+            currentUser.setWorkSchedules(sortWorkSchedules);
             Set<Skill> skills = doctorInformationRequest.getSkillIds()
                     .stream()
                     .map(id -> skillRepository.findById(id).orElse(null))
@@ -63,14 +64,13 @@ public class DoctorServiceImpl implements DoctorService {
         Map<Long, Set<WorkSchedule>> map = new HashMap<>();
         for (User user : userRepository.getDoctors()) {
             if (!map.containsKey(user.getUserId())) {
-                Set<WorkSchedule> workSchedules = workScheduleRepository.getWorkSchedulesByUserId(user.getUserId());
+                Set<WorkSchedule> workSchedules = new HashSet<>(workScheduleRepository.getWorkSchedulesByUserId(user.getUserId()));
                 map.put(user.getUserId(), workSchedules);
             }
         }
         return map;
     }
 
-    // specializationId tu currentUser
     // phai check them khoang thoi gian lich lam viec khong duoc nam trong lich lam viec cua nguoi khac
     // phai sort cac phan tu cua set theo dung thu tu
     public Set<WorkSchedule> addWorkSchedules(Set<WorkSchedule> workSchedulesRequest, Long specializationId) {
