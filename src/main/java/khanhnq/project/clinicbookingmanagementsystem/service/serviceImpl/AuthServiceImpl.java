@@ -50,11 +50,11 @@ public class AuthServiceImpl implements AuthService {
         if (!Objects.isNull(userRepository.findUserByEmail(registerRequest.getEmail()))) {
             throw new RuntimeException("Email " + registerRequest.getEmail() + " is already exist. Try again!");
         }
-        String userCode = "";
+        String userCode;
         if (userRepository.findAll().size() == 0) {
             userCode = "US1";
         } else {
-            Long nextId = Collections.max(userRepository.findAll().stream().map(user -> user.getUserId()).collect(Collectors.toList()));
+            Long nextId = Collections.max(userRepository.findAll().stream().map(User::getUserId).toList());
             userCode = "US" + nextId;
         }
         User user = User.builder()
@@ -73,20 +73,20 @@ public class AuthServiceImpl implements AuthService {
         } else {
             registerRequest.getRoles().forEach(role -> {
                 switch (role) {
-                    case "ROLE_ADMIN":
+                    case "ROLE_ADMIN" -> {
                         if (roleRepository.findRoleByRoleName(ERole.ROLE_ADMIN) == null) {
                             roleRepository.save(Role.builder().roleName(ERole.ROLE_ADMIN).build());
                         }
                         user.setRoles(registerRequest.getRoles().stream().map(r -> roleRepository.findRoleByRoleName(ERole.valueOf(r))).collect(Collectors.toSet()));
-                        break;
-                    case "ROLE_DOCTOR":
+                    }
+                    case "ROLE_DOCTOR" -> {
                         if (roleRepository.findRoleByRoleName(ERole.ROLE_DOCTOR) == null) {
                             roleRepository.save(Role.builder().roleName(ERole.ROLE_DOCTOR).build());
                         }
                         user.setRoles(registerRequest.getRoles().stream().map(r -> roleRepository.findRoleByRoleName(ERole.valueOf(r))).collect(Collectors.toSet()));
-                        break;
-                    default:
-                        user.setRoles(registerRequest.getRoles().stream().map(r -> roleRepository.findRoleByRoleName(ERole.valueOf(r))).collect(Collectors.toSet()));
+                    }
+                    default ->
+                            user.setRoles(registerRequest.getRoles().stream().map(r -> roleRepository.findRoleByRoleName(ERole.valueOf(r))).collect(Collectors.toSet()));
                 }
             });
         }
@@ -112,8 +112,7 @@ public class AuthServiceImpl implements AuthService {
         if (!authentication.isAuthenticated() || authentication.getName() == null) {
             return null;
         }
-        User user = userRepository.findUserByUsername(authentication.getName());
-        return user;
+        return userRepository.findUserByUsername(authentication.getName());
     }
 
     @Override

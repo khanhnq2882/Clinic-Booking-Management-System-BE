@@ -17,6 +17,7 @@ import org.springframework.web.client.RestTemplate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -33,9 +34,9 @@ public class AddressServiceImpl implements AddressService {
         RestTemplate restTemplate = new RestTemplate();
         CityDTO[] cities = restTemplate.getForObject(externalApi, CityDTO[].class);
         cityRepository.saveAll(getCities(cities));
-        districtRepository.saveAll(getDistricts(cities));
+        districtRepository.saveAll(getDistricts(Objects.requireNonNull(cities)));
         wardRepository.saveAll(getWards(getDistricts(cities)));
-        return Arrays.asList(cities);
+        return Arrays.asList(Objects.requireNonNull(cities));
     }
 
     @Override
@@ -82,7 +83,7 @@ public class AddressServiceImpl implements AddressService {
     }
 
     public List<City> getCities(CityDTO[] cities) {
-        return Arrays.asList(cities).stream()
+        return Arrays.stream(cities)
                 .map(cityDTO -> City.builder()
                         .cityId(cityDTO.getCode())
                         .cityName(cityDTO.getName())
@@ -92,7 +93,7 @@ public class AddressServiceImpl implements AddressService {
 
     public List<District> getDistricts(CityDTO[] cities) {
         List<District> districtList = new ArrayList<>();
-        for (CityDTO cityDTO : Arrays.asList(cities)) {
+        for (CityDTO cityDTO : cities) {
             List<District> districts = cityDTO.getDistricts().stream()
                     .map(districtDTO -> District.builder()
                             .districtId(districtDTO.getCode())
@@ -104,7 +105,7 @@ public class AddressServiceImpl implements AddressService {
                                             .build())
                                     .collect(Collectors.toList()))
                             .build())
-                    .collect(Collectors.toList());
+                    .toList();
             for (District district : districts) {
                 districtList.add(District.builder()
                         .districtId(district.getDistrictId())

@@ -21,7 +21,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.util.*;
@@ -45,7 +44,7 @@ public class AdminServiceImpl implements AdminService {
     public ResponseEntity<String> approveRequestDoctor(Long userId) {
         User currentUser = authService.getCurrentUser();
         User user = userRepository.findById(userId).orElse(null);
-        if (currentUser.getRoles().stream().filter(role -> role.getRoleName().equals(ERole.ROLE_ADMIN)).findAny().isPresent()) {
+        if (currentUser.getRoles().stream().anyMatch(role -> role.getRoleName().equals(ERole.ROLE_ADMIN))) {
             Role role = roleRepository.findRoleByRoleName(ERole.ROLE_DOCTOR);
             if (role == null) {
                 roleRepository.save(Role.builder().roleName(ERole.ROLE_DOCTOR).build());
@@ -60,7 +59,7 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public ResponseEntity<String> rejectRequestDoctor(Long userId) {
         User currentUser = authService.getCurrentUser();
-        if (currentUser.getRoles().stream().filter(role -> role.getRoleName().equals(ERole.ROLE_ADMIN)).findAny().isPresent()) {
+        if (currentUser.getRoles().stream().anyMatch(role -> role.getRoleName().equals(ERole.ROLE_ADMIN))) {
             Map<Long, List<Experience>> experiences = groupExperiencesByUserId();
             for (Experience experience : experiences.get(userId)) {
                 experienceRepository.deleteExperiencesSkills(experience.getExperienceId());

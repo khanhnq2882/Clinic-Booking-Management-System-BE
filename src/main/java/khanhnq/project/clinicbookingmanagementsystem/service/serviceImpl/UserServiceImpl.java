@@ -6,6 +6,7 @@ import khanhnq.project.clinicbookingmanagementsystem.dto.WorkScheduleDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EBookingStatus;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ERole;
+import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceException;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.BookingMapper;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.ExperienceMapper;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.UserMapper;
@@ -22,8 +23,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
-
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -33,7 +37,6 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final WardRepository wardRepository;
     private final FileRepository fileRepository;
-    private final SpecializationRepository specializationRepository;
     private final WorkScheduleRepository workScheduleRepository;
     private final SkillRepository skillRepository;
     private final BookingRepository bookingRepository;
@@ -59,7 +62,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public ResponseEntity<String> requestBecomeDoctor(AddRoleDoctorRequest addRoleDoctorRequest) {
         User currentUser = authService.getCurrentUser();
-        if (!currentUser.getRoles().stream().filter(role -> role.getRoleName().equals(ERole.ROLE_DOCTOR)).findAny().isPresent()) {
+        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().equals(ERole.ROLE_DOCTOR))) {
             currentUser.setUniversityName(addRoleDoctorRequest.getUniversityName());
             Set<Experience> experiences = addRoleDoctorRequest.getExperiences().stream()
                     .map(experienceRequest -> {
@@ -102,7 +105,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<DoctorDTO> getDoctorsBySpecialization(Long specializationId) {
-        List<DoctorDTO> doctors = userRepository.getDoctorsBySpecializationId(specializationId)
+        return userRepository.getDoctorsBySpecializationId(specializationId)
                 .stream()
                 .map(user -> DoctorDTO.builder()
                         .userId(user.getUserId())
@@ -111,12 +114,11 @@ public class UserServiceImpl implements UserService {
                         .lastName(user.getLastName())
                         .build())
                 .collect(Collectors.toList());
-        return doctors;
     }
 
     @Override
     public List<WorkScheduleDTO> getWorkSchedulesByDoctor(Long userId) {
-        List<WorkScheduleDTO> workSchedules = workScheduleRepository.getWorkSchedulesByUserId(userId)
+        return workScheduleRepository.getWorkSchedulesByUserId(userId)
                 .stream()
                 .map(workSchedule -> WorkScheduleDTO.builder()
                         .workScheduleId(workSchedule.getWorkScheduleId())
@@ -124,22 +126,31 @@ public class UserServiceImpl implements UserService {
                         .endTime(workSchedule.getEndTime())
                         .build())
                 .toList();
-        return workSchedules;
     }
 
     @Override
     public String bookingAppointment(BookingAppointmentRequest bookingAppointmentRequest) {
+        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+        String appointmentDate = dateFormat.format(bookingAppointmentRequest.getAppointmentDate());
         User currentUser = authService.getCurrentUser();
-        Booking booking = BookingMapper.BOOKING_MAPPER.mapToBooking(bookingAppointmentRequest);
-        booking.setAddress(Address.builder()
+        Booking bookingAppointment = BookingMapper.BOOKING_MAPPER.mapToBooking(bookingAppointmentRequest);
+        bookingAppointment.setAddress(Address.builder()
                 .specificAddress(bookingAppointmentRequest.getSpecificAddress())
                 .ward(wardRepository.findById(bookingAppointmentRequest.getWardId()).orElse(null))
                 .build());
         WorkSchedule workSchedule = workScheduleRepository.findById(bookingAppointmentRequest.getWorkScheduleId()).orElse(null);
-        booking.setWorkSchedule(workSchedule);
-        booking.setStatus(EBookingStatus.PENDING);
-        booking.setUser(currentUser);
-        bookingRepository.save(booking);
+        for (Booking booking : bookingRepository.findAll()) {
+            if (bookingAppointmentRequest.getWorkScheduleId().equals(booking.getWorkSchedule().getWorkScheduleId())
+            && appointmentDate.equals(booking.getAppointmentDate().toString())) {
+                throw new ResourceException("You cannot schedule an appointment at time "+ Objects.requireNonNull(workSchedule).getStartTime() +" - "+ workSchedule.getEndTime()
+                        +" on day "+appointmentDate, HttpStatus.BAD_REQUEST);
+            }
+        }
+        bookingAppointment.setBookingCode(bookingCode());
+        bookingAppointment.setWorkSchedule(workSchedule);
+        bookingAppointment.setStatus(EBookingStatus.PENDING);
+        bookingAppointment.setUser(currentUser);
+        bookingRepository.save(bookingAppointment);
         return "Booking appointment successfully.";
     }
 
@@ -147,14 +158,14 @@ public class UserServiceImpl implements UserService {
         try {
             User currentUser = authService.getCurrentUser();
             File file = new File();
-            if (!fileRepository.getFilesById(currentUser.getUserId()).stream().filter(f -> f.getFilePath().split("/")[1].equals(typeImage)).findAny().isPresent()) {
-                file.setFilePath(currentUser.getUsername()+"/"+typeImage+"/"+StringUtils.cleanPath(multipartFile.getOriginalFilename()));
+            if (fileRepository.getFilesById(currentUser.getUserId()).stream().noneMatch(f -> f.getFilePath().split("/")[1].equals(typeImage))) {
+                file.setFilePath(currentUser.getUsername()+"/"+typeImage+"/"+StringUtils.cleanPath(Objects.requireNonNull(multipartFile.getOriginalFilename())));
                 file.setData(multipartFile.getBytes());
                 file.setUser(currentUser);
                 currentUser.getFiles().add(file);
             } else {
                 file = fileRepository.getFileByType(typeImage, currentUser.getUserId());
-                file.setFilePath(currentUser.getUsername()+"/"+typeImage+"/"+StringUtils.cleanPath(multipartFile.getOriginalFilename()));
+                file.setFilePath(currentUser.getUsername()+"/"+typeImage+"/"+StringUtils.cleanPath(Objects.requireNonNull(multipartFile.getOriginalFilename())));
                 file.setData(multipartFile.getBytes());
                 file.setUser(currentUser);
             }
@@ -164,6 +175,20 @@ public class UserServiceImpl implements UserService {
         } catch (Exception e) {
             return MessageResponse.getResponseMessage("Could not upload the file"+ typeImage+ " : " + multipartFile.getOriginalFilename() + ". Error: " + e.getMessage(), HttpStatus.EXPECTATION_FAILED);
         }
+    }
+
+    public String bookingCode() {
+        String code;
+        if (bookingRepository.findAll().size() == 0) {
+            code = "BC1";
+        } else {
+            Long maxServiceCode = Collections.max(bookingRepository.findAll()
+                    .stream()
+                    .map(booking -> Long.parseLong(booking.getBookingCode().substring(2)))
+                    .toList());
+            code = "BC" + (maxServiceCode+1);
+        }
+        return code;
     }
 
 }

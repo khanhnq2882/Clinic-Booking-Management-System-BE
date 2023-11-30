@@ -3,6 +3,7 @@ package khanhnq.project.clinicbookingmanagementsystem.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalTime;
+import java.util.Set;
 
 @Entity
 @Getter
@@ -21,6 +22,9 @@ public class WorkSchedule {
 
     @Column(name = "end_time", columnDefinition = "TIME")
     private LocalTime endTime;
+
+    @OneToMany(mappedBy = "workSchedule", cascade = CascadeType.ALL)
+    private Set<Booking> bookings;
 
     @ManyToOne
     @JoinColumn(name = "user_id")

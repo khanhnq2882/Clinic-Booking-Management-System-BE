@@ -1,6 +1,5 @@
 package khanhnq.project.clinicbookingmanagementsystem.dto;
 
-import khanhnq.project.clinicbookingmanagementsystem.entity.District;
 import lombok.*;
 import java.util.ArrayList;
 import java.util.List;

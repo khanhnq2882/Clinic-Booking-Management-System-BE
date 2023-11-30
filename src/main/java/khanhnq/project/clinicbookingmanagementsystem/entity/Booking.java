@@ -19,8 +19,8 @@ public class Booking {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long bookingId;
 
-//    @Column(nullable = false)
-//    private String bookingCode;
+    @Column(nullable = false)
+    private String bookingCode;
 
     @Column(length = 50, nullable = false)
     @Size(max = 50)
@@ -51,7 +51,7 @@ public class Booking {
     @Temporal(TemporalType.DATE)
     private Date appointmentDate;
 
-    @OneToOne(cascade = CascadeType.PERSIST, fetch = FetchType.EAGER)
+    @ManyToOne
     @JoinColumn(name = "work_schedule_id")
     private WorkSchedule workSchedule;
 
