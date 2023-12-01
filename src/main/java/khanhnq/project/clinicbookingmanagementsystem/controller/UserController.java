@@ -38,27 +38,27 @@ public class UserController {
 
     @PostMapping("/update-profile")
     public ResponseEntity<String> updateProfile(@RequestBody UserProfileRequest userProfileRequest) {
-        return userService.updateProfile(userProfileRequest);
+        return MessageResponse.getResponseMessage(userService.updateProfile(userProfileRequest), HttpStatus.OK);
     }
 
     @PostMapping("/upload-avatar")
     public ResponseEntity<String> uploadFile(@RequestParam("avatar") MultipartFile file) {
-        return userService.uploadAvatar(file);
+        return MessageResponse.getResponseMessage(userService.uploadAvatar(file), HttpStatus.OK);
     }
 
     @PostMapping(value = "/request-to-become-doctor")
     public ResponseEntity<String> requestBecomeDoctor(@RequestBody AddRoleDoctorRequest addRoleDoctorRequest) {
-        return userService.requestBecomeDoctor(addRoleDoctorRequest);
+        return MessageResponse.getResponseMessage(userService.requestBecomeDoctor(addRoleDoctorRequest), HttpStatus.OK);
     }
 
     @PostMapping("/upload-medical-license")
     public ResponseEntity<String> uploadMedicalLicense(@RequestParam("medicalLicense") MultipartFile file) {
-        return userService.uploadMedicalLicense(file);
+        return MessageResponse.getResponseMessage(userService.uploadMedicalLicense(file), HttpStatus.OK);
     }
 
     @PostMapping("/upload-medical-degree")
     public ResponseEntity<String> uploadMedicalDegree(@RequestParam("medicalDegree") MultipartFile file) {
-        return userService.uploadMedicalDegree(file);
+        return MessageResponse.getResponseMessage(userService.uploadMedicalDegree(file), HttpStatus.OK);
     }
 
     @GetMapping("/get-doctors-by-specialization/{specializationId}")

@@ -12,13 +12,18 @@ import java.util.List;
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
     User findUserByUsername(String username);
+
     User findUserByEmail(String email);
+
     @Query(value = "SELECT u FROM User AS u INNER JOIN u.roles AS r WHERE r.roleName = 'ROLE_DOCTOR'")
     Page<User> getAllDoctors(Pageable pageable);
+
     @Query(value = "SELECT u FROM User AS u INNER JOIN u.roles AS r WHERE r.roleName = 'ROLE_USER'")
     Page<User> getAllUsers(Pageable pageable);
+
     @Query(value = "SELECT u FROM User AS u WHERE u.specialization.specializationId = :specializationId")
     List<User> getDoctorsBySpecializationId(@Param("specializationId") Long specializationId);
+
     @Query(value = "SELECT u FROM User AS u INNER JOIN u.roles AS r WHERE r.roleName = 'ROLE_DOCTOR'")
     List<User> getDoctors();
 }

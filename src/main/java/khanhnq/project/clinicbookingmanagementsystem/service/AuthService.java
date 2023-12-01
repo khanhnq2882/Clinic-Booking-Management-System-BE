@@ -10,7 +10,7 @@ import khanhnq.project.clinicbookingmanagementsystem.response.UserInfoResponse;
 import org.springframework.http.ResponseEntity;
 
 public interface AuthService {
-    ResponseEntity<String> register(RegisterRequest registerRequest);
+    String register(RegisterRequest registerRequest);
     JwtResponse login(LoginRequest loginRequest);
     User getCurrentUser();
     ResponseEntity<String> changePassword(ChangePasswordRequest changePasswordRequest);

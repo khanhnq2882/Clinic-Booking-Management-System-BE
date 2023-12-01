@@ -4,6 +4,7 @@ import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ERole;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Role;
 import khanhnq.project.clinicbookingmanagementsystem.entity.User;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EUserStatus;
+import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceException;
 import khanhnq.project.clinicbookingmanagementsystem.repository.RoleRepository;
 import khanhnq.project.clinicbookingmanagementsystem.repository.UserRepository;
 import khanhnq.project.clinicbookingmanagementsystem.request.ChangePasswordRequest;
@@ -33,22 +34,18 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class AuthServiceImpl implements AuthService {
     private UserRepository userRepository;
-
     private RoleRepository roleRepository;
-
     private PasswordEncoder passwordEncoder;
-
     private AuthenticationManager authenticationManager;
-
     private JwtUtils jwtUtils;
 
     @Override
-    public ResponseEntity<String> register(RegisterRequest registerRequest) {
+    public String register(RegisterRequest registerRequest) {
         if (!Objects.isNull(userRepository.findUserByUsername(registerRequest.getUsername()))) {
-            throw new RuntimeException("Username " + registerRequest.getUsername() + " is already exist. Try again!");
+            throw new ResourceException("Username " + registerRequest.getUsername() + " is already exist. Try again.", HttpStatus.BAD_REQUEST);
         }
         if (!Objects.isNull(userRepository.findUserByEmail(registerRequest.getEmail()))) {
-            throw new RuntimeException("Email " + registerRequest.getEmail() + " is already exist. Try again!");
+            throw new ResourceException("Email " + registerRequest.getEmail() + " is already exist. Try again.", HttpStatus.BAD_REQUEST);
         }
         String userCode;
         if (userRepository.findAll().size() == 0) {
@@ -77,21 +74,30 @@ public class AuthServiceImpl implements AuthService {
                         if (roleRepository.findRoleByRoleName(ERole.ROLE_ADMIN) == null) {
                             roleRepository.save(Role.builder().roleName(ERole.ROLE_ADMIN).build());
                         }
-                        user.setRoles(registerRequest.getRoles().stream().map(r -> roleRepository.findRoleByRoleName(ERole.valueOf(r))).collect(Collectors.toSet()));
+                        user.setRoles(registerRequest.getRoles()
+                                .stream()
+                                .map(r -> roleRepository.findRoleByRoleName(ERole.valueOf(r)))
+                                .collect(Collectors.toSet()));
                     }
                     case "ROLE_DOCTOR" -> {
                         if (roleRepository.findRoleByRoleName(ERole.ROLE_DOCTOR) == null) {
                             roleRepository.save(Role.builder().roleName(ERole.ROLE_DOCTOR).build());
                         }
-                        user.setRoles(registerRequest.getRoles().stream().map(r -> roleRepository.findRoleByRoleName(ERole.valueOf(r))).collect(Collectors.toSet()));
+                        user.setRoles(registerRequest.getRoles()
+                                .stream()
+                                .map(r -> roleRepository.findRoleByRoleName(ERole.valueOf(r)))
+                                .collect(Collectors.toSet()));
                     }
                     default ->
-                            user.setRoles(registerRequest.getRoles().stream().map(r -> roleRepository.findRoleByRoleName(ERole.valueOf(r))).collect(Collectors.toSet()));
+                            user.setRoles(registerRequest.getRoles()
+                                    .stream()
+                                    .map(r -> roleRepository.findRoleByRoleName(ERole.valueOf(r)))
+                                    .collect(Collectors.toSet()));
                 }
             });
         }
         userRepository.save(user);
-        return MessageResponse.getResponseMessage("Register successfully!", HttpStatus.OK);
+        return "Register successfully.";
     }
 
     @Override
@@ -123,13 +129,11 @@ public class AuthServiceImpl implements AuthService {
             if (changePasswordRequest.getNewPassword().equals(changePasswordRequest.getConfirmPassword())) {
                 currentUser.setPassword(passwordEncoder.encode(changePasswordRequest.getNewPassword()));
                 userRepository.save(currentUser);
-                return MessageResponse.getResponseMessage("Change password successfully!", HttpStatus.OK);
-            } else {
-                return MessageResponse.getResponseMessage("New password and confirm password is not match. Try again!", HttpStatus.BAD_REQUEST);
+                return MessageResponse.getResponseMessage("Change password successfully.", HttpStatus.OK);
             }
-        } else {
-            return MessageResponse.getResponseMessage("Current password is wrong. Try again!", HttpStatus.BAD_REQUEST);
+            throw new ResourceException("New password and confirm password is not match. Try again.", HttpStatus.BAD_REQUEST);
         }
+        throw new ResourceException("Current password is wrong. Try again.", HttpStatus.BAD_REQUEST);
     }
 
     @Override
@@ -146,6 +150,5 @@ public class AuthServiceImpl implements AuthService {
                 .roles(roles)
                 .build();
     }
-
 
 }

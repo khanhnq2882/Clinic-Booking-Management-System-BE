@@ -4,6 +4,7 @@ import khanhnq.project.clinicbookingmanagementsystem.dto.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ERole;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EServiceStatus;
+import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceException;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.ExperienceMapper;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.ServiceCategoryMapper;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.ServicesMapper;
@@ -21,7 +22,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -41,33 +41,33 @@ public class AdminServiceImpl implements AdminService {
     private final ServicesRepository servicesRepository;
 
     @Override
-    public ResponseEntity<String> approveRequestDoctor(Long userId) {
+    public String approveRequestDoctor(Long userId) {
         User currentUser = authService.getCurrentUser();
         User user = userRepository.findById(userId).orElse(null);
-        if (currentUser.getRoles().stream().anyMatch(role -> role.getRoleName().equals(ERole.ROLE_ADMIN))) {
-            Role role = roleRepository.findRoleByRoleName(ERole.ROLE_DOCTOR);
-            if (role == null) {
-                roleRepository.save(Role.builder().roleName(ERole.ROLE_DOCTOR).build());
-            }
-            user.getRoles().add(role);
-            userRepository.save(user);
-            return MessageResponse.getResponseMessage("Update successfully .User "+user.getFirstName()+" "+user.getLastName()+" is became a doctor in the system.", HttpStatus.OK);
+        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().equals(ERole.ROLE_ADMIN))) {
+            throw new ResourceException("You do not have permission to update user roles.", HttpStatus.UNAUTHORIZED);
         }
-        return MessageResponse.getResponseMessage("You do not have permission to update user roles.", HttpStatus.BAD_REQUEST);
+        Role role = roleRepository.findRoleByRoleName(ERole.ROLE_DOCTOR);
+        if (role == null) {
+            roleRepository.save(Role.builder().roleName(ERole.ROLE_DOCTOR).build());
+        }
+        Objects.requireNonNull(user).getRoles().add(role);
+        userRepository.save(user);
+        return "Update successfully .User "+user.getFirstName()+" "+user.getLastName()+" is became a doctor in the system.";
     }
 
     @Override
-    public ResponseEntity<String> rejectRequestDoctor(Long userId) {
+    public String rejectRequestDoctor(Long userId) {
         User currentUser = authService.getCurrentUser();
-        if (currentUser.getRoles().stream().anyMatch(role -> role.getRoleName().equals(ERole.ROLE_ADMIN))) {
-            Map<Long, List<Experience>> experiences = groupExperiencesByUserId();
-            for (Experience experience : experiences.get(userId)) {
-                experienceRepository.deleteExperiencesSkills(experience.getExperienceId());
-                experienceRepository.deleteExperiences(experience.getExperienceId());
-            }
-            return MessageResponse.getResponseMessage("Reject request successfully.", HttpStatus.OK);
+        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().equals(ERole.ROLE_ADMIN))) {
+            throw new ResourceException("You do not have permission to update user roles.", HttpStatus.UNAUTHORIZED);
         }
-        return MessageResponse.getResponseMessage("You do not have permission to update user roles.", HttpStatus.BAD_REQUEST);
+        Map<Long, List<Experience>> experiences = groupExperiencesByUserId();
+        for (Experience experience : experiences.get(userId)) {
+            experienceRepository.deleteExperiencesSkills(experience.getExperienceId());
+            experienceRepository.deleteExperiences(experience.getExperienceId());
+        }
+        return "Reject request successfully.";
     }
 
     @Override
@@ -80,7 +80,7 @@ public class AdminServiceImpl implements AdminService {
                     userDTO.setUserAddress(getAddress(user));
                     return userDTO;
                 }).collect(Collectors.toList());
-        return new UserResponse().builder()
+        return UserResponse.builder()
                 .totalItems(userPage.getTotalElements())
                 .totalPages(userPage.getTotalPages())
                 .currentPage(userPage.getNumber())
@@ -101,7 +101,7 @@ public class AdminServiceImpl implements AdminService {
                 return experienceDTO;
             }).collect(Collectors.toList());
             requestDoctorResponse.setDoctorExperiences(experiences);
-            requestDoctorResponse.setRoleNames(user.roleNames());
+            requestDoctorResponse.setRoleNames(Objects.requireNonNull(user).roleNames());
             getMedicalLicenseDegree(requestDoctorResponse, userId);
             requestList.add(requestDoctorResponse);
         }
@@ -119,7 +119,7 @@ public class AdminServiceImpl implements AdminService {
                     doctorDTO.setDoctorAddress(getAddress(user));
                     return doctorDTO;
                 }).collect(Collectors.toList());
-        return new DoctorResponse().builder()
+        return DoctorResponse.builder()
                 .totalItems(doctorPage.getTotalElements())
                 .totalPages(doctorPage.getTotalPages())
                 .currentPage(doctorPage.getNumber())
@@ -128,48 +128,47 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public ResponseEntity<String> addServiceCategory(ServiceCategoryRequest serviceCategoryRequest) {
+    public String addServiceCategory(ServiceCategoryRequest serviceCategoryRequest) {
         User currentUser = authService.getCurrentUser();
-        if (currentUser.getRoles().stream().filter(role -> role.getRoleName().name().equals("ROLE_ADMIN")).findAny().isPresent()) {
-            Specialization specialization = specializationRepository.findById(serviceCategoryRequest.getSpecializationId()).orElse(null);
-            ServiceCategory serviceCategory = ServiceCategoryMapper.SERVICE_CATEGORY_MAPPER.mapToServiceCategory(serviceCategoryRequest);
-            serviceCategory.setSpecialization(specialization);
-            serviceCategoryRepository.save(serviceCategory);
-            return MessageResponse.getResponseMessage("Add service category successfully.", HttpStatus.OK);
+        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_ADMIN"))) {
+            throw new ResourceException("You do not have permission to add service category.", HttpStatus.UNAUTHORIZED);
         }
-        return MessageResponse.getResponseMessage("You do not have permission to add service category.", HttpStatus.BAD_REQUEST);
+        Specialization specialization = specializationRepository.findById(serviceCategoryRequest.getSpecializationId()).orElse(null);
+        ServiceCategory serviceCategory = ServiceCategoryMapper.SERVICE_CATEGORY_MAPPER.mapToServiceCategory(serviceCategoryRequest);
+        serviceCategory.setSpecialization(specialization);
+        serviceCategoryRepository.save(serviceCategory);
+        return "Add service category successfully.";
     }
 
     @Override
-    public ResponseEntity<String> addService(ServiceRequest serviceRequest) {
+    public String addService(ServiceRequest serviceRequest) {
         User currentUser = authService.getCurrentUser();
-        if (currentUser.getRoles().stream().filter(role -> role.getRoleName().name().equals("ROLE_ADMIN")).findAny().isPresent()) {
-            ServiceCategory serviceCategory = serviceCategoryRepository.findById(serviceRequest.getServiceCategoryId()).orElse(null);
-            Services services = ServicesMapper.SERVICES_MAPPER.mapToServices(serviceRequest);
-            services.setStatus(EServiceStatus.ACTIVE);
-            services.setServiceCategory(serviceCategory);
-            serviceCode(services, serviceCategory);
-            servicesRepository.save(services);
-            return MessageResponse.getResponseMessage("Add service successfully.", HttpStatus.OK);
+        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_ADMIN"))) {
+            throw new ResourceException("You do not have permission to add service.", HttpStatus.UNAUTHORIZED);
         }
-        return MessageResponse.getResponseMessage("You do not have permission to add service.", HttpStatus.BAD_REQUEST);
+        ServiceCategory serviceCategory = serviceCategoryRepository.findById(serviceRequest.getServiceCategoryId()).orElse(null);
+        Services services = ServicesMapper.SERVICES_MAPPER.mapToServices(serviceRequest);
+        services.setStatus(EServiceStatus.ACTIVE);
+        services.setServiceCategory(serviceCategory);
+        serviceCode(services, Objects.requireNonNull(serviceCategory));
+        servicesRepository.save(services);
+        return "Add service successfully.";
     }
 
     @Override
     public List<SpecializationResponse> getAllSpecializations() {
-        List<SpecializationResponse> specializations = specializationRepository.findAll()
+        return specializationRepository.findAll()
                 .stream()
                 .map(specialization -> SpecializationResponse.builder()
                         .specializationId(specialization.getSpecializationId())
                         .specializationName(specialization.getSpecializationName())
                         .build())
                 .collect(Collectors.toList());
-        return specializations;
     }
 
     @Override
     public List<ServiceCategoryDTO> getServiceCategories(Long specializationId) {
-        List<ServiceCategoryDTO> serviceCategories = serviceCategoryRepository.getServiceCategoriesBySpecializationId(specializationId)
+        return serviceCategoryRepository.getServiceCategoriesBySpecializationId(specializationId)
                 .stream()
                 .map(serviceCategory -> ServiceCategoryDTO.builder()
                         .serviceCategoryId(serviceCategory.getServiceCategoryId())
@@ -177,7 +176,6 @@ public class AdminServiceImpl implements AdminService {
                         .specializationId(specializationId)
                         .build())
                 .collect(Collectors.toList());
-        return serviceCategories;
     }
 
     @Override
@@ -185,7 +183,7 @@ public class AdminServiceImpl implements AdminService {
         Page<ServiceCategory> serviceCategoryPage = serviceCategoryRepository.findAll(pagingSort(page, size, sorts));
         List<ServiceCategoryDTO> serviceCategories = serviceCategoryPage.getContent()
                 .stream()
-                .map(serviceCategory -> new ServiceCategoryDTO().builder()
+                .map(serviceCategory -> ServiceCategoryDTO.builder()
                         .serviceCategoryId(serviceCategory.getServiceCategoryId())
                         .serviceCategoryName(serviceCategory.getServiceCategoryName())
                         .description(serviceCategory.getDescription())
@@ -193,7 +191,7 @@ public class AdminServiceImpl implements AdminService {
                         .specializationName(serviceCategory.getSpecialization().getSpecializationName())
                         .build())
                 .collect(Collectors.toList());
-        return new ServiceCategoryResponse().builder()
+        return ServiceCategoryResponse.builder()
                 .totalItems(serviceCategoryPage.getTotalElements())
                 .totalPages(serviceCategoryPage.getTotalPages())
                 .currentPage(serviceCategoryPage.getNumber())
@@ -211,7 +209,7 @@ public class AdminServiceImpl implements AdminService {
                     servicesResponse.setServiceCategoryName(services.serviceCategoryName());
                     return servicesResponse;
                 }).collect(Collectors.toList());
-        return new ServicesResponse().builder()
+        return ServicesResponse.builder()
                 .totalItems(servicesPage.getTotalElements())
                 .totalPages(servicesPage.getTotalPages())
                 .currentPage(servicesPage.getNumber())
@@ -233,7 +231,6 @@ public class AdminServiceImpl implements AdminService {
     public AddressResponse getAddress(User user) {
         AddressResponse addressResponse = new AddressResponse();
         if (user.getAddress() != null) {
-            // can hoc them mapper
             Address address = addressRepository.findById(user.getAddress().getAddressId()).orElse(null);
             addressResponse.setAddressId(address.getAddressId());
             addressResponse.setSpecificAddress(address.getSpecificAddress());
@@ -259,33 +256,31 @@ public class AdminServiceImpl implements AdminService {
     }
     
     public void serviceCode(Services services, ServiceCategory serviceCategory) {
-        String code = " ";
+        StringBuilder code = new StringBuilder(" ");
         for (String s : serviceCategory.getServiceCategoryName().split(" ")) {
-            code += s.substring(0,1);
+            code.append(s.charAt(0));
         }
-        List<Services> servicesList = servicesRepository.getServicesByCode(code);
+        List<Services> servicesList = servicesRepository.getServicesByCode(code.toString());
         if (servicesList.size() == 0) {
             services.setServiceCode(code + "1");
         } else {
-            String s = code;
+            String s = code.toString();
             Long maxServiceCode = Collections.max(servicesList
                     .stream()
                     .map(service -> Long.parseLong(service.getServiceCode().substring(s.length())))
-                    .collect(Collectors.toList()));
-            services.setServiceCode(code+(maxServiceCode+1));
+                    .toList());
+            services.setServiceCode(code.toString() +(maxServiceCode+1));
         }
     }
 
     public List<FileResponse> getAllFiles(Long userId) {
-        // tim hieu java NIO -> try with resource
-        List<FileResponse> fileResponses = fileService.loadFilesByUserId(userId).map(file -> {
+        return fileService.loadFilesByUserId(userId).map(file -> {
             String fileUrl = ServletUriComponentsBuilder.fromCurrentContextPath().path("/admin/files/").path(file.getFileId().toString()).toUriString();
             return new FileResponse(file.getFilePath().split("/")[1], file.getFilePath().split("/")[2], fileUrl);
         }).collect(Collectors.toList());
-        return fileResponses;
     }
 
-    private Sort.Direction getSortDirection(String direction) {
+    public Sort.Direction getSortDirection(String direction) {
         if (direction.equals("asc")) {
             return Sort.Direction.ASC;
         } else if (direction.equals("desc")) {
@@ -294,7 +289,7 @@ public class AdminServiceImpl implements AdminService {
         return Sort.Direction.ASC;
     }
 
-    private Pageable pagingSort(int page, int size, String[] sorts) {
+    public Pageable pagingSort(int page, int size, String[] sorts) {
         List<Sort.Order> orders = new ArrayList<>();
         if (sorts[0].contains(",")) {
             for (String sortOrder : sorts) {

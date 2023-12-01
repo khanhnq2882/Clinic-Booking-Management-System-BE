@@ -4,9 +4,11 @@ import khanhnq.project.clinicbookingmanagementsystem.request.ChangePasswordReque
 import khanhnq.project.clinicbookingmanagementsystem.request.LoginRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.RegisterRequest;
 import khanhnq.project.clinicbookingmanagementsystem.response.JwtResponse;
+import khanhnq.project.clinicbookingmanagementsystem.response.MessageResponse;
 import khanhnq.project.clinicbookingmanagementsystem.response.UserInfoResponse;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import lombok.AllArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,11 +23,7 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<String> register(@RequestBody RegisterRequest registerRequest) {
-        try {
-            return authService.register(registerRequest);
-        }catch (RuntimeException ex) {
-            return ResponseEntity.badRequest().body(ex.getMessage());
-        }
+        return MessageResponse.getResponseMessage(authService.register(registerRequest), HttpStatus.OK);
     }
 
     @PostMapping("/login")

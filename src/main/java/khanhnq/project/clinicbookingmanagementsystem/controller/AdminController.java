@@ -9,6 +9,7 @@ import khanhnq.project.clinicbookingmanagementsystem.service.AdminService;
 import khanhnq.project.clinicbookingmanagementsystem.service.FileService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,17 +21,19 @@ import java.util.List;
 @RequestMapping("/admin")
 
 public class AdminController {
+
     private final AdminService adminService;
+
     private final FileService fileService;
 
     @PostMapping("/approve-request-doctor/{userId}")
     public ResponseEntity<String> approveRequestDoctor(@PathVariable("userId") Long userId) {
-        return adminService.approveRequestDoctor(userId);
+        return MessageResponse.getResponseMessage(adminService.approveRequestDoctor(userId), HttpStatus.OK);
     }
 
     @PostMapping("/reject-request-doctor/{userId}")
     public ResponseEntity<String> rejectRequestDoctor(@PathVariable("userId") Long userId) {
-        return adminService.rejectRequestDoctor(userId);
+        return MessageResponse.getResponseMessage(adminService.rejectRequestDoctor(userId), HttpStatus.OK);
     }
 
     @GetMapping("/get-all-users")
@@ -73,7 +76,7 @@ public class AdminController {
 
     @PostMapping("/add-service-category")
     public ResponseEntity<String> addServiceCategory(@RequestBody ServiceCategoryRequest serviceCategoryRequest) {
-        return adminService.addServiceCategory(serviceCategoryRequest);
+        return MessageResponse.getResponseMessage(adminService.addServiceCategory(serviceCategoryRequest), HttpStatus.OK);
     }
 
     @GetMapping("/get-all-service-categories")
@@ -85,7 +88,7 @@ public class AdminController {
 
     @PostMapping("/add-service")
     public ResponseEntity<String> addService(@RequestBody ServiceRequest serviceRequest) {
-        return adminService.addService(serviceRequest);
+        return MessageResponse.getResponseMessage(adminService.addService(serviceRequest), HttpStatus.OK);
     }
 
     @GetMapping("/get-all-services")
