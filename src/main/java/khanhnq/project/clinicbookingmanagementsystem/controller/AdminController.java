@@ -99,4 +99,9 @@ public class AdminController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllServices(page, size, sort));
     }
 
+    @PostMapping("/update-service-category/{serviceCategoryId}")
+    public ResponseEntity<String> updateServiceCategory(@PathVariable("serviceCategoryId") Long serviceCategoryId ,@RequestBody ServiceCategoryRequest serviceCategoryRequest) {
+        return MessageResponse.getResponseMessage(adminService.updateServiceCategory(serviceCategoryRequest, serviceCategoryId), HttpStatus.OK);
+    }
+
 }

@@ -217,6 +217,20 @@ public class AdminServiceImpl implements AdminService {
                 .build();
     }
 
+    @Override
+    public String updateServiceCategory(ServiceCategoryRequest serviceCategoryRequest, Long serviceCategoryId) {
+        User currentUser = authService.getCurrentUser();
+        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_ADMIN"))) {
+            throw new ResourceException("You do not have permission to update service category.", HttpStatus.UNAUTHORIZED);
+        }
+        ServiceCategory serviceCategory = serviceCategoryRepository.findById(serviceCategoryId).orElse(null);
+        serviceCategory.setSpecialization(specializationRepository.findById(serviceCategoryRequest.getSpecializationId()).orElse(null));
+        serviceCategory.setServiceCategoryName(serviceCategoryRequest.getServiceCategoryName());
+        serviceCategory.setDescription(serviceCategoryRequest.getDescription());
+        serviceCategoryRepository.save(serviceCategory);
+        return "Update service category successfully.";
+    }
+
     public Map<Long, List<Experience>> groupExperiencesByUserId() {
         Map<Long, List<Experience>> map = new HashMap<>();
         for (Experience experience : experienceRepository.findAll()) {
