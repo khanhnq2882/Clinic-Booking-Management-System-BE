@@ -57,7 +57,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public String requestBecomeDoctor(AddRoleDoctorRequest addRoleDoctorRequest) {
         User currentUser = authService.getCurrentUser();
-        if (!currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().equals(ERole.ROLE_DOCTOR))) {
+        if (currentUser.getRoles().stream().anyMatch(role -> role.getRoleName().equals(ERole.ROLE_DOCTOR))) {
             throw new ResourceException("you don't need to submit a request because you are already a doctor in the system.", HttpStatus.BAD_REQUEST);
         }
         currentUser.setUniversityName(addRoleDoctorRequest.getUniversityName());
@@ -116,8 +116,8 @@ public class UserServiceImpl implements UserService {
                 .stream()
                 .map(workSchedule -> WorkScheduleDTO.builder()
                         .workScheduleId(workSchedule.getWorkScheduleId())
-                        .startTime(workSchedule.getStartTime())
-                        .endTime(workSchedule.getEndTime())
+                        .startTime(workSchedule.getStartTime().toString())
+                        .endTime(workSchedule.getEndTime().toString())
                         .build())
                 .sorted(Comparator.comparing(WorkScheduleDTO::getStartTime))
                 .toList();

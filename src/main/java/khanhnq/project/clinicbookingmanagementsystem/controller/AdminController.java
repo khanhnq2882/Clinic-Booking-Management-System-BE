@@ -79,6 +79,7 @@ public class AdminController {
         return MessageResponse.getResponseMessage(adminService.addServiceCategory(serviceCategoryRequest), HttpStatus.OK);
     }
 
+    // Danh sách service category
     @GetMapping("/get-all-service-categories")
     public ResponseEntity<ServiceCategoryResponse> getAllServiceCategories(@RequestParam(defaultValue = "0") int page,
                                                                            @RequestParam(defaultValue = "3") int size,

@@ -15,6 +15,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -33,7 +34,7 @@ public class DoctorServiceImpl implements DoctorService {
     private final UserRepository userRepository;
 
     @Override
-    public String addDoctorInformation(DoctorInformationRequest doctorInformationRequest) {
+    public String updateDoctorInformation(DoctorInformationRequest doctorInformationRequest) {
         User currentUser = authService.getCurrentUser();
         if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_DOCTOR"))) {
             throw new ResourceException("You don't have permission to do this.", HttpStatus.UNAUTHORIZED);
@@ -45,8 +46,8 @@ public class DoctorServiceImpl implements DoctorService {
                 .build());
         Set<WorkSchedule> workSchedules = doctorInformationRequest.getWorkSchedules().stream()
                 .map(workScheduleDTO -> WorkSchedule.builder()
-                        .startTime(workScheduleDTO.getStartTime())
-                        .endTime(workScheduleDTO.getEndTime())
+                        .startTime(LocalTime.parse(workScheduleDTO.getStartTime()))
+                        .endTime(LocalTime.parse(workScheduleDTO.getEndTime()))
                         .user(currentUser)
                         .build())
                 .collect(Collectors.toSet());
