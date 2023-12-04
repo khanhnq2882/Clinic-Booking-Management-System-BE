@@ -104,4 +104,9 @@ public class AdminController {
         return MessageResponse.getResponseMessage(adminService.updateServiceCategory(serviceCategoryRequest, serviceCategoryId), HttpStatus.OK);
     }
 
+    @GetMapping("/get-service-category/{serviceCategoryId}")
+    public ResponseEntity<ServiceCategoryDTO> updateServiceCategory(@PathVariable("serviceCategoryId") Long serviceCategoryId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getServiceCategoryById(serviceCategoryId));
+    }
+
 }

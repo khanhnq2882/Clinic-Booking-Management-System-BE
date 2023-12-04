@@ -12,3 +12,5 @@ admin thêm bác sĩ (thêm chuyên khoa cho bác sĩ) <làm sau> -> bác sĩ c�
 
 người dùng chọn chuyên khoa -> liệt kê ra danh sách bác sĩ của chuyên khoa đó -> hiển thị ngày và danh sách lịch khám trong ngày còn trống để người dùng chọn -> người dùng nhập thông tin cần khám
 -> đưa vào danh sách booking do từng bác sĩ quản lý -> chuyển trạng thái -> nếu chấp nhận thì hẹn người dùng đi khám
+
+https://hasthemes.com/free-bootstrap-templates/mexi/

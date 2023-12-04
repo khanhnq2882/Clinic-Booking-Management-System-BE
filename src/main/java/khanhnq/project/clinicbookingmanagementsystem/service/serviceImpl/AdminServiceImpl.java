@@ -218,6 +218,18 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    public ServiceCategoryDTO getServiceCategoryById(Long serviceCategoryId) {
+        ServiceCategory serviceCategory = serviceCategoryRepository.findById(serviceCategoryId).orElse(null);
+        return ServiceCategoryDTO.builder()
+                .serviceCategoryId(serviceCategory.getServiceCategoryId())
+                .serviceCategoryName(serviceCategory.getServiceCategoryName())
+                .description(serviceCategory.getDescription())
+                .specializationId(serviceCategory.getSpecialization().getSpecializationId())
+                .specializationName(serviceCategory.getSpecialization().getSpecializationName())
+                .build();
+    }
+
+    @Override
     public String updateServiceCategory(ServiceCategoryRequest serviceCategoryRequest, Long serviceCategoryId) {
         User currentUser = authService.getCurrentUser();
         if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_ADMIN"))) {

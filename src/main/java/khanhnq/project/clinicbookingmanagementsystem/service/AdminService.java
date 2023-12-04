@@ -18,5 +18,6 @@ public interface AdminService {
     List<ServiceCategoryDTO> getServiceCategories(Long specializationId);
     ServiceCategoryResponse getAllServiceCategories(int page, int size, String[] sorts);
     ServicesResponse getAllServices(int page, int size, String[] sorts);
+    ServiceCategoryDTO getServiceCategoryById (Long serviceCategoryId);
     String updateServiceCategory(ServiceCategoryRequest serviceCategoryRequest, Long serviceCategoryId);
 }
