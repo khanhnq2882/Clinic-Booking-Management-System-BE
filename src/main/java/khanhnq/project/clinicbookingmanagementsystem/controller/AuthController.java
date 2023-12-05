@@ -36,6 +36,11 @@ public class AuthController {
         return authService.changePassword(changePasswordRequest);
     }
 
+    @GetMapping("/get-user/{username}")
+    public ResponseEntity<UserInfoResponse> getUserByUsername(@PathVariable("username") String username) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(authService.getUserByUsername(username));
+    }
+
     @GetMapping("/get-user-info")
     public ResponseEntity<UserInfoResponse> getUserInfo() {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(authService.getUserInfo());

@@ -137,8 +137,16 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    public UserInfoResponse getUserByUsername(String username) {
+        return getUser(userRepository.findUserByUsername(username));
+    }
+
+    @Override
     public UserInfoResponse getUserInfo() {
-        User user = getCurrentUser();
+        return getUser(getCurrentUser());
+    }
+
+    public UserInfoResponse getUser (User user) {
         List<String> roles = user.getRoles()
                 .stream()
                 .map(role -> role.getRoleName().name())
