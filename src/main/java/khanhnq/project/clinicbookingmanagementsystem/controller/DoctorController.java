@@ -18,13 +18,11 @@ public class DoctorController {
 
     private final DoctorService doctorService;
 
-    // cập nhật thông tin bác sĩ
     @PostMapping("/update-doctor-information")
     public ResponseEntity<String> addDoctorInformation(@RequestBody DoctorInformationRequest doctorInformationRequest) {
         return MessageResponse.getResponseMessage(doctorService.updateDoctorInformation(doctorInformationRequest), HttpStatus.OK);
     }
 
-    // danh sách user đã đặt lịch khám
     @GetMapping("/get-all-user-bookings")
     public ResponseEntity<BookingResponse> getAllUserBookings(@RequestParam(defaultValue = "0") int page,
                                                               @RequestParam(defaultValue = "3") int size,

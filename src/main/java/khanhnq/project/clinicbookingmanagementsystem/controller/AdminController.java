@@ -1,6 +1,7 @@
 package khanhnq.project.clinicbookingmanagementsystem.controller;
 
 import khanhnq.project.clinicbookingmanagementsystem.dto.ServiceCategoryDTO;
+import khanhnq.project.clinicbookingmanagementsystem.dto.ServicesDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.File;
 import khanhnq.project.clinicbookingmanagementsystem.request.ServiceCategoryRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.ServiceRequest;
@@ -74,12 +75,6 @@ public class AdminController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getServiceCategories(specializationId));
     }
 
-    @PostMapping("/add-service-category")
-    public ResponseEntity<String> addServiceCategory(@RequestBody ServiceCategoryRequest serviceCategoryRequest) {
-        return MessageResponse.getResponseMessage(adminService.addServiceCategory(serviceCategoryRequest), HttpStatus.OK);
-    }
-
-    // Danh sách service category
     @GetMapping("/get-all-service-categories")
     public ResponseEntity<ServiceCategoryResponse> getAllServiceCategories(@RequestParam(defaultValue = "0") int page,
                                                                            @RequestParam(defaultValue = "3") int size,
@@ -87,9 +82,19 @@ public class AdminController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllServiceCategories(page, size, sort));
     }
 
-    @PostMapping("/add-service")
-    public ResponseEntity<String> addService(@RequestBody ServiceRequest serviceRequest) {
-        return MessageResponse.getResponseMessage(adminService.addService(serviceRequest), HttpStatus.OK);
+    @PostMapping("/add-service-category")
+    public ResponseEntity<String> addServiceCategory(@RequestBody ServiceCategoryRequest serviceCategoryRequest) {
+        return MessageResponse.getResponseMessage(adminService.addServiceCategory(serviceCategoryRequest), HttpStatus.OK);
+    }
+
+    @GetMapping("/get-service-category/{serviceCategoryId}")
+    public ResponseEntity<ServiceCategoryDTO> getServiceCategory(@PathVariable("serviceCategoryId") Long serviceCategoryId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getServiceCategoryById(serviceCategoryId));
+    }
+
+    @PostMapping("/update-service-category/{serviceCategoryId}")
+    public ResponseEntity<String> updateServiceCategory(@PathVariable("serviceCategoryId") Long serviceCategoryId ,@RequestBody ServiceCategoryRequest serviceCategoryRequest) {
+        return MessageResponse.getResponseMessage(adminService.updateServiceCategory(serviceCategoryRequest, serviceCategoryId), HttpStatus.OK);
     }
 
     @GetMapping("/get-all-services")
@@ -99,14 +104,19 @@ public class AdminController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllServices(page, size, sort));
     }
 
-    @PostMapping("/update-service-category/{serviceCategoryId}")
-    public ResponseEntity<String> updateServiceCategory(@PathVariable("serviceCategoryId") Long serviceCategoryId ,@RequestBody ServiceCategoryRequest serviceCategoryRequest) {
-        return MessageResponse.getResponseMessage(adminService.updateServiceCategory(serviceCategoryRequest, serviceCategoryId), HttpStatus.OK);
+    @PostMapping("/add-service")
+    public ResponseEntity<String> addService(@RequestBody ServiceRequest serviceRequest) {
+        return MessageResponse.getResponseMessage(adminService.addService(serviceRequest), HttpStatus.OK);
     }
 
-    @GetMapping("/get-service-category/{serviceCategoryId}")
-    public ResponseEntity<ServiceCategoryDTO> updateServiceCategory(@PathVariable("serviceCategoryId") Long serviceCategoryId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getServiceCategoryById(serviceCategoryId));
+    @GetMapping("/get-service/{serviceId}")
+    public ResponseEntity<ServicesDTO> getService(@PathVariable("serviceId") Long serviceId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getServiceById(serviceId));
+    }
+
+    @PostMapping("/update-service/{serviceId}")
+    public ResponseEntity<String> updateService(@PathVariable("serviceId") Long serviceId ,@RequestBody ServiceRequest serviceRequest) {
+        return MessageResponse.getResponseMessage(adminService.updateService(serviceRequest, serviceId), HttpStatus.OK);
     }
 
 }

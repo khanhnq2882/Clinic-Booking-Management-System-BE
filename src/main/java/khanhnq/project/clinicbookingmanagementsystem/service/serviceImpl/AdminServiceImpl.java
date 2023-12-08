@@ -156,6 +156,37 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    public ServicesDTO getServiceById(Long serviceId) {
+        Services services = servicesRepository.findById(serviceId).orElse(null);
+        return ServicesDTO.builder()
+                .serviceId(services.getServiceId())
+                .serviceCode(services.getServiceCode())
+                .serviceName(services.getServiceName())
+                .price(services.getPrice())
+                .description(services.getDescription())
+                .status(services.getStatus().name())
+                .serviceCategoryName(services.serviceCategoryName())
+                .build();
+    }
+
+    @Override
+    public String updateService(ServiceRequest serviceRequest, Long serviceId) {
+        User currentUser = authService.getCurrentUser();
+        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_ADMIN"))) {
+            throw new ResourceException("You do not have permission to update service category.", HttpStatus.UNAUTHORIZED);
+        }
+        Services service = servicesRepository.findById(serviceId).orElse(null);
+        ServiceCategory serviceCategory = serviceCategoryRepository.findById(serviceRequest.getServiceCategoryId()).orElse(null);
+        serviceCode(service, serviceCategory);
+        service.setServiceCategory(serviceCategory);
+        service.setServiceName(serviceRequest.getServiceName());
+        service.setPrice(serviceRequest.getPrice());
+        service.setDescription(serviceRequest.getDescription());
+        servicesRepository.save(service);
+        return "Update service successfully.";
+    }
+
+    @Override
     public List<SpecializationResponse> getAllSpecializations() {
         return specializationRepository.findAll()
                 .stream()
