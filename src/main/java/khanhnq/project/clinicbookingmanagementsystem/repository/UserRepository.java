@@ -24,6 +24,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query(value = "SELECT u FROM User AS u WHERE u.specialization.specializationId = :specializationId")
     List<User> getDoctorsBySpecializationId(@Param("specializationId") Long specializationId);
 
+    @Query(value = "SELECT u FROM User AS u INNER JOIN u.roles AS r WHERE r.roleName = 'ROLE_USER'")
+    List<User> getUsers();
+
     @Query(value = "SELECT u FROM User AS u INNER JOIN u.roles AS r WHERE r.roleName = 'ROLE_DOCTOR'")
     List<User> getDoctors();
 }

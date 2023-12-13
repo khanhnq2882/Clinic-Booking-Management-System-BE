@@ -17,12 +17,18 @@ import khanhnq.project.clinicbookingmanagementsystem.service.AdminService;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import khanhnq.project.clinicbookingmanagementsystem.service.FileService;
 import lombok.AllArgsConstructor;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
@@ -39,6 +45,7 @@ public class AdminServiceImpl implements AdminService {
     private final SpecializationRepository specializationRepository;
     private final ServiceCategoryRepository serviceCategoryRepository;
     private final ServicesRepository servicesRepository;
+    private final Workbook workbook = new XSSFWorkbook();
 
     @Override
     public String approveRequestDoctor(Long userId) {
@@ -159,7 +166,7 @@ public class AdminServiceImpl implements AdminService {
     public ServicesDTO getServiceById(Long serviceId) {
         Services services = servicesRepository.findById(serviceId).orElse(null);
         return ServicesDTO.builder()
-                .serviceId(services.getServiceId())
+                .serviceId(Objects.requireNonNull(services).getServiceId())
                 .serviceCode(services.getServiceCode())
                 .serviceName(services.getServiceName())
                 .price(services.getPrice())
@@ -177,13 +184,25 @@ public class AdminServiceImpl implements AdminService {
         }
         Services service = servicesRepository.findById(serviceId).orElse(null);
         ServiceCategory serviceCategory = serviceCategoryRepository.findById(serviceRequest.getServiceCategoryId()).orElse(null);
-        serviceCode(service, serviceCategory);
-        service.setServiceCategory(serviceCategory);
+        serviceCode(service, Objects.requireNonNull(serviceCategory));
+        Objects.requireNonNull(service).setServiceCategory(serviceCategory);
         service.setServiceName(serviceRequest.getServiceName());
         service.setPrice(serviceRequest.getPrice());
         service.setDescription(serviceRequest.getDescription());
         servicesRepository.save(service);
         return "Update service successfully.";
+    }
+
+    @Override
+    public List<UserDTO> getUsers() {
+        return userRepository.getUsers()
+                .stream()
+                .map(user -> {
+                    UserDTO userDTO = UserMapper.USER_MAPPER.mapToUserDTO(user);
+                    userDTO.setUserAddress(getAddress(user));
+                    return userDTO;
+                })
+                .toList();
     }
 
     @Override
@@ -252,7 +271,7 @@ public class AdminServiceImpl implements AdminService {
     public ServiceCategoryDTO getServiceCategoryById(Long serviceCategoryId) {
         ServiceCategory serviceCategory = serviceCategoryRepository.findById(serviceCategoryId).orElse(null);
         return ServiceCategoryDTO.builder()
-                .serviceCategoryId(serviceCategory.getServiceCategoryId())
+                .serviceCategoryId(Objects.requireNonNull(serviceCategory).getServiceCategoryId())
                 .serviceCategoryName(serviceCategory.getServiceCategoryName())
                 .description(serviceCategory.getDescription())
                 .specializationId(serviceCategory.getSpecialization().getSpecializationId())
@@ -267,11 +286,131 @@ public class AdminServiceImpl implements AdminService {
             throw new ResourceException("You do not have permission to update service category.", HttpStatus.UNAUTHORIZED);
         }
         ServiceCategory serviceCategory = serviceCategoryRepository.findById(serviceCategoryId).orElse(null);
-        serviceCategory.setSpecialization(specializationRepository.findById(serviceCategoryRequest.getSpecializationId()).orElse(null));
+        Objects.requireNonNull(serviceCategory).setSpecialization(specializationRepository.findById(serviceCategoryRequest.getSpecializationId()).orElse(null));
         serviceCategory.setServiceCategoryName(serviceCategoryRequest.getServiceCategoryName());
         serviceCategory.setDescription(serviceCategoryRequest.getDescription());
         serviceCategoryRepository.save(serviceCategory);
         return "Update service category successfully.";
+    }
+
+    @Override
+    public ByteArrayInputStream exportUsersToExcel(List<UserDTO> users) {
+        try {
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            Sheet sheet = workbook.createSheet("Users");
+            String[] headers = {"User Code", "Email", "Full Name", "Date Of Birth",
+                    "Gender", "Phone Number", "Address", "Status"};
+            createHeader(sheet, headers);
+            int firstRow = 1;
+            for (UserDTO userDTO : users) {
+                Row currentRow = sheet.createRow(firstRow++);
+                String fullName = userDTO.getFirstName() + " " + userDTO.getLastName();
+                AddressResponse userAddress = userDTO.getUserAddress();
+                String address = userAddress.getSpecificAddress() + ", " + userAddress.getWardName()
+                        + ", " + userAddress.getDistrictName() + ", " + userAddress.getCityName();
+                createCell(currentRow, 0, userDTO.getUserCode());
+                createCell(currentRow, 1, userDTO.getEmail());
+                createCell(currentRow, 2, (Objects.isNull(userDTO.getFirstName()) && Objects.isNull(userDTO.getLastName())) ? " " : fullName);
+                createCell(currentRow, 3, Objects.isNull(userDTO.getDateOfBirth()) ? " " : userDTO.getDateOfBirth());
+                createCell(currentRow, 4, userDTO.getGender());
+                createCell(currentRow, 5, Objects.isNull(userDTO.getPhoneNumber()) ? " " : userDTO.getPhoneNumber());
+                createCell(currentRow, 6, Objects.isNull(userDTO.getUserAddress().getSpecificAddress()) ? " " : address);
+                createCell(currentRow, 7, userDTO.getStatus());
+            }
+            workbook.write(outputStream);
+            return new ByteArrayInputStream(outputStream.toByteArray());
+        } catch (IOException ex) {
+            throw new ResourceException("Failed export data to file excel.", HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @Override
+    public List<ServiceCategory> importServiceCategoriesFromExcel(InputStream inputStream){
+        try {
+            List<ServiceCategory> serviceCategories = new ArrayList<>();
+            Sheet sheet = new XSSFWorkbook(inputStream).getSheet("service_category");
+            Iterator<Row> rows = sheet.iterator();
+            int rowIndex = 0;
+            while (rows.hasNext()) {
+                ServiceCategory serviceCategory = new ServiceCategory();
+                Row currentRow = rows.next();
+                if (rowIndex == 0) {
+                    rowIndex++;
+                    continue;
+                }
+                Iterator<Cell> cells = currentRow.cellIterator();
+                int cellIndex = 0;
+                while (cells.hasNext()) {
+                    Cell currentCell = cells.next();
+                    switch (cellIndex) {
+                        case 0 -> {
+                            if (currentCell.getStringCellValue() == null) {
+                                throw new ResourceException("Service category name in row "+rowIndex+" can't be empty.", HttpStatus.BAD_REQUEST);
+                            }
+                            serviceCategory.setServiceCategoryName(currentCell.getStringCellValue());
+                        }
+                        case 1 -> {
+                            if (currentCell.getStringCellValue() == null) {
+                                throw new ResourceException("Description in row "+rowIndex+" can't be empty.", HttpStatus.BAD_REQUEST);
+                            }
+                            serviceCategory.setDescription(currentCell.getStringCellValue());
+                        }
+                        case 2 -> {
+                            if (currentCell.getStringCellValue() == null) {
+                                throw new ResourceException("Specialization name in row "+rowIndex+" can't be empty.", HttpStatus.BAD_REQUEST);
+                            }
+                            Specialization specialization = specializationRepository.getSpecializationBySpecializationName(currentCell.getStringCellValue());
+                            serviceCategory.setSpecialization(specialization);
+                        }
+                        default -> {
+                        }
+                    }
+                    cellIndex ++;
+                }
+                serviceCategories.add(serviceCategory);
+                rowIndex ++;
+            }
+            return serviceCategories;
+        } catch (IOException ex) {
+            throw new ResourceException("Failed to import data from file excel.", HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @Override
+    public List<Services> importServicesFromExcel(InputStream inputStream) {
+        return null;
+    }
+
+    public void createHeader (Sheet sheet, String[] headers) {
+        Row headerRow = sheet.createRow(0);
+        for (int i=0 ; i < headers.length; i++) {
+            Cell cell = headerRow.createCell(i);
+            cell.setCellValue(headers[i]);
+            Font font = workbook.createFont();
+            font.setBold(true);
+            CellStyle cellStyle = workbook.createCellStyle();
+            cellStyle.setFont(font);
+            cell.setCellStyle(cellStyle);
+        }
+    }
+
+    public void createCell (Row row, int cellIndex, Object value) {
+        Cell cell = row.createCell(cellIndex);
+        if (value instanceof String) {
+            cell.setCellValue((String) value);
+        } else if (value instanceof Integer) {
+            cell.setCellValue((Integer) value);
+        } else if (value instanceof Long) {
+            cell.setCellValue((Long) value);
+        } else if (value instanceof Boolean) {
+            cell.setCellValue((Boolean) value);
+        } else {
+            CreationHelper helper = workbook.getCreationHelper();
+            CellStyle cellStyle = workbook.createCellStyle();
+            cellStyle.setDataFormat(helper.createDataFormat().getFormat("dd-MM-yyyy"));
+            cell.setCellValue((Date) value);
+            cell.setCellStyle(cellStyle);
+        }
     }
 
     public Map<Long, List<Experience>> groupExperiencesByUserId() {
@@ -289,7 +428,7 @@ public class AdminServiceImpl implements AdminService {
         AddressResponse addressResponse = new AddressResponse();
         if (user.getAddress() != null) {
             Address address = addressRepository.findById(user.getAddress().getAddressId()).orElse(null);
-            addressResponse.setAddressId(address.getAddressId());
+            addressResponse.setAddressId(Objects.requireNonNull(address).getAddressId());
             addressResponse.setSpecificAddress(address.getSpecificAddress());
             addressResponse.setWardName(address.getWard().getWardName());
             addressResponse.setDistrictName(address.getWard().getDistrict().getDistrictName());

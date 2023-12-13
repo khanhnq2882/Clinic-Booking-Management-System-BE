@@ -3,17 +3,22 @@ package khanhnq.project.clinicbookingmanagementsystem.controller;
 import khanhnq.project.clinicbookingmanagementsystem.dto.ServiceCategoryDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.ServicesDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.File;
+import khanhnq.project.clinicbookingmanagementsystem.entity.ServiceCategory;
+import khanhnq.project.clinicbookingmanagementsystem.repository.ServiceCategoryRepository;
 import khanhnq.project.clinicbookingmanagementsystem.request.ServiceCategoryRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.ServiceRequest;
 import khanhnq.project.clinicbookingmanagementsystem.response.*;
 import khanhnq.project.clinicbookingmanagementsystem.service.AdminService;
 import khanhnq.project.clinicbookingmanagementsystem.service.FileService;
 import lombok.AllArgsConstructor;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import java.io.IOException;
 import java.util.List;
 
 @CrossOrigin(origins = "http://localhost:4200", maxAge = 3600, allowCredentials = "true")
@@ -26,6 +31,8 @@ public class AdminController {
     private final AdminService adminService;
 
     private final FileService fileService;
+
+    private final ServiceCategoryRepository serviceCategoryRepository;
 
     @PostMapping("/approve-request-doctor/{userId}")
     public ResponseEntity<String> approveRequestDoctor(@PathVariable("userId") Long userId) {
@@ -117,6 +124,31 @@ public class AdminController {
     @PostMapping("/update-service/{serviceId}")
     public ResponseEntity<String> updateService(@PathVariable("serviceId") Long serviceId ,@RequestBody ServiceRequest serviceRequest) {
         return MessageResponse.getResponseMessage(adminService.updateService(serviceRequest, serviceId), HttpStatus.OK);
+    }
+
+    @GetMapping("/export-users-to-excel")
+    public ResponseEntity<InputStreamResource> exportUsersToExcel () {
+        String fileName = "list_users.xlsx";
+        InputStreamResource file = new InputStreamResource(adminService.exportUsersToExcel(adminService.getUsers()));
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName)
+                .contentType(MediaType.parseMediaType("application/vnd.ms-excel"))
+                .body(file);
+    }
+
+    @PostMapping("/import-service-categories-from-excel")
+    public ResponseEntity<String> importServiceCategoriesFromExcel (@RequestParam("file") MultipartFile file){
+        String excelType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        try {
+            if (!excelType.equals(file.getContentType())) {
+                return MessageResponse.getResponseMessage("Invalid file excel.", HttpStatus.BAD_REQUEST);
+            }
+            List<ServiceCategory> serviceCategories = adminService.importServiceCategoriesFromExcel(file.getInputStream());
+            serviceCategoryRepository.saveAll(serviceCategories);
+            return MessageResponse.getResponseMessage("Import data successfully.", HttpStatus.BAD_REQUEST);
+        } catch (IOException e) {
+            return MessageResponse.getResponseMessage("Failed to store data from file excel.", HttpStatus.BAD_REQUEST);
+        }
     }
 
 }

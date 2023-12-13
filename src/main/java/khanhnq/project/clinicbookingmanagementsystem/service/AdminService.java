@@ -2,9 +2,14 @@ package khanhnq.project.clinicbookingmanagementsystem.service;
 
 import khanhnq.project.clinicbookingmanagementsystem.dto.ServiceCategoryDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.ServicesDTO;
+import khanhnq.project.clinicbookingmanagementsystem.dto.UserDTO;
+import khanhnq.project.clinicbookingmanagementsystem.entity.ServiceCategory;
+import khanhnq.project.clinicbookingmanagementsystem.entity.Services;
 import khanhnq.project.clinicbookingmanagementsystem.request.ServiceCategoryRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.ServiceRequest;
 import khanhnq.project.clinicbookingmanagementsystem.response.*;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.util.List;
 
 public interface AdminService {
@@ -23,4 +28,8 @@ public interface AdminService {
     String addService(ServiceRequest serviceRequest);
     ServicesDTO getServiceById (Long serviceId);
     String updateService(ServiceRequest serviceRequest, Long serviceId);
+    List<UserDTO> getUsers();
+    ByteArrayInputStream exportUsersToExcel (List<UserDTO> users);
+    List<ServiceCategory> importServiceCategoriesFromExcel (InputStream inputStream);
+    List<Services> importServicesFromExcel (InputStream inputStream);
 }
