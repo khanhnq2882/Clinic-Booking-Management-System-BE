@@ -5,7 +5,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EServiceStatus;
 import lombok.*;
-
 @Entity
 @Getter
 @Setter
@@ -18,7 +17,6 @@ public class Services {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long serviceId;
 
-    @Column(nullable = true)
     private String serviceCode;
 
     @Column(nullable = false)
@@ -29,7 +27,7 @@ public class Services {
 
     @NotBlank
     @Size(max = 255)
-    @Column(nullable = false, length = 255)
+    @Column(nullable = false)
     private String description;
 
     @Enumerated(EnumType.STRING)

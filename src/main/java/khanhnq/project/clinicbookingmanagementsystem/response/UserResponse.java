@@ -1,8 +1,8 @@
 package khanhnq.project.clinicbookingmanagementsystem.response;
 
+import khanhnq.project.clinicbookingmanagementsystem.dto.UserDTO;
 import lombok.*;
-import java.util.Date;
-import java.util.Set;
+import java.util.List;
 
 @Getter
 @Setter
@@ -10,15 +10,8 @@ import java.util.Set;
 @NoArgsConstructor
 @Builder
 public class UserResponse {
-    private Long userId;
-    private String userCode;
-    private String email;
-    private String firstName;
-    private String lastName;
-    private Date dateOfBirth;
-    private int gender;
-    private String phoneNumber;
-    private AddressResponse userAddress;
-    private Set<String> roleNames;
-    private String status;
+    private long totalItems;
+    private List<UserDTO> users;
+    private long totalPages;
+    private long currentPage;
 }

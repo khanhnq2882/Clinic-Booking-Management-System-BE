@@ -1,4 +1,4 @@
-package khanhnq.project.clinicbookingmanagementsystem.response;
+package khanhnq.project.clinicbookingmanagementsystem.dto;
 
 import lombok.*;
 import java.util.Date;
@@ -9,7 +9,7 @@ import java.util.Set;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class ExperienceResponse {
+public class ExperienceDTO {
     private String clinicName;
     private String position;
     private String specialization;

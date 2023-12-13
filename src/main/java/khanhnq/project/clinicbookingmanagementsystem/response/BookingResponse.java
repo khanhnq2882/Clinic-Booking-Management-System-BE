@@ -1,6 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.response;
 
-import khanhnq.project.clinicbookingmanagementsystem.dto.DoctorDTO;
+import khanhnq.project.clinicbookingmanagementsystem.dto.BookingDTO;
 import lombok.*;
 import java.util.List;
 
@@ -9,9 +9,9 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class DoctorResponse {
+public class BookingResponse {
     private long totalItems;
-    private List<DoctorDTO> doctors;
+    private List<BookingDTO> bookings;
     private long totalPages;
     private long currentPage;
 }

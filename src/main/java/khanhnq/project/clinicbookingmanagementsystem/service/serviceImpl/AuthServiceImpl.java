@@ -4,6 +4,7 @@ import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ERole;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Role;
 import khanhnq.project.clinicbookingmanagementsystem.entity.User;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EUserStatus;
+import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceException;
 import khanhnq.project.clinicbookingmanagementsystem.repository.RoleRepository;
 import khanhnq.project.clinicbookingmanagementsystem.repository.UserRepository;
 import khanhnq.project.clinicbookingmanagementsystem.request.ChangePasswordRequest;
@@ -33,28 +34,24 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class AuthServiceImpl implements AuthService {
     private UserRepository userRepository;
-
     private RoleRepository roleRepository;
-
     private PasswordEncoder passwordEncoder;
-
     private AuthenticationManager authenticationManager;
-
     private JwtUtils jwtUtils;
 
     @Override
-    public ResponseEntity<String> register(RegisterRequest registerRequest) {
+    public String register(RegisterRequest registerRequest) {
         if (!Objects.isNull(userRepository.findUserByUsername(registerRequest.getUsername()))) {
-            throw new RuntimeException("Username " + registerRequest.getUsername() + " is already exist. Try again!");
+            throw new ResourceException("Username " + registerRequest.getUsername() + " is already exist. Try again.", HttpStatus.BAD_REQUEST);
         }
         if (!Objects.isNull(userRepository.findUserByEmail(registerRequest.getEmail()))) {
-            throw new RuntimeException("Email " + registerRequest.getEmail() + " is already exist. Try again!");
+            throw new ResourceException("Email " + registerRequest.getEmail() + " is already exist. Try again.", HttpStatus.BAD_REQUEST);
         }
-        String userCode = "";
+        String userCode;
         if (userRepository.findAll().size() == 0) {
             userCode = "US1";
         } else {
-            Long nextId = Collections.max(userRepository.findAll().stream().map(user -> user.getUserId()).collect(Collectors.toList()));
+            Long nextId = Collections.max(userRepository.findAll().stream().map(User::getUserId).toList());
             userCode = "US" + nextId;
         }
         User user = User.builder()
@@ -73,36 +70,43 @@ public class AuthServiceImpl implements AuthService {
         } else {
             registerRequest.getRoles().forEach(role -> {
                 switch (role) {
-                    case "ROLE_ADMIN":
+                    case "ROLE_ADMIN" -> {
                         if (roleRepository.findRoleByRoleName(ERole.ROLE_ADMIN) == null) {
                             roleRepository.save(Role.builder().roleName(ERole.ROLE_ADMIN).build());
                         }
-                        user.setRoles(registerRequest.getRoles().stream().map(r -> roleRepository.findRoleByRoleName(ERole.valueOf(r))).collect(Collectors.toSet()));
-                        break;
-                    case "ROLE_DOCTOR":
+                        user.setRoles(registerRequest.getRoles()
+                                .stream()
+                                .map(r -> roleRepository.findRoleByRoleName(ERole.valueOf(r)))
+                                .collect(Collectors.toSet()));
+                    }
+                    case "ROLE_DOCTOR" -> {
                         if (roleRepository.findRoleByRoleName(ERole.ROLE_DOCTOR) == null) {
                             roleRepository.save(Role.builder().roleName(ERole.ROLE_DOCTOR).build());
                         }
-                        user.setRoles(registerRequest.getRoles().stream().map(r -> roleRepository.findRoleByRoleName(ERole.valueOf(r))).collect(Collectors.toSet()));
-                        break;
-                    default:
-                        user.setRoles(registerRequest.getRoles().stream().map(r -> roleRepository.findRoleByRoleName(ERole.valueOf(r))).collect(Collectors.toSet()));
+                        user.setRoles(registerRequest.getRoles()
+                                .stream()
+                                .map(r -> roleRepository.findRoleByRoleName(ERole.valueOf(r)))
+                                .collect(Collectors.toSet()));
+                    }
+                    default ->
+                            user.setRoles(registerRequest.getRoles()
+                                    .stream()
+                                    .map(r -> roleRepository.findRoleByRoleName(ERole.valueOf(r)))
+                                    .collect(Collectors.toSet()));
                 }
             });
         }
         userRepository.save(user);
-        return MessageResponse.getResponseMessage("Register successfully!", HttpStatus.OK);
+        return "Register successfully.";
     }
 
     @Override
-    public ResponseEntity<JwtResponse> login(LoginRequest loginRequest) {
+    public JwtResponse login(LoginRequest loginRequest) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
         SecurityContextHolder.getContext().setAuthentication(authentication);
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        ResponseCookie jwtCookie = jwtUtils.generateJwtCookie(userDetails);
-        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
-                .body(new JwtResponse(jwtUtils.generateTokenFromUsername(userDetails.getUsername())));
+        return new JwtResponse(jwtUtils.generateTokenFromUsername(userDetails.getUsername()));
     }
 
     @Override
@@ -114,8 +118,7 @@ public class AuthServiceImpl implements AuthService {
         if (!authentication.isAuthenticated() || authentication.getName() == null) {
             return null;
         }
-        User user = userRepository.findUserByUsername(authentication.getName());
-        return user;
+        return userRepository.findUserByUsername(authentication.getName());
     }
 
     @Override
@@ -126,32 +129,34 @@ public class AuthServiceImpl implements AuthService {
             if (changePasswordRequest.getNewPassword().equals(changePasswordRequest.getConfirmPassword())) {
                 currentUser.setPassword(passwordEncoder.encode(changePasswordRequest.getNewPassword()));
                 userRepository.save(currentUser);
-                return MessageResponse.getResponseMessage("Change password successfully!", HttpStatus.OK);
-            } else {
-                return MessageResponse.getResponseMessage("New password and confirm password is not match. Try again!", HttpStatus.BAD_REQUEST);
+                return MessageResponse.getResponseMessage("Change password successfully.", HttpStatus.OK);
             }
-        } else {
-            return MessageResponse.getResponseMessage("Current password is wrong. Try again!", HttpStatus.BAD_REQUEST);
+            throw new ResourceException("New password and confirm password is not match. Try again.", HttpStatus.BAD_REQUEST);
         }
+        throw new ResourceException("Current password is wrong. Try again.", HttpStatus.BAD_REQUEST);
     }
 
     @Override
-    public ResponseEntity<UserInfoResponse> getUserInfo() {
-        User user = getCurrentUser();
-        List<String> roles = user.getRoles().stream().map(role -> role.getRoleName().name()).collect(Collectors.toList());
-        UserInfoResponse userInfoResponse = UserInfoResponse.builder()
+    public UserInfoResponse getUserByUsername(String username) {
+        return getUser(userRepository.findUserByUsername(username));
+    }
+
+    @Override
+    public UserInfoResponse getUserInfo() {
+        return getUser(getCurrentUser());
+    }
+
+    public UserInfoResponse getUser (User user) {
+        List<String> roles = user.getRoles()
+                .stream()
+                .map(role -> role.getRoleName().name())
+                .collect(Collectors.toList());
+        return UserInfoResponse.builder()
                 .id(user.getUserId())
                 .username(user.getUsername())
                 .email(user.getEmail())
                 .roles(roles)
                 .build();
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(userInfoResponse);
-    }
-
-    @Override
-    public ResponseEntity<MessageResponse> logoutUser() {
-        ResponseCookie cookie = jwtUtils.getCleanJwtCookie();
-        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).body(new MessageResponse("You've been log out."));
     }
 
 }

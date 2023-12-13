@@ -1,6 +1,7 @@
 package khanhnq.project.clinicbookingmanagementsystem.response;
 
 import lombok.*;
+
 import java.util.List;
 
 @Getter
@@ -8,9 +9,9 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class UserPageResponse {
+public class RequestDoctorPageResponse {
     private long totalItems;
-    private List<UserResponse> users;
+    private List<RequestDoctorResponse> requestDoctorResponses;
     private long totalPages;
     private long currentPage;
 }

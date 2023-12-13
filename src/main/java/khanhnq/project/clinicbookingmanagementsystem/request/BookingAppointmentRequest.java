@@ -1,15 +1,16 @@
 package khanhnq.project.clinicbookingmanagementsystem.request;
 
-import khanhnq.project.clinicbookingmanagementsystem.dto.WorkScheduleDTO;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import java.util.Date;
-import java.util.Set;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class DoctorInformationRequest {
+public class BookingAppointmentRequest {
     private String firstName;
     private String lastName;
     private Date dateOfBirth;
@@ -17,7 +18,7 @@ public class DoctorInformationRequest {
     private String phoneNumber;
     private String specificAddress;
     private Long wardId;
-    private Set<Long> skillIds;
-    private Set<WorkScheduleDTO> workSchedules;
-    private String describeExperiences;
+    private Date appointmentDate;
+    private Long workScheduleId;
+    private String describeSymptoms;
 }
