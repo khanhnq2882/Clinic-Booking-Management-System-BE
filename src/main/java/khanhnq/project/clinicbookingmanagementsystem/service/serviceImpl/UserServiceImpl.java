@@ -132,8 +132,8 @@ public class UserServiceImpl implements UserService {
         for (Booking booking : bookingRepository.findAll()) {
             if (bookingAppointmentRequest.getWorkScheduleId().equals(booking.getWorkSchedule().getWorkScheduleId())
             && appointmentDate.equals(booking.getAppointmentDate().toString())) {
-                throw new ResourceException("You cannot schedule an appointment at time "+ Objects.requireNonNull(workSchedule).getStartTime() +" - "+ workSchedule.getEndTime()
-                        +" on day "+appointmentDate, HttpStatus.BAD_REQUEST);
+                throw new ResourceException("You cannot schedule an appointment at time "
+                        + Objects.requireNonNull(workSchedule).getStartTime() +" - "+ workSchedule.getEndTime() +" on day "+appointmentDate, HttpStatus.BAD_REQUEST);
             }
         }
         Booking bookingAppointment = BookingMapper.BOOKING_MAPPER.mapToBooking(bookingAppointmentRequest);
@@ -173,17 +173,11 @@ public class UserServiceImpl implements UserService {
     }
 
     public String bookingCode() {
-        String code;
-        if (bookingRepository.findAll().size() == 0) {
-            code = "BC1";
-        } else {
-            Long maxServiceCode = Collections.max(bookingRepository.findAll()
-                    .stream()
-                    .map(booking -> Long.parseLong(booking.getBookingCode().substring(2)))
-                    .toList());
-            code = "BC" + (maxServiceCode+1);
-        }
-        return code;
+        Long maxServiceCode = Collections.max(bookingRepository.findAll()
+                .stream()
+                .map(booking -> Long.parseLong(booking.getBookingCode().substring(2)))
+                .toList());
+        return (bookingRepository.findAll().size() == 0) ? "BC1" : ("BC" + (maxServiceCode+1));
     }
 
 }

@@ -4,7 +4,9 @@ import khanhnq.project.clinicbookingmanagementsystem.dto.ServiceCategoryDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.ServicesDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.File;
 import khanhnq.project.clinicbookingmanagementsystem.entity.ServiceCategory;
+import khanhnq.project.clinicbookingmanagementsystem.entity.Services;
 import khanhnq.project.clinicbookingmanagementsystem.repository.ServiceCategoryRepository;
+import khanhnq.project.clinicbookingmanagementsystem.repository.ServicesRepository;
 import khanhnq.project.clinicbookingmanagementsystem.request.ServiceCategoryRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.ServiceRequest;
 import khanhnq.project.clinicbookingmanagementsystem.response.*;
@@ -33,6 +35,8 @@ public class AdminController {
     private final FileService fileService;
 
     private final ServiceCategoryRepository serviceCategoryRepository;
+
+    private final ServicesRepository serviceRepository;
 
     @PostMapping("/approve-request-doctor/{userId}")
     public ResponseEntity<String> approveRequestDoctor(@PathVariable("userId") Long userId) {
@@ -138,13 +142,28 @@ public class AdminController {
 
     @PostMapping("/import-service-categories-from-excel")
     public ResponseEntity<String> importServiceCategoriesFromExcel (@RequestParam("file") MultipartFile file){
-        String excelType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
         try {
+            String excelType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
             if (!excelType.equals(file.getContentType())) {
                 return MessageResponse.getResponseMessage("Invalid file excel.", HttpStatus.BAD_REQUEST);
             }
             List<ServiceCategory> serviceCategories = adminService.importServiceCategoriesFromExcel(file.getInputStream());
             serviceCategoryRepository.saveAll(serviceCategories);
+            return MessageResponse.getResponseMessage("Import data successfully.", HttpStatus.BAD_REQUEST);
+        } catch (IOException e) {
+            return MessageResponse.getResponseMessage("Failed to store data from file excel.", HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PostMapping("/import-services-from-excel")
+    public ResponseEntity<String> importServicesFromExcel (@RequestParam("file") MultipartFile file){
+        try {
+            String excelType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            if (!excelType.equals(file.getContentType())) {
+                return MessageResponse.getResponseMessage("Invalid file excel.", HttpStatus.BAD_REQUEST);
+            }
+            List<Services> services = adminService.importServicesFromExcel(file.getInputStream());
+            serviceRepository.saveAll(services);
             return MessageResponse.getResponseMessage("Import data successfully.", HttpStatus.BAD_REQUEST);
         } catch (IOException e) {
             return MessageResponse.getResponseMessage("Failed to store data from file excel.", HttpStatus.BAD_REQUEST);

@@ -17,6 +17,7 @@ import khanhnq.project.clinicbookingmanagementsystem.service.AdminService;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import khanhnq.project.clinicbookingmanagementsystem.service.FileService;
 import lombok.AllArgsConstructor;
+import org.apache.commons.compress.utils.Lists;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.data.domain.Page;
@@ -40,6 +41,7 @@ public class AdminServiceImpl implements AdminService {
     private final AuthService authService;
     private final FileService fileService;
     private final RoleRepository roleRepository;
+    private final WardRepository wardRepository;
     private final AddressRepository addressRepository;
     private final ExperienceRepository experienceRepository;
     private final SpecializationRepository specializationRepository;
@@ -60,7 +62,7 @@ public class AdminServiceImpl implements AdminService {
         }
         Objects.requireNonNull(user).getRoles().add(role);
         userRepository.save(user);
-        return "Update successfully .User "+user.getFirstName()+" "+user.getLastName()+" is became a doctor in the system.";
+        return "Update successfully .User " + user.getFirstName() + " " + user.getLastName() + " is became a doctor in the system.";
     }
 
     @Override
@@ -119,13 +121,13 @@ public class AdminServiceImpl implements AdminService {
     public DoctorResponse getAllDoctors(int page, int size, String[] sorts) {
         Page<User> doctorPage = userRepository.getAllDoctors(pagingSort(page, size, sorts));
         List<DoctorDTO> doctors = doctorPage.getContent().stream().map(user -> {
-                    DoctorDTO doctorDTO = UserMapper.USER_MAPPER.mapToDoctorResponse(user);
-                    if (user.getSpecialization() != null) {
-                        doctorDTO.setSpecializationName(user.specializationName());
-                    }
-                    doctorDTO.setDoctorAddress(getAddress(user));
-                    return doctorDTO;
-                }).collect(Collectors.toList());
+            DoctorDTO doctorDTO = UserMapper.USER_MAPPER.mapToDoctorResponse(user);
+            if (user.getSpecialization() != null) {
+                doctorDTO.setSpecializationName(user.specializationName());
+            }
+            doctorDTO.setDoctorAddress(getAddress(user));
+            return doctorDTO;
+        }).collect(Collectors.toList());
         return DoctorResponse.builder()
                 .totalItems(doctorPage.getTotalElements())
                 .totalPages(doctorPage.getTotalPages())
@@ -325,65 +327,151 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public List<ServiceCategory> importServiceCategoriesFromExcel(InputStream inputStream){
+    public List<ServiceCategory> importServiceCategoriesFromExcel(InputStream inputStream) {
         try {
             List<ServiceCategory> serviceCategories = new ArrayList<>();
             Sheet sheet = new XSSFWorkbook(inputStream).getSheet("service_category");
-            Iterator<Row> rows = sheet.iterator();
-            int rowIndex = 0;
-            while (rows.hasNext()) {
+            List<Row> rows = Lists.newArrayList(sheet.rowIterator());
+            for (int i = 1; i < rows.size(); i++) {
                 ServiceCategory serviceCategory = new ServiceCategory();
-                Row currentRow = rows.next();
-                if (rowIndex == 0) {
-                    rowIndex++;
-                    continue;
-                }
-                Iterator<Cell> cells = currentRow.cellIterator();
-                int cellIndex = 0;
-                while (cells.hasNext()) {
-                    Cell currentCell = cells.next();
-                    switch (cellIndex) {
-                        case 0 -> {
-                            if (currentCell.getStringCellValue() == null) {
-                                throw new ResourceException("Service category name in row "+rowIndex+" can't be empty.", HttpStatus.BAD_REQUEST);
-                            }
-                            serviceCategory.setServiceCategoryName(currentCell.getStringCellValue());
-                        }
-                        case 1 -> {
-                            if (currentCell.getStringCellValue() == null) {
-                                throw new ResourceException("Description in row "+rowIndex+" can't be empty.", HttpStatus.BAD_REQUEST);
-                            }
-                            serviceCategory.setDescription(currentCell.getStringCellValue());
-                        }
+                List<Cell> cells = getAllCells(rows.get(i));
+                for (int j = 0; j < cells.size(); j++) {
+                    if (cells.get(j).getCellType() == CellType.BLANK) {
+                        throw new ResourceException("Import data failed. The value of column " + (j + 1) + " , row " + i + " can't be blank.", HttpStatus.BAD_REQUEST);
+                    }
+                    switch (j) {
+                        case 0 -> serviceCategory.setServiceCategoryName(cells.get(j).getStringCellValue());
+                        case 1 -> serviceCategory.setDescription(cells.get(j).getStringCellValue());
                         case 2 -> {
-                            if (currentCell.getStringCellValue() == null) {
-                                throw new ResourceException("Specialization name in row "+rowIndex+" can't be empty.", HttpStatus.BAD_REQUEST);
-                            }
-                            Specialization specialization = specializationRepository.getSpecializationBySpecializationName(currentCell.getStringCellValue());
+                            Specialization specialization = specializationRepository.getSpecializationBySpecializationName(cells.get(j).getStringCellValue());
                             serviceCategory.setSpecialization(specialization);
                         }
                         default -> {
                         }
                     }
-                    cellIndex ++;
                 }
                 serviceCategories.add(serviceCategory);
-                rowIndex ++;
             }
             return serviceCategories;
-        } catch (IOException ex) {
+        } catch (IOException e) {
             throw new ResourceException("Failed to import data from file excel.", HttpStatus.BAD_REQUEST);
         }
     }
 
     @Override
     public List<Services> importServicesFromExcel(InputStream inputStream) {
-        return null;
+        try {
+            List<Services> services = new ArrayList<>();
+            Sheet sheet = new XSSFWorkbook(inputStream).getSheet("services");
+            List<Row> rows = Lists.newArrayList(sheet.rowIterator());
+            for (int i = 1; i < rows.size(); i++) {
+                Services service = new Services();
+                List<Cell> cells = getAllCells(rows.get(i));
+                for (int j = 0; j < cells.size(); j++) {
+                    if (cells.get(j).getCellType() == CellType.BLANK) {
+                        throw new ResourceException("Import data failed. The value of column " + (j + 1) + " , row " + i + " can't be blank.", HttpStatus.BAD_REQUEST);
+                    }
+                    switch (j) {
+                        case 0 -> service.setServiceName(cells.get(j).getStringCellValue());
+                        case 1 -> service.setPrice(cells.get(j).getNumericCellValue());
+                        case 2 -> service.setDescription(cells.get(j).getStringCellValue());
+                        case 3 -> service.setStatus(EServiceStatus.valueOf(cells.get(j).getStringCellValue()));
+                        case 4 -> {
+                            ServiceCategory serviceCategory = serviceCategoryRepository.getServiceCategoriesByServiceCategoryName(cells.get(j).getStringCellValue());
+                            if (Objects.isNull(serviceCategory)) {
+                                throw new ResourceException("Import failed. Service category name in row " + i + " is not exist.", HttpStatus.BAD_REQUEST);
+                            }
+                            serviceCode(service, serviceCategory);
+                            service.setServiceCategory(serviceCategory);
+                        }
+                        default -> {
+                        }
+                    }
+                }
+                services.add(service);
+            }
+            return services;
+        } catch (IOException e) {
+            throw new ResourceException("Failed to import data from file excel.", HttpStatus.BAD_REQUEST);
+        }
     }
 
-    public void createHeader (Sheet sheet, String[] headers) {
+    @Override
+    public List<Booking> importBookingsFromExcel(InputStream inputStream) {
+        try {
+            List<Booking> bookings = new ArrayList<>();
+            Sheet sheet = new XSSFWorkbook(inputStream).getSheet("bookings");
+            List<Row> rows = Lists.newArrayList(sheet.rowIterator());
+            for (int i = 1; i < rows.size(); i++) {
+                Booking booking = new Booking();
+                List<Cell> cells = getAllCells(rows.get(i));
+                for (int j = 0; j < cells.size(); j++) {
+                    if (cells.get(j).getCellType() == CellType.BLANK) {
+                        throw new ResourceException("Import data failed. The value of column " + (j + 1) + " , row " + i + " can't be blank.", HttpStatus.BAD_REQUEST);
+                    }
+                    switch (j) {
+                        case 0 -> {
+                            String firstName = cells.get(j).getStringCellValue().split(" ")[0];
+                            booking.setFirstName(firstName);
+                            booking.setLastName(cells.get(j).getStringCellValue().substring(firstName.length() + 1));
+                        }
+                        case 1 -> booking.setDateOfBirth(cells.get(j).getDateCellValue());
+                        case 2 -> booking.setGender((int) cells.get(j).getNumericCellValue());
+                        case 3 -> booking.setPhoneNumber(cells.get(j).getStringCellValue());
+                        case 4 -> {
+                            List<String> strings = Arrays.asList(cells.get(j).getStringCellValue().split(", "));
+                            Ward ward = wardRepository.findWardByWardName(strings.get(strings.size() - 3));
+                            if (Objects.isNull(ward)) {
+                                throw new ResourceException("Ward is not exist. Try again.", HttpStatus.BAD_REQUEST);
+                            }
+                            List<String> specificAddressElements = strings.stream()
+                                    .filter(s -> !s.equals(strings.get(strings.size() - 1))
+                                            && !s.equals(strings.get(strings.size() - 2))
+                                            && !s.equals(strings.get(strings.size() - 3))
+                                    ).toList();
+                            StringBuilder specificAddress = new StringBuilder();
+                            for (String element : specificAddressElements)
+                            {
+                                specificAddress.append(element+", ");
+                            }
+                            booking.setAddress(Address.builder()
+                                    .specificAddress(specificAddress.toString())
+                                    .ward(ward).build());
+                        }
+                        case 5 -> {
+                            //
+                        }
+                        case 6 -> {
+                            booking.setAppointmentDate(cells.get(j).getDateCellValue());
+                        }
+                        case 7 -> booking.setGender((int) cells.get(j).getNumericCellValue());
+                        case 8 -> {
+                            //
+                        }
+                        default -> {
+                        }
+                    }
+                }
+            }
+            return bookings;
+        } catch (IOException e) {
+            throw new ResourceException("Failed to import data from file excel.", HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    public List<Cell> getAllCells (Row row) {
+        List<Cell> cells = new ArrayList<>();
+        int countCells = row.getLastCellNum();
+        for (int x = 0; x < countCells; x++) {
+            Cell cell = row.getCell(x, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
+            cells.add(cell);
+        }
+        return cells;
+    }
+
+    public void createHeader(Sheet sheet, String[] headers) {
         Row headerRow = sheet.createRow(0);
-        for (int i=0 ; i < headers.length; i++) {
+        for (int i = 0; i < headers.length; i++) {
             Cell cell = headerRow.createCell(i);
             cell.setCellValue(headers[i]);
             Font font = workbook.createFont();
@@ -394,7 +482,7 @@ public class AdminServiceImpl implements AdminService {
         }
     }
 
-    public void createCell (Row row, int cellIndex, Object value) {
+    public void createCell(Row row, int cellIndex, Object value) {
         Cell cell = row.createCell(cellIndex);
         if (value instanceof String) {
             cell.setCellValue((String) value);
@@ -450,7 +538,7 @@ public class AdminServiceImpl implements AdminService {
             }
         }
     }
-    
+
     public void serviceCode(Services services, ServiceCategory serviceCategory) {
         StringBuilder code = new StringBuilder(" ");
         for (String s : serviceCategory.getServiceCategoryName().split(" ")) {
@@ -465,7 +553,7 @@ public class AdminServiceImpl implements AdminService {
                     .stream()
                     .map(service -> Long.parseLong(service.getServiceCode().substring(s.length())))
                     .toList());
-            services.setServiceCode(code.toString() +(maxServiceCode+1));
+            services.setServiceCode(code.toString() + (maxServiceCode + 1));
         }
     }
 
