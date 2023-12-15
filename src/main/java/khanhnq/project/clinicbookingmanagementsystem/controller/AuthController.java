@@ -1,6 +1,7 @@
 package khanhnq.project.clinicbookingmanagementsystem.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import khanhnq.project.clinicbookingmanagementsystem.request.ChangePasswordRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.LoginRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.RegisterRequest;
@@ -24,7 +25,7 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/register")
-    public ResponseEntity<String> register(@RequestBody RegisterRequest registerRequest) {
+    public ResponseEntity<String> register(@Valid @RequestBody RegisterRequest registerRequest) {
         return MessageResponse.getResponseMessage(authService.register(registerRequest), HttpStatus.OK);
     }
 

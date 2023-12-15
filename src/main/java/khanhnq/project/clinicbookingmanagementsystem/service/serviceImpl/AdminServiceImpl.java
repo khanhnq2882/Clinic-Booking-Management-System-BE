@@ -2,6 +2,7 @@ package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
 import khanhnq.project.clinicbookingmanagementsystem.dto.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
+import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EBookingStatus;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ERole;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EServiceStatus;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceException;
@@ -47,6 +48,7 @@ public class AdminServiceImpl implements AdminService {
     private final SpecializationRepository specializationRepository;
     private final ServiceCategoryRepository serviceCategoryRepository;
     private final ServicesRepository servicesRepository;
+    private final DoctorServiceImpl doctorService;
     private final Workbook workbook = new XSSFWorkbook();
 
     @Override
@@ -308,8 +310,7 @@ public class AdminServiceImpl implements AdminService {
                 Row currentRow = sheet.createRow(firstRow++);
                 String fullName = userDTO.getFirstName() + " " + userDTO.getLastName();
                 AddressResponse userAddress = userDTO.getUserAddress();
-                String address = userAddress.getSpecificAddress() + ", " + userAddress.getWardName()
-                        + ", " + userAddress.getDistrictName() + ", " + userAddress.getCityName();
+                String address = userAddress.getSpecificAddress() + ", " + userAddress.getWardName() + ", " + userAddress.getDistrictName() + ", " + userAddress.getCityName();
                 createCell(currentRow, 0, userDTO.getUserCode());
                 createCell(currentRow, 1, userDTO.getEmail());
                 createCell(currentRow, 2, (Objects.isNull(userDTO.getFirstName()) && Objects.isNull(userDTO.getLastName())) ? " " : fullName);
@@ -344,6 +345,9 @@ public class AdminServiceImpl implements AdminService {
                         case 1 -> serviceCategory.setDescription(cells.get(j).getStringCellValue());
                         case 2 -> {
                             Specialization specialization = specializationRepository.getSpecializationBySpecializationName(cells.get(j).getStringCellValue());
+                            if (Objects.isNull(specialization)) {
+                                throw new ResourceException("Import failed. Specialization name in row " + i + " is not exist.", HttpStatus.BAD_REQUEST);
+                            }
                             serviceCategory.setSpecialization(specialization);
                         }
                         default -> {
@@ -416,7 +420,7 @@ public class AdminServiceImpl implements AdminService {
                             booking.setLastName(cells.get(j).getStringCellValue().substring(firstName.length() + 1));
                         }
                         case 1 -> booking.setDateOfBirth(cells.get(j).getDateCellValue());
-                        case 2 -> booking.setGender((int) cells.get(j).getNumericCellValue());
+                        case 2 -> booking.setGender(cells.get(j).getStringCellValue().equals("Male") ? 1 : 0);
                         case 3 -> booking.setPhoneNumber(cells.get(j).getStringCellValue());
                         case 4 -> {
                             List<String> strings = Arrays.asList(cells.get(j).getStringCellValue().split(", "));
@@ -427,27 +431,32 @@ public class AdminServiceImpl implements AdminService {
                             List<String> specificAddressElements = strings.stream()
                                     .filter(s -> !s.equals(strings.get(strings.size() - 1))
                                             && !s.equals(strings.get(strings.size() - 2))
-                                            && !s.equals(strings.get(strings.size() - 3))
-                                    ).toList();
+                                            && !s.equals(strings.get(strings.size() - 3))).toList();
                             StringBuilder specificAddress = new StringBuilder();
-                            for (String element : specificAddressElements)
-                            {
+                            for (String element : specificAddressElements) {
                                 specificAddress.append(element+", ");
                             }
                             booking.setAddress(Address.builder()
                                     .specificAddress(specificAddress.toString())
-                                    .ward(ward).build());
+                                    .ward(ward)
+                                    .build());
                         }
-                        case 5 -> {
-                            //
+//                        case 5 -> {
+//                        }
+                        case 6 -> booking.setAppointmentDate(cells.get(j).getDateCellValue());
+                        case 7 -> {
+                            Specialization specialization = specializationRepository.getSpecializationBySpecializationName(cells.get(j-2).getStringCellValue());
+                            if (Objects.isNull(specialization)) {
+                                throw new ResourceException("Import failed. Specialization name in row " + i + " is not exist.", HttpStatus.BAD_REQUEST);
+                            }
+                            List<User> doctors = doctorService.groupDoctorsBySpecialization().get(specialization.getSpecializationId());
+                            for (User doctor : doctors) {
+                                Map<Long, List<WorkSchedule>> getWorkSchedulesByDoctor = doctorService.groupWorkScheduleByDoctor();
+                                List<WorkSchedule> workSchedules = getWorkSchedulesByDoctor.get(doctor.getUserId());
+                            }
                         }
-                        case 6 -> {
-                            booking.setAppointmentDate(cells.get(j).getDateCellValue());
-                        }
-                        case 7 -> booking.setGender((int) cells.get(j).getNumericCellValue());
-                        case 8 -> {
-                            //
-                        }
+                        case 8 -> booking.setDescribeSymptoms(cells.get(j).getStringCellValue());
+                        case 9 -> booking.setStatus(EBookingStatus.valueOf(cells.get(j).getStringCellValue()));
                         default -> {
                         }
                     }

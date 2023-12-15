@@ -3,9 +3,9 @@ package khanhnq.project.clinicbookingmanagementsystem.entity;
 import java.util.*;
 import java.util.stream.Collectors;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import khanhnq.project.clinicbookingmanagementsystem.annotation.EmailConstraint;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EUserStatus;
 import lombok.*;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -38,7 +38,7 @@ public class User {
 
     @NotBlank
     @Size(max = 50)
-    @Email
+    @EmailConstraint
     @Column(nullable = false)
     private String email;
 
@@ -104,7 +104,7 @@ public class User {
             inverseJoinColumns = @JoinColumn(name = "skill_id"))
     private Set<Skill> skills = new HashSet<>();
 
-    @Column
+    @Column(nullable = false)
     private String describeExperiences;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
