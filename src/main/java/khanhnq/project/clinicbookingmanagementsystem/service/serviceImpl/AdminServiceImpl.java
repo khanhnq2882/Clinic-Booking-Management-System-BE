@@ -48,7 +48,7 @@ public class AdminServiceImpl implements AdminService {
     private final SpecializationRepository specializationRepository;
     private final ServiceCategoryRepository serviceCategoryRepository;
     private final ServicesRepository servicesRepository;
-    private final DoctorServiceImpl doctorService;
+//    private final DoctorServiceImpl doctorService;
     private final Workbook workbook = new XSSFWorkbook();
 
     @Override
@@ -301,7 +301,7 @@ public class AdminServiceImpl implements AdminService {
     public ByteArrayInputStream exportUsersToExcel(List<UserDTO> users) {
         try {
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            Sheet sheet = workbook.createSheet("Users");
+            Sheet sheet = workbook.createSheet("Users"+1);
             String[] headers = {"User Code", "Email", "Full Name", "Date Of Birth",
                     "Gender", "Phone Number", "Address", "Status"};
             createHeader(sheet, headers);
@@ -445,15 +445,15 @@ public class AdminServiceImpl implements AdminService {
 //                        }
                         case 6 -> booking.setAppointmentDate(cells.get(j).getDateCellValue());
                         case 7 -> {
-                            Specialization specialization = specializationRepository.getSpecializationBySpecializationName(cells.get(j-2).getStringCellValue());
-                            if (Objects.isNull(specialization)) {
-                                throw new ResourceException("Import failed. Specialization name in row " + i + " is not exist.", HttpStatus.BAD_REQUEST);
-                            }
-                            List<User> doctors = doctorService.groupDoctorsBySpecialization().get(specialization.getSpecializationId());
-                            for (User doctor : doctors) {
-                                Map<Long, List<WorkSchedule>> getWorkSchedulesByDoctor = doctorService.groupWorkScheduleByDoctor();
-                                List<WorkSchedule> workSchedules = getWorkSchedulesByDoctor.get(doctor.getUserId());
-                            }
+//                            Specialization specialization = specializationRepository.getSpecializationBySpecializationName(cells.get(j-2).getStringCellValue());
+//                            if (Objects.isNull(specialization)) {
+//                                throw new ResourceException("Import failed. Specialization name in row " + i + " is not exist.", HttpStatus.BAD_REQUEST);
+//                            }
+//                            List<User> doctors = doctorService.groupDoctorsBySpecialization().get(specialization.getSpecializationId());
+//                            for (User doctor : doctors) {
+//                                Map<Long, List<WorkSchedule>> getWorkSchedulesByDoctor = doctorService.groupWorkScheduleByDoctor();
+//                                List<WorkSchedule> workSchedules = getWorkSchedulesByDoctor.get(doctor.getUserId());
+//                            }
                         }
                         case 8 -> booking.setDescribeSymptoms(cells.get(j).getStringCellValue());
                         case 9 -> booking.setStatus(EBookingStatus.valueOf(cells.get(j).getStringCellValue()));
