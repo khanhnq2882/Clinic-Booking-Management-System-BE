@@ -31,6 +31,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
@@ -48,7 +49,8 @@ public class AdminServiceImpl implements AdminService {
     private final SpecializationRepository specializationRepository;
     private final ServiceCategoryRepository serviceCategoryRepository;
     private final ServicesRepository servicesRepository;
-//    private final DoctorServiceImpl doctorService;
+    private final WorkScheduleRepository workScheduleRepository;
+    private final BookingRepository bookingRepository;
     private final Workbook workbook = new XSSFWorkbook();
 
     @Override
@@ -301,7 +303,7 @@ public class AdminServiceImpl implements AdminService {
     public ByteArrayInputStream exportUsersToExcel(List<UserDTO> users) {
         try {
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            Sheet sheet = workbook.createSheet("Users"+1);
+            Sheet sheet = workbook.createSheet("Users");
             String[] headers = {"User Code", "Email", "Full Name", "Date Of Birth",
                     "Gender", "Phone Number", "Address", "Status"};
             createHeader(sheet, headers);
@@ -315,7 +317,7 @@ public class AdminServiceImpl implements AdminService {
                 createCell(currentRow, 1, userDTO.getEmail());
                 createCell(currentRow, 2, (Objects.isNull(userDTO.getFirstName()) && Objects.isNull(userDTO.getLastName())) ? " " : fullName);
                 createCell(currentRow, 3, Objects.isNull(userDTO.getDateOfBirth()) ? " " : userDTO.getDateOfBirth());
-                createCell(currentRow, 4, userDTO.getGender());
+                createCell(currentRow, 4, userDTO.getGender() == 1 ? "Male" : "Female");
                 createCell(currentRow, 5, Objects.isNull(userDTO.getPhoneNumber()) ? " " : userDTO.getPhoneNumber());
                 createCell(currentRow, 6, Objects.isNull(userDTO.getUserAddress().getSpecificAddress()) ? " " : address);
                 createCell(currentRow, 7, userDTO.getStatus());
@@ -331,22 +333,33 @@ public class AdminServiceImpl implements AdminService {
     public List<ServiceCategory> importServiceCategoriesFromExcel(InputStream inputStream) {
         try {
             List<ServiceCategory> serviceCategories = new ArrayList<>();
-            Sheet sheet = new XSSFWorkbook(inputStream).getSheet("service_category");
+            Sheet sheet = new XSSFWorkbook(inputStream).getSheet("service category");
+            if (sheet == null) {
+                throw new ResourceException("Sheet named 'service category' doesn't not exist.", HttpStatus.BAD_REQUEST);
+            }
             List<Row> rows = Lists.newArrayList(sheet.rowIterator());
-            for (int i = 1; i < rows.size(); i++) {
+            for (int indexRow = 1; indexRow < rows.size(); indexRow++) {
                 ServiceCategory serviceCategory = new ServiceCategory();
-                List<Cell> cells = getAllCells(rows.get(i));
-                for (int j = 0; j < cells.size(); j++) {
-                    if (cells.get(j).getCellType() == CellType.BLANK) {
-                        throw new ResourceException("Import data failed. The value of column " + (j + 1) + " , row " + i + " can't be blank.", HttpStatus.BAD_REQUEST);
-                    }
-                    switch (j) {
-                        case 0 -> serviceCategory.setServiceCategoryName(cells.get(j).getStringCellValue());
-                        case 1 -> serviceCategory.setDescription(cells.get(j).getStringCellValue());
+                List<Cell> cells = getAllCells(rows.get(indexRow));
+                for (int indexCell = 0; indexCell < cells.size(); indexCell++) {
+                    checkBlankType(cells.get(indexCell), indexRow, indexCell);
+                    switch (indexCell) {
+                        case 0 -> {
+                            String serviceCategoryName = checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue();
+                            List<String> serviceCategoriesName = serviceCategoryRepository.findAll().stream().map(ServiceCategory::getServiceCategoryName).toList();
+                            for (String name : serviceCategoriesName) {
+                                if (serviceCategoryName.equals(name)) {
+                                    throw new ResourceException("Import data failed. Service category named '"+ serviceCategoryName +"' is already existed.", HttpStatus.BAD_REQUEST);
+                                }
+                            }
+                            serviceCategory.setServiceCategoryName(serviceCategoryName);
+                        }
+                        case 1 -> serviceCategory.setDescription(checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue());
                         case 2 -> {
-                            Specialization specialization = specializationRepository.getSpecializationBySpecializationName(cells.get(j).getStringCellValue());
+                            String specializationName = checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue();
+                            Specialization specialization = specializationRepository.getSpecializationBySpecializationName(specializationName);
                             if (Objects.isNull(specialization)) {
-                                throw new ResourceException("Import failed. Specialization name in row " + i + " is not exist.", HttpStatus.BAD_REQUEST);
+                                throw new ResourceException("Import failed. Specialization name in row " + indexRow + " is not exist.", HttpStatus.BAD_REQUEST);
                             }
                             serviceCategory.setSpecialization(specialization);
                         }
@@ -367,23 +380,39 @@ public class AdminServiceImpl implements AdminService {
         try {
             List<Services> services = new ArrayList<>();
             Sheet sheet = new XSSFWorkbook(inputStream).getSheet("services");
+            if (sheet == null) {
+                throw new ResourceException("Sheet named 'services' doesn't not exist.", HttpStatus.BAD_REQUEST);
+            }
             List<Row> rows = Lists.newArrayList(sheet.rowIterator());
-            for (int i = 1; i < rows.size(); i++) {
+            for (int indexRow = 1; indexRow < rows.size(); indexRow++) {
                 Services service = new Services();
-                List<Cell> cells = getAllCells(rows.get(i));
-                for (int j = 0; j < cells.size(); j++) {
-                    if (cells.get(j).getCellType() == CellType.BLANK) {
-                        throw new ResourceException("Import data failed. The value of column " + (j + 1) + " , row " + i + " can't be blank.", HttpStatus.BAD_REQUEST);
-                    }
-                    switch (j) {
-                        case 0 -> service.setServiceName(cells.get(j).getStringCellValue());
-                        case 1 -> service.setPrice(cells.get(j).getNumericCellValue());
-                        case 2 -> service.setDescription(cells.get(j).getStringCellValue());
-                        case 3 -> service.setStatus(EServiceStatus.valueOf(cells.get(j).getStringCellValue()));
+                List<Cell> cells = getAllCells(rows.get(indexRow));
+                for (int indexCell = 0; indexCell < cells.size(); indexCell++) {
+                    checkBlankType(cells.get(indexCell), indexRow, indexCell);
+                    switch (indexCell) {
+                        case 0 -> {
+                            String serviceName = checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue();
+                            List<String> servicesName = servicesRepository.findAll().stream().map(Services::getServiceName).toList();
+                            for (String name : servicesName) {
+                                if (serviceName.equals(name)) {
+                                    throw new ResourceException("Import data failed. Service named '"+ serviceName +"' is already existed.", HttpStatus.BAD_REQUEST);
+                                }
+                            }
+                            service.setServiceName(serviceName);
+                        }
+                        case 1 -> service.setPrice(checkNumericType(cells.get(indexCell), indexRow, indexCell).getNumericCellValue());
+                        case 2 -> service.setDescription(checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue());
+                        case 3 -> {
+                            String serviceStatus = checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue();
+                            if (!serviceStatus.equals("ACTIVE") && !serviceStatus.equals("SUSPENDED") && !serviceStatus.equals("INACTIVE")) {
+                                throw new ResourceException("Import data failed. The value of column " + (indexCell + 1) + " , row " + indexRow + " must be 'ACTIVE' or 'SUSPENDED' or 'INACTIVE'.", HttpStatus.BAD_REQUEST);
+                            }
+                            service.setStatus(EServiceStatus.valueOf(serviceStatus));
+                        }
                         case 4 -> {
-                            ServiceCategory serviceCategory = serviceCategoryRepository.getServiceCategoriesByServiceCategoryName(cells.get(j).getStringCellValue());
+                            ServiceCategory serviceCategory = serviceCategoryRepository.getServiceCategoriesByServiceCategoryName(checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue());
                             if (Objects.isNull(serviceCategory)) {
-                                throw new ResourceException("Import failed. Service category name in row " + i + " is not exist.", HttpStatus.BAD_REQUEST);
+                                throw new ResourceException("Import failed. Service category name in row " + indexRow + " is not exist.", HttpStatus.BAD_REQUEST);
                             }
                             serviceCode(service, serviceCategory);
                             service.setServiceCategory(serviceCategory);
@@ -441,31 +470,69 @@ public class AdminServiceImpl implements AdminService {
                                     .ward(ward)
                                     .build());
                         }
-//                        case 5 -> {
-//                        }
                         case 6 -> booking.setAppointmentDate(cells.get(j).getDateCellValue());
                         case 7 -> {
-//                            Specialization specialization = specializationRepository.getSpecializationBySpecializationName(cells.get(j-2).getStringCellValue());
-//                            if (Objects.isNull(specialization)) {
-//                                throw new ResourceException("Import failed. Specialization name in row " + i + " is not exist.", HttpStatus.BAD_REQUEST);
-//                            }
-//                            List<User> doctors = doctorService.groupDoctorsBySpecialization().get(specialization.getSpecializationId());
-//                            for (User doctor : doctors) {
-//                                Map<Long, List<WorkSchedule>> getWorkSchedulesByDoctor = doctorService.groupWorkScheduleByDoctor();
-//                                List<WorkSchedule> workSchedules = getWorkSchedulesByDoctor.get(doctor.getUserId());
-//                            }
+                            Specialization specialization = specializationRepository.getSpecializationBySpecializationName(cells.get(j-2).getStringCellValue());
+                            if (Objects.isNull(specialization)) {
+                                throw new ResourceException("Import failed. Specialization name in row " + i + " is not exist.", HttpStatus.BAD_REQUEST);
+                            }
+                            LocalTime startTime = cells.get(j).getLocalDateTimeCellValue().toLocalTime();
+                            LocalTime endTime = cells.get(j+1).getLocalDateTimeCellValue().toLocalTime();
+                            List<User> doctors = new ArrayList<>();
+                            for (User doctor : groupDoctorsBySpecialization().get(specialization.getSpecializationId())) {
+                                List<WorkSchedule> workSchedules = groupWorkScheduleByDoctor().get(doctor.getUserId());
+                                for (WorkSchedule workSchedule : workSchedules) {
+                                    if (startTime.equals(workSchedule.getStartTime()) && endTime.equals(workSchedule.getEndTime())) {
+                                        doctors.add(doctor);
+                                    }
+                                }
+                            }
+                            // group booking by specialization
+                            for (Booking b : bookingRepository.findAll()) {
+                                for (User doctor : doctors) {
+                                    for (WorkSchedule workSchedule : groupWorkScheduleByDoctor().get(doctor.getUserId())) {
+                                        if (!b.getAppointmentDate().equals(cells.get(j-1).getDateCellValue())
+                                                || !b.getWorkSchedule().getStartTime().equals(workSchedule.getStartTime())) {
+                                            booking.setWorkSchedule(workSchedule);
+                                        }
+                                    }
+                                }
+                            }
                         }
-                        case 8 -> booking.setDescribeSymptoms(cells.get(j).getStringCellValue());
-                        case 9 -> booking.setStatus(EBookingStatus.valueOf(cells.get(j).getStringCellValue()));
+                        case 9 -> booking.setDescribeSymptoms(cells.get(j).getStringCellValue());
+                        case 10 -> booking.setStatus(EBookingStatus.valueOf(cells.get(j).getStringCellValue()));
                         default -> {
                         }
                     }
+                    booking.setBookingCode(bookingCode());
                 }
+                bookings.add(booking);
             }
             return bookings;
         } catch (IOException e) {
             throw new ResourceException("Failed to import data from file excel.", HttpStatus.BAD_REQUEST);
         }
+    }
+
+    public Cell checkBlankType (Cell cell, int rowIndex, int cellIndex) {
+        if (cell.getCellType() == CellType.BLANK) {
+            throw new ResourceException("Import data failed. The value of column " + (cellIndex + 1) + " , row " + rowIndex + " can't be blank.", HttpStatus.BAD_REQUEST);
+        }
+        return cell;
+    }
+
+    public Cell checkStringType (Cell cell, int rowIndex, int cellIndex) {
+        if (!cell.getCellType().equals(CellType.STRING)) {
+            throw new ResourceException("Import data failed. The value of column " + (cellIndex + 1) + " , row " + rowIndex + " must be string type.", HttpStatus.BAD_REQUEST);
+        }
+        return cell;
+    }
+
+    public Cell checkNumericType (Cell cell, int rowIndex, int cellIndex) {
+        if (!cell.getCellType().equals(CellType.NUMERIC)) {
+            throw new ResourceException("Import data failed. The value of column " + (cellIndex + 1) + " , row " + rowIndex + " must be numeric type.", HttpStatus.BAD_REQUEST);
+        }
+        return cell;
     }
 
     public List<Cell> getAllCells (Row row) {
@@ -510,12 +577,42 @@ public class AdminServiceImpl implements AdminService {
         }
     }
 
+    public String bookingCode() {
+        Long maxServiceCode = Collections.max(bookingRepository.findAll()
+                .stream()
+                .map(booking -> Long.parseLong(booking.getBookingCode().substring(2)))
+                .toList());
+        return (bookingRepository.findAll().size() == 0) ? "BC1" : ("BC" + (maxServiceCode+1));
+    }
+
     public Map<Long, List<Experience>> groupExperiencesByUserId() {
         Map<Long, List<Experience>> map = new HashMap<>();
         for (Experience experience : experienceRepository.findAll()) {
             if (!map.containsKey(experience.getUser().getUserId())) {
                 List<Experience> experiences = experienceRepository.getExperiencesByUserId(experience.getUser().getUserId());
                 map.put(experience.getUser().getUserId(), experiences);
+            }
+        }
+        return map;
+    }
+
+    public Map<Long, List<WorkSchedule>> groupWorkScheduleByDoctor() {
+        Map<Long, List<WorkSchedule>> map = new HashMap<>();
+        for (User user : userRepository.getDoctors()) {
+            if (!map.containsKey(user.getUserId())) {
+                List<WorkSchedule> workSchedules = workScheduleRepository.getWorkSchedulesByUserId(user.getUserId());
+                map.put(user.getUserId(), workSchedules);
+            }
+        }
+        return map;
+    }
+
+    public Map<Long, List<User>> groupDoctorsBySpecialization() {
+        Map<Long, List<User>> map = new HashMap<>();
+        for (Specialization specialization : specializationRepository.findAll()) {
+            if (!map.containsKey(specialization.getSpecializationId())) {
+                List<User> users = userRepository.getDoctorsBySpecializationId(specialization.getSpecializationId());
+                map.put(specialization.getSpecializationId(), users);
             }
         }
         return map;
