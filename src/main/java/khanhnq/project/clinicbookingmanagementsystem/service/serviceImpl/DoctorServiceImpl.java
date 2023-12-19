@@ -1,5 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
+import khanhnq.project.clinicbookingmanagementsystem.common.FunctionsCommon;
 import khanhnq.project.clinicbookingmanagementsystem.dto.BookingDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceException;
@@ -24,14 +25,12 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class DoctorServiceImpl implements DoctorService {
     private final AuthService authService;
-    private final AdminServiceImpl adminServiceImpl;
     private final WardRepository wardRepository;
     private final SkillRepository skillRepository;
-    private final SpecializationRepository specializationRepository;
-    private final WorkScheduleRepository workScheduleRepository;
     private final BookingRepository bookingRepository;
     private final AddressRepository addressRepository;
     private final UserRepository userRepository;
+    private final FunctionsCommon functionsCommon;
 
     @Override
     public String updateDoctorInformation(DoctorInformationRequest doctorInformationRequest) {
@@ -83,7 +82,7 @@ public class DoctorServiceImpl implements DoctorService {
     @Override
     public BookingResponse getAllBookings(int page, int size, String[] sorts) {
         User currentUser = authService.getCurrentUser();
-        Page<Booking> bookingPage = bookingRepository.getAllBookings(currentUser.getUserId() , adminServiceImpl.pagingSort(page, size, sorts));
+        Page<Booking> bookingPage = bookingRepository.getAllBookings(currentUser.getUserId() , functionsCommon.pagingSort(page, size, sorts));
         List<BookingDTO> bookings = bookingPage.getContent()
                 .stream()
                 .map(booking -> {
@@ -114,33 +113,11 @@ public class DoctorServiceImpl implements DoctorService {
                 .build();
     }
 
-    public Map<Long, List<User>> groupDoctorsBySpecialization() {
-        Map<Long, List<User>> map = new HashMap<>();
-        for (Specialization specialization : specializationRepository.findAll()) {
-            if (!map.containsKey(specialization.getSpecializationId())) {
-                List<User> users = userRepository.getDoctorsBySpecializationId(specialization.getSpecializationId());
-                map.put(specialization.getSpecializationId(), users);
-            }
-        }
-        return map;
-    }
-
-    public Map<Long, List<WorkSchedule>> groupWorkScheduleByDoctor() {
-        Map<Long, List<WorkSchedule>> map = new HashMap<>();
-        for (User user : userRepository.getDoctors()) {
-            if (!map.containsKey(user.getUserId())) {
-                List<WorkSchedule> workSchedules = workScheduleRepository.getWorkSchedulesByUserId(user.getUserId());
-                map.put(user.getUserId(), workSchedules);
-            }
-        }
-        return map;
-    }
-
     public Set<WorkSchedule> filterWorkSchedules(Set<WorkSchedule> workSchedulesRequest, Long specializationId) {
         Set<WorkSchedule> resultWorkSchedule = workSchedulesRequest;
-        for (User doctor : groupDoctorsBySpecialization().get(specializationId)) {
+        for (User doctor : functionsCommon.groupDoctorsBySpecialization().get(specializationId)) {
             resultWorkSchedule = resultWorkSchedule.stream()
-                    .filter(request -> groupWorkScheduleByDoctor().get(doctor.getUserId()).stream()
+                    .filter(request -> functionsCommon.groupWorkScheduleByDoctor().get(doctor.getUserId()).stream()
                             .noneMatch(workSchedule -> workSchedule.getStartTime().equals(request.getStartTime())
                                     && workSchedule.getEndTime().equals(request.getEndTime())))
                     .collect(Collectors.toSet());

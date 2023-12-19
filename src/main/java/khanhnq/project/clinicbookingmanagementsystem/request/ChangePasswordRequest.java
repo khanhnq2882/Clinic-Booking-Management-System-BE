@@ -1,5 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.request;
 
+import khanhnq.project.clinicbookingmanagementsystem.annotation.PasswordConstraint;
 import lombok.*;
 
 @Data
@@ -8,6 +9,10 @@ import lombok.*;
 @Builder
 public class ChangePasswordRequest {
     private String currentPassword;
+
+    @PasswordConstraint
     private String newPassword;
+
+    @PasswordConstraint
     private String confirmPassword;
 }

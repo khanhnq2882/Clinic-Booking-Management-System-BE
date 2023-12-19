@@ -6,13 +6,12 @@ import khanhnq.project.clinicbookingmanagementsystem.request.LoginRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.RegisterRequest;
 import khanhnq.project.clinicbookingmanagementsystem.response.JwtResponse;
 import khanhnq.project.clinicbookingmanagementsystem.response.UserInfoResponse;
-import org.springframework.http.ResponseEntity;
 
 public interface AuthService {
     String register(RegisterRequest registerRequest);
     JwtResponse login(LoginRequest loginRequest);
     User getCurrentUser();
-    ResponseEntity<String> changePassword(ChangePasswordRequest changePasswordRequest);
+    String changePassword(ChangePasswordRequest changePasswordRequest);
     UserInfoResponse getUserByUsername (String username);
     UserInfoResponse getUserInfo();
 }
