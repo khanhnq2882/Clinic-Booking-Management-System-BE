@@ -1,6 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
-import khanhnq.project.clinicbookingmanagementsystem.common.FunctionsCommon;
+import khanhnq.project.clinicbookingmanagementsystem.service.common.MethodsCommon;
 import khanhnq.project.clinicbookingmanagementsystem.dto.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EBookingStatus;
@@ -44,7 +44,7 @@ public class AdminServiceImpl implements AdminService {
     private final ServiceCategoryRepository serviceCategoryRepository;
     private final ServicesRepository servicesRepository;
     private final BookingRepository bookingRepository;
-    private final FunctionsCommon functionsCommon;
+    private final MethodsCommon methodsCommon;
     private final Workbook workbook = new XSSFWorkbook();
 
     @Override
@@ -69,7 +69,7 @@ public class AdminServiceImpl implements AdminService {
         if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().equals(ERole.ROLE_ADMIN))) {
             throw new ResourceException("You do not have permission to update user roles.", HttpStatus.UNAUTHORIZED);
         }
-        Map<Long, List<Experience>> experiences = functionsCommon.groupExperiencesByUserId();
+        Map<Long, List<Experience>> experiences = methodsCommon.groupExperiencesByUserId();
         for (Experience experience : experiences.get(userId)) {
             experienceRepository.deleteExperiencesSkills(experience.getExperienceId());
             experienceRepository.deleteExperiences(experience.getExperienceId());
@@ -79,12 +79,12 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public UserResponse getAllUsers(int page, int size, String[] sorts) {
-        Page<User> userPage = userRepository.getAllUsers(functionsCommon.pagingSort(page, size, sorts));
+        Page<User> userPage = userRepository.getAllUsers(methodsCommon.pagingSort(page, size, sorts));
         List<UserDTO> users = userPage.getContent()
                 .stream()
                 .map(user -> {
                     UserDTO userDTO = UserMapper.USER_MAPPER.mapToUserDTO(user);
-                    userDTO.setUserAddress(functionsCommon.getAddress(user));
+                    userDTO.setUserAddress(methodsCommon.getAddress(user));
                     return userDTO;
                 }).collect(Collectors.toList());
         return UserResponse.builder()
@@ -98,18 +98,18 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public List<RequestDoctorResponse> getAllRequestDoctors() {
         List<RequestDoctorResponse> requestList = new ArrayList<>();
-        for (Long userId : functionsCommon.groupExperiencesByUserId().keySet()) {
+        for (Long userId : methodsCommon.groupExperiencesByUserId().keySet()) {
             RequestDoctorResponse requestDoctorResponse = new RequestDoctorResponse();
             User user = userRepository.findById(userId).orElse(null);
             UserMapper.USER_MAPPER.mapToRequestDoctorResponse(requestDoctorResponse, user);
-            List<ExperienceDTO> experiences = functionsCommon.groupExperiencesByUserId().get(userId).stream().map(experience -> {
+            List<ExperienceDTO> experiences = methodsCommon.groupExperiencesByUserId().get(userId).stream().map(experience -> {
                 ExperienceDTO experienceDTO = ExperienceMapper.EXPERIENCE_MAPPER.mapToExperienceResponse(experience);
                 experienceDTO.setSkillNames(experience.skillNames());
                 return experienceDTO;
             }).collect(Collectors.toList());
             requestDoctorResponse.setDoctorExperiences(experiences);
             requestDoctorResponse.setRoleNames(Objects.requireNonNull(user).roleNames());
-            functionsCommon.getMedicalLicenseDegree(requestDoctorResponse, userId);
+            methodsCommon.getMedicalLicenseDegree(requestDoctorResponse, userId);
             requestList.add(requestDoctorResponse);
         }
         return requestList;
@@ -117,13 +117,13 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public DoctorResponse getAllDoctors(int page, int size, String[] sorts) {
-        Page<User> doctorPage = userRepository.getAllDoctors(functionsCommon.pagingSort(page, size, sorts));
+        Page<User> doctorPage = userRepository.getAllDoctors(methodsCommon.pagingSort(page, size, sorts));
         List<DoctorDTO> doctors = doctorPage.getContent().stream().map(user -> {
             DoctorDTO doctorDTO = UserMapper.USER_MAPPER.mapToDoctorResponse(user);
             if (user.getSpecialization() != null) {
                 doctorDTO.setSpecializationName(user.specializationName());
             }
-            doctorDTO.setDoctorAddress(functionsCommon.getAddress(user));
+            doctorDTO.setDoctorAddress(methodsCommon.getAddress(user));
             return doctorDTO;
         }).collect(Collectors.toList());
         return DoctorResponse.builder()
@@ -157,7 +157,7 @@ public class AdminServiceImpl implements AdminService {
         Services services = ServicesMapper.SERVICES_MAPPER.mapToServices(serviceRequest);
         services.setStatus(EServiceStatus.ACTIVE);
         services.setServiceCategory(serviceCategory);
-        functionsCommon.serviceCode(services, Objects.requireNonNull(serviceCategory));
+        methodsCommon.serviceCode(services, Objects.requireNonNull(serviceCategory));
         servicesRepository.save(services);
         return "Add service successfully.";
     }
@@ -184,7 +184,7 @@ public class AdminServiceImpl implements AdminService {
         }
         Services service = servicesRepository.findById(serviceId).orElse(null);
         ServiceCategory serviceCategory = serviceCategoryRepository.findById(serviceRequest.getServiceCategoryId()).orElse(null);
-        functionsCommon.serviceCode(service, Objects.requireNonNull(serviceCategory));
+        methodsCommon.serviceCode(service, Objects.requireNonNull(serviceCategory));
         Objects.requireNonNull(service).setServiceCategory(serviceCategory);
         service.setServiceName(serviceRequest.getServiceName());
         service.setPrice(serviceRequest.getPrice());
@@ -199,7 +199,7 @@ public class AdminServiceImpl implements AdminService {
                 .stream()
                 .map(user -> {
                     UserDTO userDTO = UserMapper.USER_MAPPER.mapToUserDTO(user);
-                    userDTO.setUserAddress(functionsCommon.getAddress(user));
+                    userDTO.setUserAddress(methodsCommon.getAddress(user));
                     return userDTO;
                 })
                 .toList();
@@ -230,7 +230,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public ServiceCategoryResponse getAllServiceCategories(int page, int size, String[] sorts) {
-        Page<ServiceCategory> serviceCategoryPage = serviceCategoryRepository.findAll(functionsCommon.pagingSort(page, size, sorts));
+        Page<ServiceCategory> serviceCategoryPage = serviceCategoryRepository.findAll(methodsCommon.pagingSort(page, size, sorts));
         List<ServiceCategoryDTO> serviceCategories = serviceCategoryPage.getContent()
                 .stream()
                 .map(serviceCategory -> ServiceCategoryDTO.builder()
@@ -251,7 +251,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public ServicesResponse getAllServices(int page, int size, String[] sorts) {
-        Page<Services> servicesPage = servicesRepository.findAll(functionsCommon.pagingSort(page, size, sorts));
+        Page<Services> servicesPage = servicesRepository.findAll(methodsCommon.pagingSort(page, size, sorts));
         List<ServicesDTO> servicesResponses = servicesPage.getContent()
                 .stream()
                 .map(services -> {
@@ -300,21 +300,21 @@ public class AdminServiceImpl implements AdminService {
             Sheet sheet = workbook.createSheet("Users");
             String[] headers = {"User Code", "Email", "Full Name", "Date Of Birth",
                     "Gender", "Phone Number", "Address", "Status"};
-            functionsCommon.createHeader(workbook, sheet, headers);
+            methodsCommon.createHeader(workbook, sheet, headers);
             int firstRow = 1;
             for (UserDTO userDTO : users) {
                 Row currentRow = sheet.createRow(firstRow++);
                 String fullName = userDTO.getFirstName() + " " + userDTO.getLastName();
                 AddressResponse userAddress = userDTO.getUserAddress();
                 String address = userAddress.getSpecificAddress() + ", " + userAddress.getWardName() + ", " + userAddress.getDistrictName() + ", " + userAddress.getCityName();
-                functionsCommon.createCell(workbook, currentRow, 0, userDTO.getUserCode());
-                functionsCommon.createCell(workbook, currentRow, 1, userDTO.getEmail());
-                functionsCommon.createCell(workbook, currentRow, 2, (Objects.isNull(userDTO.getFirstName()) && Objects.isNull(userDTO.getLastName())) ? " " : fullName);
-                functionsCommon.createCell(workbook, currentRow, 3, Objects.isNull(userDTO.getDateOfBirth()) ? " " : userDTO.getDateOfBirth());
-                functionsCommon.createCell(workbook, currentRow, 4, userDTO.getGender() == 1 ? "Male" : "Female");
-                functionsCommon.createCell(workbook, currentRow, 5, Objects.isNull(userDTO.getPhoneNumber()) ? " " : userDTO.getPhoneNumber());
-                functionsCommon.createCell(workbook, currentRow, 6, Objects.isNull(userDTO.getUserAddress().getSpecificAddress()) ? " " : address);
-                functionsCommon.createCell(workbook, currentRow, 7, userDTO.getStatus());
+                methodsCommon.createCell(workbook, currentRow, 0, userDTO.getUserCode());
+                methodsCommon.createCell(workbook, currentRow, 1, userDTO.getEmail());
+                methodsCommon.createCell(workbook, currentRow, 2, (Objects.isNull(userDTO.getFirstName()) && Objects.isNull(userDTO.getLastName())) ? " " : fullName);
+                methodsCommon.createCell(workbook, currentRow, 3, Objects.isNull(userDTO.getDateOfBirth()) ? " " : userDTO.getDateOfBirth());
+                methodsCommon.createCell(workbook, currentRow, 4, userDTO.getGender() == 1 ? "Male" : "Female");
+                methodsCommon.createCell(workbook, currentRow, 5, Objects.isNull(userDTO.getPhoneNumber()) ? " " : userDTO.getPhoneNumber());
+                methodsCommon.createCell(workbook, currentRow, 6, Objects.isNull(userDTO.getUserAddress().getSpecificAddress()) ? " " : address);
+                methodsCommon.createCell(workbook, currentRow, 7, userDTO.getStatus());
             }
             workbook.write(outputStream);
             return new ByteArrayInputStream(outputStream.toByteArray());
@@ -334,12 +334,12 @@ public class AdminServiceImpl implements AdminService {
             List<Row> rows = Lists.newArrayList(sheet.rowIterator());
             for (int indexRow = 1; indexRow < rows.size(); indexRow++) {
                 ServiceCategory serviceCategory = new ServiceCategory();
-                List<Cell> cells = functionsCommon.getAllCells(rows.get(indexRow));
+                List<Cell> cells = methodsCommon.getAllCells(rows.get(indexRow));
                 for (int indexCell = 0; indexCell < cells.size(); indexCell++) {
-                    functionsCommon.checkBlankType(cells.get(indexCell), indexRow, indexCell);
+                    methodsCommon.checkBlankType(cells.get(indexCell), indexRow, indexCell);
                     switch (indexCell) {
                         case 0 -> {
-                            String serviceCategoryName = functionsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue();
+                            String serviceCategoryName = methodsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue();
                             List<String> serviceCategoriesName = serviceCategoryRepository.findAll().stream().map(ServiceCategory::getServiceCategoryName).toList();
                             for (String name : serviceCategoriesName) {
                                 if (serviceCategoryName.equals(name)) {
@@ -348,9 +348,9 @@ public class AdminServiceImpl implements AdminService {
                             }
                             serviceCategory.setServiceCategoryName(serviceCategoryName);
                         }
-                        case 1 -> serviceCategory.setDescription(functionsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue());
+                        case 1 -> serviceCategory.setDescription(methodsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue());
                         case 2 -> {
-                            String specializationName = functionsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue();
+                            String specializationName = methodsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue();
                             Specialization specialization = specializationRepository.getSpecializationBySpecializationName(specializationName);
                             if (Objects.isNull(specialization)) {
                                 throw new ResourceException("Import failed. Specialization name in row " + indexRow + " is not exist.", HttpStatus.BAD_REQUEST);
@@ -380,12 +380,12 @@ public class AdminServiceImpl implements AdminService {
             List<Row> rows = Lists.newArrayList(sheet.rowIterator());
             for (int indexRow = 1; indexRow < rows.size(); indexRow++) {
                 Services service = new Services();
-                List<Cell> cells = functionsCommon.getAllCells(rows.get(indexRow));
+                List<Cell> cells = methodsCommon.getAllCells(rows.get(indexRow));
                 for (int indexCell = 0; indexCell < cells.size(); indexCell++) {
-                    functionsCommon.checkBlankType(cells.get(indexCell), indexRow, indexCell);
+                    methodsCommon.checkBlankType(cells.get(indexCell), indexRow, indexCell);
                     switch (indexCell) {
                         case 0 -> {
-                            String serviceName = functionsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue();
+                            String serviceName = methodsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue();
                             List<String> servicesName = servicesRepository.findAll().stream().map(Services::getServiceName).toList();
                             for (String name : servicesName) {
                                 if (serviceName.equals(name)) {
@@ -394,21 +394,21 @@ public class AdminServiceImpl implements AdminService {
                             }
                             service.setServiceName(serviceName);
                         }
-                        case 1 -> service.setPrice(functionsCommon.checkNumericType(cells.get(indexCell), indexRow, indexCell).getNumericCellValue());
-                        case 2 -> service.setDescription(functionsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue());
+                        case 1 -> service.setPrice(methodsCommon.checkNumericType(cells.get(indexCell), indexRow, indexCell).getNumericCellValue());
+                        case 2 -> service.setDescription(methodsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue());
                         case 3 -> {
-                            String serviceStatus = functionsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue();
+                            String serviceStatus = methodsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue();
                             if (!serviceStatus.equals("ACTIVE") && !serviceStatus.equals("SUSPENDED") && !serviceStatus.equals("INACTIVE")) {
                                 throw new ResourceException("Import data failed. The value of column " + (indexCell + 1) + " , row " + indexRow + " must be 'ACTIVE' or 'SUSPENDED' or 'INACTIVE'.", HttpStatus.BAD_REQUEST);
                             }
                             service.setStatus(EServiceStatus.valueOf(serviceStatus));
                         }
                         case 4 -> {
-                            ServiceCategory serviceCategory = serviceCategoryRepository.getServiceCategoriesByServiceCategoryName(functionsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue());
+                            ServiceCategory serviceCategory = serviceCategoryRepository.getServiceCategoriesByServiceCategoryName(methodsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue());
                             if (Objects.isNull(serviceCategory)) {
                                 throw new ResourceException("Import failed. Service category name in row " + indexRow + " is not exist.", HttpStatus.BAD_REQUEST);
                             }
-                            functionsCommon.serviceCode(service, serviceCategory);
+                            methodsCommon.serviceCode(service, serviceCategory);
                             service.setServiceCategory(serviceCategory);
                         }
                         default -> {
@@ -431,20 +431,20 @@ public class AdminServiceImpl implements AdminService {
             List<Row> rows = Lists.newArrayList(sheet.rowIterator());
             for (int indexRow = 1; indexRow < rows.size(); indexRow++) {
                 Booking booking = new Booking();
-                List<Cell> cells = functionsCommon.getAllCells(rows.get(indexRow));
+                List<Cell> cells = methodsCommon.getAllCells(rows.get(indexRow));
                 for (int indexCell = 0; indexCell < cells.size(); indexCell++) {
-                    functionsCommon.checkBlankType(cells.get(indexCell), indexRow, indexCell);
+                    methodsCommon.checkBlankType(cells.get(indexCell), indexRow, indexCell);
                     switch (indexCell) {
                         case 0 -> {
-                            String fullName = functionsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue();
+                            String fullName = methodsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue();
                             booking.setFirstName(fullName.split(" ")[0]);
                             booking.setLastName(fullName.substring(fullName.split(" ")[0].length() + 1));
                         }
-                        case 1 -> booking.setDateOfBirth(functionsCommon.checkDateType(cells.get(indexCell), indexRow, indexCell).getDateCellValue());
-                        case 2 -> booking.setGender(functionsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue().equals("Male") ? 1 : 0);
-                        case 3 -> booking.setPhoneNumber(functionsCommon.getPhoneNumberFromExcel(cells.get(indexCell), indexRow, indexCell));
-                        case 4 -> booking.setAddress(functionsCommon.getAddressFromExcel(cells.get(indexCell), indexRow, indexCell));
-                        case 6 -> booking.setAppointmentDate(functionsCommon.checkDateType(cells.get(indexCell), indexRow, indexCell).getDateCellValue());
+                        case 1 -> booking.setDateOfBirth(methodsCommon.checkDateType(cells.get(indexCell), indexRow, indexCell).getDateCellValue());
+                        case 2 -> booking.setGender(methodsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue().equals("Male") ? 1 : 0);
+                        case 3 -> booking.setPhoneNumber(methodsCommon.getPhoneNumberFromExcel(cells.get(indexCell), indexRow, indexCell));
+                        case 4 -> booking.setAddress(methodsCommon.getAddressFromExcel(cells.get(indexCell), indexRow, indexCell));
+                        case 6 -> booking.setAppointmentDate(methodsCommon.checkDateType(cells.get(indexCell), indexRow, indexCell).getDateCellValue());
                         case 7 -> {
                             Specialization specialization = specializationRepository.getSpecializationBySpecializationName(cells.get(indexCell-2).getStringCellValue());
                             if (Objects.isNull(specialization)) {
@@ -453,16 +453,16 @@ public class AdminServiceImpl implements AdminService {
                             Date appointmentDate = cells.get(indexCell-1).getDateCellValue();
                             LocalTime startTime = cells.get(indexCell).getLocalDateTimeCellValue().toLocalTime();
                             LocalTime endTime = cells.get(indexCell+1).getLocalDateTimeCellValue().toLocalTime();
-                            List<User> doctors = functionsCommon.groupDoctorsBySpecialization().get(specialization.getSpecializationId())
+                            List<User> doctors = methodsCommon.groupDoctorsBySpecialization().get(specialization.getSpecializationId())
                                     .stream()
-                                    .filter(doctor -> functionsCommon.groupWorkScheduleByDoctor().get(doctor.getUserId())
+                                    .filter(doctor -> methodsCommon.groupWorkScheduleByDoctor().get(doctor.getUserId())
                                             .stream()
                                             .anyMatch(workSchedule -> startTime.equals(workSchedule.getStartTime()) && endTime.equals(workSchedule.getEndTime()))
                                     ).toList();
 
                             // group booking by specialization
                             for (User doctor : doctors) {
-                                for (WorkSchedule workSchedule : functionsCommon.groupWorkScheduleByDoctor().get(doctor.getUserId())) {
+                                for (WorkSchedule workSchedule : methodsCommon.groupWorkScheduleByDoctor().get(doctor.getUserId())) {
                                     for (Booking b : bookingRepository.findAll()) {
                                         if (b.getAppointmentDate().equals(appointmentDate) && b.getWorkSchedule().getStartTime().equals(workSchedule.getStartTime())) {
                                             throw new ResourceException("You cannot import data in row "+indexRow+" because all doctors have appointments at "
@@ -474,13 +474,13 @@ public class AdminServiceImpl implements AdminService {
                             }
 
                         }
-                        case 9 -> booking.setDescribeSymptoms(functionsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue());
-                        case 10 -> booking.setStatus(EBookingStatus.valueOf(functionsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue()));
+                        case 9 -> booking.setDescribeSymptoms(methodsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue());
+                        case 10 -> booking.setStatus(EBookingStatus.valueOf(methodsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue()));
                         default -> {
                         }
                     }
                 }
-                booking.setBookingCode(functionsCommon.bookingCode());
+                booking.setBookingCode(methodsCommon.bookingCode());
                 bookings.add(booking);
             }
             return bookings;

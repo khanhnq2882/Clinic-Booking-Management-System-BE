@@ -43,12 +43,12 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    @Column(length = 50)
-    @Size(max = 50)
+    @Column(length = 20)
+    @Size(max = 20)
     private String firstName;
 
-    @Column(length = 50)
-    @Size(max = 50)
+    @Column(length = 20)
+    @Size(max = 20)
     private String lastName;
 
     @DateTimeFormat(pattern = "dd-MM-yyyy")

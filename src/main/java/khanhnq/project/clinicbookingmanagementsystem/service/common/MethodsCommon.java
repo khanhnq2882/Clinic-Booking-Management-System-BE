@@ -1,4 +1,4 @@
-package khanhnq.project.clinicbookingmanagementsystem.common;
+package khanhnq.project.clinicbookingmanagementsystem.service.common;
 
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceException;
@@ -6,6 +6,7 @@ import khanhnq.project.clinicbookingmanagementsystem.repository.*;
 import khanhnq.project.clinicbookingmanagementsystem.response.AddressResponse;
 import khanhnq.project.clinicbookingmanagementsystem.response.FileResponse;
 import khanhnq.project.clinicbookingmanagementsystem.response.RequestDoctorResponse;
+import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import khanhnq.project.clinicbookingmanagementsystem.service.FileService;
 import lombok.AllArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
@@ -14,13 +15,16 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Component
 @AllArgsConstructor
-public class FunctionsCommon {
+public class MethodsCommon {
 
     private final UserRepository userRepository;
     private final WorkScheduleRepository workScheduleRepository;
@@ -31,28 +35,8 @@ public class FunctionsCommon {
     private final ExperienceRepository experienceRepository;
     private final ServicesRepository servicesRepository;
     private final BookingRepository bookingRepository;
-
-    public Map<Long, List<WorkSchedule>> groupWorkScheduleByDoctor() {
-        Map<Long, List<WorkSchedule>> map = new HashMap<>();
-        for (User user : userRepository.getDoctors()) {
-            if (!map.containsKey(user.getUserId())) {
-                List<WorkSchedule> workSchedules = workScheduleRepository.getWorkSchedulesByUserId(user.getUserId());
-                map.put(user.getUserId(), workSchedules);
-            }
-        }
-        return map;
-    }
-
-    public Map<Long, List<User>> groupDoctorsBySpecialization() {
-        Map<Long, List<User>> map = new HashMap<>();
-        for (Specialization specialization : specializationRepository.findAll()) {
-            if (!map.containsKey(specialization.getSpecializationId())) {
-                List<User> users = userRepository.getDoctorsBySpecializationId(specialization.getSpecializationId());
-                map.put(specialization.getSpecializationId(), users);
-            }
-        }
-        return map;
-    }
+    private final AuthService authService;
+    private final FileRepository fileRepository;
 
     public Sort.Direction getSortDirection(String direction) {
         if (direction.equals("asc")) {
@@ -147,6 +131,28 @@ public class FunctionsCommon {
             throw new ResourceException("Import data failed. The value of column " + (cellIndex + 1) + " , row " + rowIndex + " must be date type.", HttpStatus.BAD_REQUEST);
         }
         return cell;
+    }
+
+    public Map<Long, List<WorkSchedule>> groupWorkScheduleByDoctor() {
+        Map<Long, List<WorkSchedule>> map = new HashMap<>();
+        for (User user : userRepository.getDoctors()) {
+            if (!map.containsKey(user.getUserId())) {
+                List<WorkSchedule> workSchedules = workScheduleRepository.getWorkSchedulesByUserId(user.getUserId());
+                map.put(user.getUserId(), workSchedules);
+            }
+        }
+        return map;
+    }
+
+    public Map<Long, List<User>> groupDoctorsBySpecialization() {
+        Map<Long, List<User>> map = new HashMap<>();
+        for (Specialization specialization : specializationRepository.findAll()) {
+            if (!map.containsKey(specialization.getSpecializationId())) {
+                List<User> users = userRepository.getDoctorsBySpecializationId(specialization.getSpecializationId());
+                map.put(specialization.getSpecializationId(), users);
+            }
+        }
+        return map;
     }
 
     public String bookingCode() {
@@ -249,4 +255,63 @@ public class FunctionsCommon {
         }).collect(Collectors.toList());
     }
 
+    public Set<WorkSchedule> filterWorkSchedules(Set<WorkSchedule> workSchedulesRequest, Long specializationId) {
+        Set<WorkSchedule> resultWorkSchedule = workSchedulesRequest;
+        for (User doctor : groupDoctorsBySpecialization().get(specializationId)) {
+            resultWorkSchedule = resultWorkSchedule.stream()
+                    .filter(request -> groupWorkScheduleByDoctor().get(doctor.getUserId()).stream()
+                            .noneMatch(workSchedule -> workSchedule.getStartTime().equals(request.getStartTime())
+                                    && workSchedule.getEndTime().equals(request.getEndTime())))
+                    .collect(Collectors.toSet());
+        }
+        return resultWorkSchedule;
+    }
+
+    public AddressResponse getAddress(Booking booking) {
+        Address address = addressRepository.findById(booking.getAddress().getAddressId()).orElse(null);
+        new AddressResponse();
+        return AddressResponse.builder()
+                .addressId(Objects.requireNonNull(address).getAddressId())
+                .specificAddress(address.getSpecificAddress())
+                .wardName(address.getWard().getWardName())
+                .districtName(address.getWard().getDistrict().getDistrictName())
+                .cityName(address.getWard().getDistrict().getCity().getCityName())
+                .build();
+    }
+
+    public String uploadFile(MultipartFile multipartFile, String typeImage) {
+        try {
+            User currentUser = authService.getCurrentUser();
+            File file = new File();
+            if (fileRepository.getFilesById(currentUser.getUserId()).stream().noneMatch(f -> f.getFilePath().split("/")[1].equals(typeImage))) {
+                file.setFilePath(currentUser.getUsername()+"/"+typeImage+"/"+ StringUtils.cleanPath(Objects.requireNonNull(multipartFile.getOriginalFilename())));
+                file.setData(multipartFile.getBytes());
+                file.setUser(currentUser);
+                currentUser.getFiles().add(file);
+            } else {
+                file = fileRepository.getFileByType(typeImage, currentUser.getUserId());
+                file.setFilePath(currentUser.getUsername()+"/"+typeImage+"/"+StringUtils.cleanPath(Objects.requireNonNull(multipartFile.getOriginalFilename())));
+                file.setData(multipartFile.getBytes());
+                file.setUser(currentUser);
+            }
+            fileRepository.save(file);
+            userRepository.save(currentUser);
+            return "Uploaded the file" +typeImage+ " successfully: " + multipartFile.getOriginalFilename();
+        } catch (Exception e) {
+            throw new ResourceException("Could not upload the file"+ typeImage+ " : " + multipartFile.getOriginalFilename() + ". Error: " + e.getMessage(), HttpStatus.EXPECTATION_FAILED);
+        }
+    }
+
+    public void handleErrors (BindingResult bindingResult) {
+        if(bindingResult.hasErrors()){
+            Map<String, String> errors= new HashMap<>();
+            bindingResult.getFieldErrors().forEach(
+                    error -> errors.put(error.getField(), error.getDefaultMessage()));
+            String errorMsg = "";
+            for (String key: errors.keySet()) {
+                errorMsg += key + " : " + errors.get(key) + " ; ";
+            }
+            throw new ResourceException(errorMsg, HttpStatus.BAD_REQUEST);
+        }
+    }
 }

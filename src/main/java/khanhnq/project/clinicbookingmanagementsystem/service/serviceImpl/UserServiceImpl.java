@@ -16,10 +16,10 @@ import khanhnq.project.clinicbookingmanagementsystem.request.BookingAppointmentR
 import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import khanhnq.project.clinicbookingmanagementsystem.service.UserService;
+import khanhnq.project.clinicbookingmanagementsystem.service.common.MethodsCommon;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -31,15 +31,21 @@ import java.util.stream.Collectors;
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final WardRepository wardRepository;
-    private final FileRepository fileRepository;
     private final WorkScheduleRepository workScheduleRepository;
     private final SkillRepository skillRepository;
     private final BookingRepository bookingRepository;
     private final AuthService authService;
+    private final MethodsCommon methodsCommon;
 
     @Override
     public String updateProfile(UserProfileRequest userProfileRequest) {
         User currentUser = authService.getCurrentUser();
+        List<User> users = userRepository.findAll().stream().filter(user -> Objects.nonNull(user.getPhoneNumber())).toList();
+        for (User user : users) {
+            if (userProfileRequest.getPhoneNumber().equals(user.getPhoneNumber())) {
+                throw new ResourceException("Phone number is already existed.", HttpStatus.BAD_REQUEST);
+            }
+        }
         UserMapper.USER_MAPPER.mapToUser(currentUser, userProfileRequest);
         currentUser.setAddress(Address.builder()
                 .specificAddress(userProfileRequest.getSpecificAddress())
@@ -51,7 +57,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public String uploadAvatar(MultipartFile multipartFile) {
-        return uploadFile(multipartFile, "avatar");
+        return methodsCommon.uploadFile(multipartFile, "avatar");
     }
 
     @Override
@@ -78,12 +84,12 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public String uploadMedicalLicense(MultipartFile multipartFile) {
-        return uploadFile(multipartFile, "medical-license");
+        return methodsCommon.uploadFile(multipartFile, "medical-license");
     }
 
     @Override
     public String uploadMedicalDegree(MultipartFile multipartFile) {
-        return uploadFile(multipartFile, "medical-degree");
+        return methodsCommon.uploadFile(multipartFile, "medical-degree");
     }
 
     @Override
@@ -141,7 +147,7 @@ public class UserServiceImpl implements UserService {
                 .specificAddress(bookingAppointmentRequest.getSpecificAddress())
                 .ward(wardRepository.findById(bookingAppointmentRequest.getWardId()).orElse(null))
                 .build());
-        bookingAppointment.setBookingCode(bookingCode());
+        bookingAppointment.setBookingCode(methodsCommon.bookingCode());
         bookingAppointment.setWorkSchedule(workSchedule);
         bookingAppointment.setStatus(EBookingStatus.PENDING);
         bookingAppointment.setUser(currentUser);
@@ -149,35 +155,6 @@ public class UserServiceImpl implements UserService {
         return "Booking appointment successfully.";
     }
 
-    public String uploadFile(MultipartFile multipartFile, String typeImage) {
-        try {
-            User currentUser = authService.getCurrentUser();
-            File file = new File();
-            if (fileRepository.getFilesById(currentUser.getUserId()).stream().noneMatch(f -> f.getFilePath().split("/")[1].equals(typeImage))) {
-                file.setFilePath(currentUser.getUsername()+"/"+typeImage+"/"+StringUtils.cleanPath(Objects.requireNonNull(multipartFile.getOriginalFilename())));
-                file.setData(multipartFile.getBytes());
-                file.setUser(currentUser);
-                currentUser.getFiles().add(file);
-            } else {
-                file = fileRepository.getFileByType(typeImage, currentUser.getUserId());
-                file.setFilePath(currentUser.getUsername()+"/"+typeImage+"/"+StringUtils.cleanPath(Objects.requireNonNull(multipartFile.getOriginalFilename())));
-                file.setData(multipartFile.getBytes());
-                file.setUser(currentUser);
-            }
-            fileRepository.save(file);
-            userRepository.save(currentUser);
-            return "Uploaded the file" +typeImage+ " successfully: " + multipartFile.getOriginalFilename();
-        } catch (Exception e) {
-            throw new ResourceException("Could not upload the file"+ typeImage+ " : " + multipartFile.getOriginalFilename() + ". Error: " + e.getMessage(), HttpStatus.EXPECTATION_FAILED);
-        }
-    }
 
-    public String bookingCode() {
-        Long maxServiceCode = Collections.max(bookingRepository.findAll()
-                .stream()
-                .map(booking -> Long.parseLong(booking.getBookingCode().substring(2)))
-                .toList());
-        return (bookingRepository.findAll().size() == 0) ? "BC1" : ("BC" + (maxServiceCode+1));
-    }
 
 }
