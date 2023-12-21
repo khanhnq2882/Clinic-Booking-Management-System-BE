@@ -29,7 +29,7 @@ public class UserProfileRequest {
     private String phoneNumber;
 
     @NotNull(message = "Specific address can't be empty.")
-    @Length(max = 50, message = "Specific address has a maximum of 50 characters.")
+    @Length(max = 100, message = "Specific address has a maximum of 100 characters.")
     private String specificAddress;
 
     private Long wardId;

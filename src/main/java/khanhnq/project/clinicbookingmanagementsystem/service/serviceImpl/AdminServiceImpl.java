@@ -23,6 +23,7 @@ import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -31,6 +32,7 @@ import java.text.SimpleDateFormat;
 import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
+
 import org.springframework.stereotype.Service;
 
 @Service
@@ -343,12 +345,13 @@ public class AdminServiceImpl implements AdminService {
                             List<String> serviceCategoriesName = serviceCategoryRepository.findAll().stream().map(ServiceCategory::getServiceCategoryName).toList();
                             for (String name : serviceCategoriesName) {
                                 if (serviceCategoryName.equals(name)) {
-                                    throw new ResourceException("Import data failed. Service category named '"+ serviceCategoryName +"' is already existed.", HttpStatus.BAD_REQUEST);
+                                    throw new ResourceException("Import data failed. Service category named '" + serviceCategoryName + "' is already existed.", HttpStatus.BAD_REQUEST);
                                 }
                             }
                             serviceCategory.setServiceCategoryName(serviceCategoryName);
                         }
-                        case 1 -> serviceCategory.setDescription(methodsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue());
+                        case 1 ->
+                                serviceCategory.setDescription(methodsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue());
                         case 2 -> {
                             String specializationName = methodsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue();
                             Specialization specialization = specializationRepository.getSpecializationBySpecializationName(specializationName);
@@ -389,13 +392,15 @@ public class AdminServiceImpl implements AdminService {
                             List<String> servicesName = servicesRepository.findAll().stream().map(Services::getServiceName).toList();
                             for (String name : servicesName) {
                                 if (serviceName.equals(name)) {
-                                    throw new ResourceException("Import data failed. Service named '"+ serviceName +"' is already existed.", HttpStatus.BAD_REQUEST);
+                                    throw new ResourceException("Import data failed. Service named '" + serviceName + "' is already existed.", HttpStatus.BAD_REQUEST);
                                 }
                             }
                             service.setServiceName(serviceName);
                         }
-                        case 1 -> service.setPrice(methodsCommon.checkNumericType(cells.get(indexCell), indexRow, indexCell).getNumericCellValue());
-                        case 2 -> service.setDescription(methodsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue());
+                        case 1 ->
+                                service.setPrice(methodsCommon.checkNumericType(cells.get(indexCell), indexRow, indexCell).getNumericCellValue());
+                        case 2 ->
+                                service.setDescription(methodsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue());
                         case 3 -> {
                             String serviceStatus = methodsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue();
                             if (!serviceStatus.equals("ACTIVE") && !serviceStatus.equals("SUSPENDED") && !serviceStatus.equals("INACTIVE")) {
@@ -440,42 +445,56 @@ public class AdminServiceImpl implements AdminService {
                             booking.setFirstName(fullName.split(" ")[0]);
                             booking.setLastName(fullName.substring(fullName.split(" ")[0].length() + 1));
                         }
-                        case 1 -> booking.setDateOfBirth(methodsCommon.checkDateType(cells.get(indexCell), indexRow, indexCell).getDateCellValue());
-                        case 2 -> booking.setGender(methodsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue().equals("Male") ? 1 : 0);
-                        case 3 -> booking.setPhoneNumber(methodsCommon.getPhoneNumberFromExcel(cells.get(indexCell), indexRow, indexCell));
-                        case 4 -> booking.setAddress(methodsCommon.getAddressFromExcel(cells.get(indexCell), indexRow, indexCell));
-                        case 6 -> booking.setAppointmentDate(methodsCommon.checkDateType(cells.get(indexCell), indexRow, indexCell).getDateCellValue());
+                        case 1 ->
+                                booking.setDateOfBirth(methodsCommon.checkDateType(cells.get(indexCell), indexRow, indexCell).getDateCellValue());
+                        case 2 ->
+                                booking.setGender(methodsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue().equals("Male") ? 1 : 0);
+                        case 3 ->
+                                booking.setPhoneNumber(methodsCommon.getPhoneNumberFromExcel(cells.get(indexCell), indexRow, indexCell));
+                        case 4 ->
+                                booking.setAddress(methodsCommon.getAddressFromExcel(cells.get(indexCell), indexRow, indexCell));
+                        case 6 ->
+                                booking.setAppointmentDate(methodsCommon.checkDateType(cells.get(indexCell), indexRow, indexCell).getDateCellValue());
                         case 7 -> {
-                            Specialization specialization = specializationRepository.getSpecializationBySpecializationName(cells.get(indexCell-2).getStringCellValue());
+                            Specialization specialization = specializationRepository.getSpecializationBySpecializationName(cells.get(indexCell - 2).getStringCellValue());
                             if (Objects.isNull(specialization)) {
                                 throw new ResourceException("Import failed. Specialization name in row " + indexRow + " is not exist.", HttpStatus.BAD_REQUEST);
                             }
-                            Date appointmentDate = cells.get(indexCell-1).getDateCellValue();
+                            Date appointmentDate = cells.get(indexCell - 1).getDateCellValue();
                             LocalTime startTime = cells.get(indexCell).getLocalDateTimeCellValue().toLocalTime();
-                            LocalTime endTime = cells.get(indexCell+1).getLocalDateTimeCellValue().toLocalTime();
+                            LocalTime endTime = cells.get(indexCell + 1).getLocalDateTimeCellValue().toLocalTime();
                             List<User> doctors = methodsCommon.groupDoctorsBySpecialization().get(specialization.getSpecializationId())
                                     .stream()
                                     .filter(doctor -> methodsCommon.groupWorkScheduleByDoctor().get(doctor.getUserId())
                                             .stream()
-                                            .anyMatch(workSchedule -> startTime.equals(workSchedule.getStartTime()) && endTime.equals(workSchedule.getEndTime()))
-                                    ).toList();
-
-                            // group booking by specialization
+                                            .anyMatch(workSchedule -> startTime.equals(workSchedule.getStartTime()) && endTime.equals(workSchedule.getEndTime())))
+                                    .toList();
                             for (User doctor : doctors) {
                                 for (WorkSchedule workSchedule : methodsCommon.groupWorkScheduleByDoctor().get(doctor.getUserId())) {
-                                    for (Booking b : bookingRepository.findAll()) {
+                                    for (Booking b : bookingRepository.getBookingsByDoctorId(doctor.getUserId())) {
                                         if (b.getAppointmentDate().equals(appointmentDate) && b.getWorkSchedule().getStartTime().equals(workSchedule.getStartTime())) {
-                                            throw new ResourceException("You cannot import data in row "+indexRow+" because all doctors have appointments at "
-                                                    + workSchedule.getStartTime() + " - " + workSchedule.getEndTime() +" on "+ new SimpleDateFormat("dd/MM/yyyy").format(appointmentDate), HttpStatus.BAD_REQUEST);
+                                            throw new ResourceException("You cannot import data in row " + (indexRow + 1) + " because all doctors have appointments at "
+                                                    + workSchedule.getStartTime() + " - " + workSchedule.getEndTime() + " on " + new SimpleDateFormat("dd/MM/yyyy").format(appointmentDate), HttpStatus.BAD_REQUEST);
                                         }
-                                        booking.setWorkSchedule(workSchedule);
+                                        if (startTime.equals(workSchedule.getStartTime()) && endTime.equals(workSchedule.getEndTime())) {
+                                            booking.setWorkSchedule(workSchedule);
+                                        } else {
+                                            throw new ResourceException("Invalid data in row " + (indexRow + 1) + " . Currently there are no doctors available to schedule examinations from "
+                                                    + startTime + " to " + endTime + ". Please contact the booking person and choose another time.", HttpStatus.BAD_REQUEST);
+                                        }
                                     }
                                 }
                             }
-
                         }
-                        case 9 -> booking.setDescribeSymptoms(methodsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue());
-                        case 10 -> booking.setStatus(EBookingStatus.valueOf(methodsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue()));
+                        case 9 ->
+                                booking.setDescribeSymptoms(methodsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue());
+                        case 10 -> {
+                            String serviceStatus = methodsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue();
+                            if (!serviceStatus.equals("PENDING") && !serviceStatus.equals("CONFIRMED") && !serviceStatus.equals("CANCELLED") && !serviceStatus.equals("COMPLETED")) {
+                                throw new ResourceException("Import data failed. The value of column " + (indexCell + 1) + " , row " + indexRow + " must be 'PENDING' or 'CONFIRMED' or 'CANCELLED' or 'COMPLETED'.", HttpStatus.BAD_REQUEST);
+                            }
+                            booking.setStatus(EBookingStatus.valueOf(methodsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue()));
+                        }
                         default -> {
                         }
                     }

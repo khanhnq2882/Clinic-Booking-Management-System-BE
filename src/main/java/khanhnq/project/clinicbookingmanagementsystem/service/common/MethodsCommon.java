@@ -31,6 +31,8 @@ public class MethodsCommon {
     private final SpecializationRepository specializationRepository;
     private final FileService fileService;
     private final WardRepository wardRepository;
+    private final DistrictRepository districtRepository;
+    private final CityRepository cityRepository;
     private final AddressRepository addressRepository;
     private final ExperienceRepository experienceRepository;
     private final ServicesRepository servicesRepository;
@@ -165,31 +167,52 @@ public class MethodsCommon {
 
     public String getPhoneNumberFromExcel (Cell cell, int indexRow, int indexCell) {
         String phoneNumber = checkStringType(cell, indexRow, indexCell).getStringCellValue();
-        if (!phoneNumber.matches("^0{1}[2|3|5|7|8|9]{1}[0-9]{8,9}$")) {
+        if (!phoneNumber.matches("^0[2|3|5|7|8|9][0-9]{8}$")) {
             throw new ResourceException("Import failed. Phone number is in wrong format.", HttpStatus.BAD_REQUEST);
         }
         return phoneNumber;
     }
 
     public Address getAddressFromExcel (Cell cell, int indexRow, int indexCell) {
-        List<String> strings = Arrays.asList(checkStringType(cell, indexRow, indexCell).getStringCellValue().split(", "));
-        Ward ward = wardRepository.findWardByWardName(strings.get(strings.size() - 3));
-        if (Objects.isNull(ward)) {
-            throw new ResourceException("Ward name doesn't exist.", HttpStatus.BAD_REQUEST);
+        List<String> strings = Arrays.asList(checkStringType(cell, indexRow, indexCell).getStringCellValue().split(","));
+        if (strings.size() < 3) {
+            throw new ResourceException("Invalid address. Must contain at least information about wards, districts, and cities of Vietnam and separated by commas.", HttpStatus.BAD_REQUEST);
+        }
+        String wardName = strings.get(strings.size() - 3).trim();
+        String districtName = strings.get(strings.size() - 2).trim();
+        String cityName = strings.get(strings.size() - 1).trim();
+        List<Ward> wards = wardRepository.getWardsByWardName(wardName);
+        if (wards.size() == 0) {
+            throw new ResourceException("Ward named '"+ wardName +"' of column "+ (indexCell + 1) +", row "+ indexRow +" doesn't exist.", HttpStatus.BAD_REQUEST);
+        }
+        List<District> districts = districtRepository.getDistrictsByDistrictName(districtName);
+        if (districts.size() == 0) {
+            throw new ResourceException("District named '"+ districtName +"' of column "+ (indexCell + 1) +", row "+ indexRow +" doesn't exist.", HttpStatus.BAD_REQUEST);
+        }
+        List<City> cities = cityRepository.getCitiesByCityName(cityName);
+        if (cities.size() == 0) {
+            throw new ResourceException("City named '"+ cityName +"' of column "+ (indexCell + 1) +", row "+ indexRow +" doesn't exist.", HttpStatus.BAD_REQUEST);
+        }
+        Address address = new Address();
+        for (Ward ward : wards) {
+            for (District district : districts) {
+                if (ward.getDistrict().getDistrictName().equals(district.getDistrictName())) {
+                    for (City city : cities) {
+                        if (district.getCity().getCityName().equals(city.getCityName())) {
+                            address.setWard(ward);
+                        }
+                    }
+                }
+            }
         }
         List<String> specificAddressElements = strings.stream()
-                .filter(s -> !s.equals(strings.get(strings.size() - 1))
-                        && !s.equals(strings.get(strings.size() - 2))
-                        && !s.equals(strings.get(strings.size() - 3)))
-                .toList();
+                .filter(s -> !s.trim().equals(cityName) && !s.trim().equals(districtName) && !s.trim().equals(wardName)).toList();
         StringBuilder specificAddress = new StringBuilder();
         for (String element : specificAddressElements) {
             specificAddress.append(element+", ");
         }
-        return Address.builder()
-                .specificAddress(specificAddress.toString())
-                .ward(ward)
-                .build();
+        address.setSpecificAddress(specificAddress.toString());
+        return address;
     }
 
     public Map<Long, List<Experience>> groupExperiencesByUserId() {
