@@ -1,5 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
+import khanhnq.project.clinicbookingmanagementsystem.mapper.*;
 import khanhnq.project.clinicbookingmanagementsystem.service.common.MethodsCommon;
 import khanhnq.project.clinicbookingmanagementsystem.dto.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
@@ -7,10 +8,6 @@ import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EBookingStatus
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ERole;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EServiceStatus;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceException;
-import khanhnq.project.clinicbookingmanagementsystem.mapper.ExperienceMapper;
-import khanhnq.project.clinicbookingmanagementsystem.mapper.ServiceCategoryMapper;
-import khanhnq.project.clinicbookingmanagementsystem.mapper.ServicesMapper;
-import khanhnq.project.clinicbookingmanagementsystem.mapper.UserMapper;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
 import khanhnq.project.clinicbookingmanagementsystem.request.ServiceCategoryRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.ServiceRequest;
@@ -23,11 +20,11 @@ import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.LocalTime;
 import java.util.*;
@@ -433,6 +430,9 @@ public class AdminServiceImpl implements AdminService {
         try {
             List<Booking> bookings = new ArrayList<>();
             Sheet sheet = new XSSFWorkbook(inputStream).getSheet("bookings");
+            if (sheet == null) {
+                throw new ResourceException("Sheet named 'bookings' doesn't not exist.", HttpStatus.BAD_REQUEST);
+            }
             List<Row> rows = Lists.newArrayList(sheet.rowIterator());
             for (int indexRow = 1; indexRow < rows.size(); indexRow++) {
                 Booking booking = new Booking();
@@ -445,20 +445,37 @@ public class AdminServiceImpl implements AdminService {
                             booking.setFirstName(fullName.split(" ")[0]);
                             booking.setLastName(fullName.substring(fullName.split(" ")[0].length() + 1));
                         }
-                        case 1 ->
-                                booking.setDateOfBirth(methodsCommon.checkDateType(cells.get(indexCell), indexRow, indexCell).getDateCellValue());
-                        case 2 ->
-                                booking.setGender(methodsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue().equals("Male") ? 1 : 0);
+                        case 1 -> {
+                            DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+                            Date dateOfBirth = methodsCommon.checkDateType(cells.get(indexCell), indexRow, indexCell).getDateCellValue();
+                            if (!dateFormat.format(dateOfBirth).matches("^\\d{4}\\-(0?[1-9]|1[012])\\-(0?[1-9]|[12][0-9]|3[01])$")) {
+                                throw new ResourceException("Import failed. Date of birth in row " + (indexRow + 1) + " must be yyyy-MM-dd format.", HttpStatus.BAD_REQUEST);
+                            }
+                            booking.setDateOfBirth(dateOfBirth);
+                        }
+                        case 2 -> {
+                            String gender = methodsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue();
+                            if (!gender.equalsIgnoreCase("Male") && !gender.equalsIgnoreCase("Female")) {
+                                throw new ResourceException("Import data failed. The value of column " + (indexCell + 1) + " , row " + indexRow + " must be 'Male' or 'Female'.", HttpStatus.BAD_REQUEST);
+                            }
+                            booking.setGender(gender.equalsIgnoreCase("Male") ? 1 : 0);
+                        }
                         case 3 ->
                                 booking.setPhoneNumber(methodsCommon.getPhoneNumberFromExcel(cells.get(indexCell), indexRow, indexCell));
                         case 4 ->
                                 booking.setAddress(methodsCommon.getAddressFromExcel(cells.get(indexCell), indexRow, indexCell));
-                        case 6 ->
-                                booking.setAppointmentDate(methodsCommon.checkDateType(cells.get(indexCell), indexRow, indexCell).getDateCellValue());
+                        case 6 -> {
+                            DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+                            Date appointmentDate = methodsCommon.checkDateType(cells.get(indexCell), indexRow, indexCell).getDateCellValue();
+                            if (!dateFormat.format(appointmentDate).matches("^\\d{4}\\-(0?[1-9]|1[012])\\-(0?[1-9]|[12][0-9]|3[01])$")) {
+                                throw new ResourceException("Import failed. Appointment date in row " + (indexRow + 1) + " must be yyyy-MM-dd format.", HttpStatus.BAD_REQUEST);
+                            }
+                            booking.setAppointmentDate(methodsCommon.checkDateType(cells.get(indexCell), indexRow, indexCell).getDateCellValue());
+                        }
                         case 7 -> {
                             Specialization specialization = specializationRepository.getSpecializationBySpecializationName(cells.get(indexCell - 2).getStringCellValue());
                             if (Objects.isNull(specialization)) {
-                                throw new ResourceException("Import failed. Specialization name in row " + indexRow + " is not exist.", HttpStatus.BAD_REQUEST);
+                                throw new ResourceException("Import failed. Specialization name in row " + (indexRow + 1) + " is not exist.", HttpStatus.BAD_REQUEST);
                             }
                             Date appointmentDate = cells.get(indexCell - 1).getDateCellValue();
                             LocalTime startTime = cells.get(indexCell).getLocalDateTimeCellValue().toLocalTime();
@@ -479,8 +496,8 @@ public class AdminServiceImpl implements AdminService {
                                         if (startTime.equals(workSchedule.getStartTime()) && endTime.equals(workSchedule.getEndTime())) {
                                             booking.setWorkSchedule(workSchedule);
                                         } else {
-                                            throw new ResourceException("Invalid data in row " + (indexRow + 1) + " . Currently there are no doctors available to schedule examinations from "
-                                                    + startTime + " to " + endTime + ". Please contact the booking person and choose another time.", HttpStatus.BAD_REQUEST);
+//                                            throw new ResourceException("Invalid data in row " + (indexRow + 1) + " . Currently there are no doctors available to schedule examinations from "
+//                                                    + workSchedule.getStartTime() + " to " + workSchedule.getEndTime() + ". Please contact the booking person and choose another time.", HttpStatus.BAD_REQUEST);
                                         }
                                     }
                                 }
@@ -506,5 +523,20 @@ public class AdminServiceImpl implements AdminService {
         } catch (IOException e) {
             throw new ResourceException("Failed to import data from file excel.", HttpStatus.BAD_REQUEST);
         }
+    }
+
+    @Override
+    public List<BookingDTO> getAllBookings() {
+        List<Booking> bookings = bookingRepository.findAll()
+                .stream()
+                .filter(booking -> Objects.isNull(booking.getUser()) && Objects.isNull(booking.getWorkSchedule()))
+                .toList();
+        List<BookingDTO> bookingDTOS = bookings.stream()
+                .map(booking -> {
+                    BookingDTO bookingDTO = BookingMapper.BOOKING_MAPPER.mapToBookingDTO(booking);
+                    bookingDTO.setUserAddress(methodsCommon.getAddress(booking));
+                    return bookingDTO;
+                }).toList();
+        return bookingDTOS;
     }
 }

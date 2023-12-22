@@ -106,31 +106,31 @@ public class MethodsCommon {
 
     public Cell checkBlankType (Cell cell, int rowIndex, int cellIndex) {
         if (cell.getCellType() == CellType.BLANK) {
-            throw new ResourceException("Import data failed. The value of column " + (cellIndex + 1) + " , row " + rowIndex + " can't be blank.", HttpStatus.BAD_REQUEST);
+            throw new ResourceException("Import data failed. The value of column " + (cellIndex + 1) + " , row " + (rowIndex + 1) + " can't be blank.", HttpStatus.BAD_REQUEST);
         }
         return cell;
     }
 
     public Cell checkStringType (Cell cell, int rowIndex, int cellIndex) {
         if (!cell.getCellType().equals(CellType.STRING)) {
-            throw new ResourceException("Import data failed. The value of column " + (cellIndex + 1) + " , row " + rowIndex + " must be string type.", HttpStatus.BAD_REQUEST);
+            throw new ResourceException("Import data failed. The value of column " + (cellIndex + 1) + " , row " + (rowIndex + 1) + " must be string type.", HttpStatus.BAD_REQUEST);
         }
         if (cell.getStringCellValue().length() > 255) {
-            throw new ResourceException("Import data failed. The value of column " + (cellIndex + 1) + " , row " + rowIndex + " has a maximum of 255 characters.", HttpStatus.BAD_REQUEST);
+            throw new ResourceException("Import data failed. The value of column " + (cellIndex + 1) + " , row " + (rowIndex + 1) + " has a maximum of 255 characters.", HttpStatus.BAD_REQUEST);
         }
         return cell;
     }
 
     public Cell checkNumericType (Cell cell, int rowIndex, int cellIndex) {
         if (!cell.getCellType().equals(CellType.NUMERIC)) {
-            throw new ResourceException("Import data failed. The value of column " + (cellIndex + 1) + " , row " + rowIndex + " must be numeric type.", HttpStatus.BAD_REQUEST);
+            throw new ResourceException("Import data failed. The value of column " + (cellIndex + 1) + " , row " + (rowIndex + 1) + " must be numeric type.", HttpStatus.BAD_REQUEST);
         }
         return cell;
     }
 
     public Cell checkDateType (Cell cell, int rowIndex, int cellIndex) {
-        if (!DateUtil.isCellDateFormatted(cell)) {
-            throw new ResourceException("Import data failed. The value of column " + (cellIndex + 1) + " , row " + rowIndex + " must be date type.", HttpStatus.BAD_REQUEST);
+        if (!DateUtil.isCellDateFormatted(checkNumericType(cell, rowIndex, cellIndex))) {
+            throw new ResourceException("Import data failed. The value of column " + (cellIndex + 1) + " , row " + (rowIndex + 1) + " must be date type.", HttpStatus.BAD_REQUEST);
         }
         return cell;
     }
@@ -206,7 +206,7 @@ public class MethodsCommon {
             }
         }
         List<String> specificAddressElements = strings.stream()
-                .filter(s -> !s.trim().equals(cityName) && !s.trim().equals(districtName) && !s.trim().equals(wardName)).toList();
+                .filter(s -> !s.trim().equalsIgnoreCase(cityName) && !s.trim().equalsIgnoreCase(districtName) && !s.trim().equalsIgnoreCase(wardName)).toList();
         StringBuilder specificAddress = new StringBuilder();
         for (String element : specificAddressElements) {
             specificAddress.append(element+", ");

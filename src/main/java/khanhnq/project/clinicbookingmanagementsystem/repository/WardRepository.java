@@ -12,6 +12,6 @@ public interface WardRepository extends JpaRepository<Ward, Long> {
     @Query(value = "SELECT w FROM Ward AS w INNER JOIN District AS d ON w.district.districtId = d.districtId WHERE w.district.districtId = :districtId")
     List<Ward> getWardsByDistrictId(@Param("districtId") Long districtId);
 
-    @Query(value = "SELECT w FROM Ward AS w WHERE w.wardName LIKE %:wardName%")
+    @Query(value = "SELECT w FROM Ward AS w WHERE w.wardName = :wardName")
     List<Ward> getWardsByWardName (String wardName);
 }
