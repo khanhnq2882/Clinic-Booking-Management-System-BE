@@ -13,8 +13,6 @@ import java.util.List;
 
 @Repository
 public interface BookingRepository extends JpaRepository<Booking, Long> {
-    @Query(value = "SELECT b FROM Booking AS b WHERE b.workSchedule.workScheduleId = :workScheduleId")
-    List<Booking> getAllUserBookings(@Param("workScheduleId") Long workScheduleId);
 
     @Modifying
     @Transactional
@@ -31,4 +29,14 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             "INNER JOIN FETCH ws.user AS u " +
             "WHERE u.userId = :userId")
     Page<Booking> getAllBookings(@Param("userId") Long userId, Pageable pageable);
+
+    @Query(value = "SELECT b FROM Booking AS b " +
+            "INNER JOIN FETCH b.workSchedule AS ws " +
+            "INNER JOIN FETCH ws.user AS u " +
+            "WHERE u.userId = :userId")
+    List<Booking> getBookingsByDoctorId (Long userId);
+
+
+
+
 }

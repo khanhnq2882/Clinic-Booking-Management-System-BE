@@ -17,6 +17,7 @@ public class Services {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long serviceId;
 
+    @Column(nullable = false)
     private String serviceCode;
 
     @Column(nullable = false)

@@ -3,7 +3,6 @@ package khanhnq.project.clinicbookingmanagementsystem.entity;
 import java.util.*;
 import java.util.stream.Collectors;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EUserStatus;
@@ -31,14 +30,11 @@ public class User {
     @Column(nullable = false)
     private String userCode;
 
-    @NotBlank
-    @Size(max = 20)
     @Column(nullable = false)
     private String username;
 
     @NotBlank
     @Size(max = 50)
-    @Email
     @Column(nullable = false)
     private String email;
 
@@ -47,12 +43,12 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    @Column(length = 50)
-    @Size(max = 50)
+    @Column(length = 20)
+    @Size(max = 20)
     private String firstName;
 
-    @Column(length = 50)
-    @Size(max = 50)
+    @Column(length = 20)
+    @Size(max = 20)
     private String lastName;
 
     @DateTimeFormat(pattern = "dd-MM-yyyy")

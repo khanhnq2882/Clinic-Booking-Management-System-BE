@@ -30,13 +30,11 @@ public class DoctorController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(doctorService.getAllBookings(page, size, sort));
     }
 
-    // confirmed booking
     @PostMapping("/confirmed-booking/{bookingId}")
     public ResponseEntity<String> confirmedBooking(@PathVariable("bookingId") Long bookingId) {
         return MessageResponse.getResponseMessage(doctorService.confirmedBooking(bookingId), HttpStatus.OK);
     }
 
-    // cancelled booking
     @PostMapping("/cancelled-booking/{bookingId}")
     public ResponseEntity<String> cancelledBooking(@PathVariable("bookingId") Long bookingId) {
         return MessageResponse.getResponseMessage(doctorService.cancelledBooking(bookingId), HttpStatus.OK);

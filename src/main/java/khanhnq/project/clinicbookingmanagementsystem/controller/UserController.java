@@ -1,5 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.controller;
 
+import jakarta.validation.Valid;
 import khanhnq.project.clinicbookingmanagementsystem.dto.DoctorDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.SkillDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.WorkScheduleDTO;
@@ -10,10 +11,12 @@ import khanhnq.project.clinicbookingmanagementsystem.request.BookingAppointmentR
 import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
 import khanhnq.project.clinicbookingmanagementsystem.response.MessageResponse;
 import khanhnq.project.clinicbookingmanagementsystem.service.UserService;
+import khanhnq.project.clinicbookingmanagementsystem.service.common.MethodsCommon;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
@@ -25,6 +28,7 @@ import java.util.List;
 public class UserController {
     private final UserService userService;
     private final SpecializationRepository specializationRepository;
+    private final MethodsCommon methodsCommon;
 
     @GetMapping("/skills")
     public ResponseEntity<List<SkillDTO>> getAllSkills() {
@@ -37,7 +41,8 @@ public class UserController {
     }
 
     @PostMapping("/update-profile")
-    public ResponseEntity<String> updateProfile(@RequestBody UserProfileRequest userProfileRequest) {
+    public ResponseEntity<String> updateProfile(@Valid @RequestBody UserProfileRequest userProfileRequest, BindingResult bindingResult) {
+        methodsCommon.handleErrors(bindingResult);
         return MessageResponse.getResponseMessage(userService.updateProfile(userProfileRequest), HttpStatus.OK);
     }
 
@@ -71,7 +76,6 @@ public class UserController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(userService.getWorkSchedulesByDoctor(userId));
     }
 
-    // chức năng user đặt lịch khám
     @PostMapping("/booking-appointment")
     public ResponseEntity<String> bookingAppointment(@RequestBody BookingAppointmentRequest bookingAppointmentRequest) {
         return MessageResponse.getResponseMessage(userService.bookingAppointment(bookingAppointmentRequest), HttpStatus.OK);

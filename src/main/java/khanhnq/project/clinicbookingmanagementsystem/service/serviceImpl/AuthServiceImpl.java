@@ -11,7 +11,6 @@ import khanhnq.project.clinicbookingmanagementsystem.request.ChangePasswordReque
 import khanhnq.project.clinicbookingmanagementsystem.request.LoginRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.RegisterRequest;
 import khanhnq.project.clinicbookingmanagementsystem.response.JwtResponse;
-import khanhnq.project.clinicbookingmanagementsystem.response.MessageResponse;
 import khanhnq.project.clinicbookingmanagementsystem.response.UserInfoResponse;
 import khanhnq.project.clinicbookingmanagementsystem.security.jwt.JwtUtils;
 import khanhnq.project.clinicbookingmanagementsystem.security.services.UserDetailsImpl;
@@ -122,14 +121,14 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public ResponseEntity<String> changePassword(ChangePasswordRequest changePasswordRequest) {
+    public String changePassword(ChangePasswordRequest changePasswordRequest) {
         User currentUser = getCurrentUser();
         BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder();
         if (bCryptPasswordEncoder.matches(changePasswordRequest.getCurrentPassword(), currentUser.getPassword())) {
             if (changePasswordRequest.getNewPassword().equals(changePasswordRequest.getConfirmPassword())) {
                 currentUser.setPassword(passwordEncoder.encode(changePasswordRequest.getNewPassword()));
                 userRepository.save(currentUser);
-                return MessageResponse.getResponseMessage("Change password successfully.", HttpStatus.OK);
+                return "Change password successfully.";
             }
             throw new ResourceException("New password and confirm password is not match. Try again.", HttpStatus.BAD_REQUEST);
         }

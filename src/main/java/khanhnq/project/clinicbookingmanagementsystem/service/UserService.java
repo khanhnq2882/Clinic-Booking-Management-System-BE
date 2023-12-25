@@ -7,7 +7,6 @@ import khanhnq.project.clinicbookingmanagementsystem.request.AddRoleDoctorReques
 import khanhnq.project.clinicbookingmanagementsystem.request.BookingAppointmentRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.util.List;
 
 public interface UserService {
@@ -20,5 +19,4 @@ public interface UserService {
     List<DoctorDTO> getDoctorsBySpecialization(Long specializationId);
     List<WorkScheduleDTO> getWorkSchedulesByDoctor(Long userId);
     String bookingAppointment(BookingAppointmentRequest bookingAppointmentRequest);
-
 }

@@ -1,8 +1,10 @@
 package khanhnq.project.clinicbookingmanagementsystem.service;
 
+import khanhnq.project.clinicbookingmanagementsystem.dto.BookingDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.ServiceCategoryDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.ServicesDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.UserDTO;
+import khanhnq.project.clinicbookingmanagementsystem.entity.Booking;
 import khanhnq.project.clinicbookingmanagementsystem.entity.ServiceCategory;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Services;
 import khanhnq.project.clinicbookingmanagementsystem.request.ServiceCategoryRequest;
@@ -32,4 +34,6 @@ public interface AdminService {
     ByteArrayInputStream exportUsersToExcel (List<UserDTO> users);
     List<ServiceCategory> importServiceCategoriesFromExcel (InputStream inputStream);
     List<Services> importServicesFromExcel (InputStream inputStream);
+    List<Booking> importBookingsFromExcel (InputStream inputStream);
+    List<BookingDTO> getAllBookings();
 }

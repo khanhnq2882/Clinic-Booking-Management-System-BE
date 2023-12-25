@@ -1,6 +1,5 @@
 package khanhnq.project.clinicbookingmanagementsystem.repository;
 
-import khanhnq.project.clinicbookingmanagementsystem.entity.District;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Ward;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -12,4 +11,7 @@ import java.util.List;
 public interface WardRepository extends JpaRepository<Ward, Long> {
     @Query(value = "SELECT w FROM Ward AS w INNER JOIN District AS d ON w.district.districtId = d.districtId WHERE w.district.districtId = :districtId")
     List<Ward> getWardsByDistrictId(@Param("districtId") Long districtId);
+
+    @Query(value = "SELECT w FROM Ward AS w WHERE w.wardName = :wardName")
+    List<Ward> getWardsByWardName (String wardName);
 }
