@@ -5,13 +5,10 @@ import khanhnq.project.clinicbookingmanagementsystem.dto.SkillDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.WorkScheduleDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EBookingStatus;
-import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ERole;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceException;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.BookingMapper;
-import khanhnq.project.clinicbookingmanagementsystem.mapper.ExperienceMapper;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.UserMapper;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
-import khanhnq.project.clinicbookingmanagementsystem.request.AddRoleDoctorRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.BookingAppointmentRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
@@ -58,38 +55,6 @@ public class UserServiceImpl implements UserService {
     @Override
     public String uploadAvatar(MultipartFile multipartFile) {
         return methodsCommon.uploadFile(multipartFile, "avatar");
-    }
-
-    @Override
-    public String requestBecomeDoctor(AddRoleDoctorRequest addRoleDoctorRequest) {
-        User currentUser = authService.getCurrentUser();
-        if (currentUser.getRoles().stream().anyMatch(role -> role.getRoleName().equals(ERole.ROLE_DOCTOR))) {
-            throw new ResourceException("you don't need to submit a request because you are already a doctor in the system.", HttpStatus.BAD_REQUEST);
-        }
-        currentUser.setUniversityName(addRoleDoctorRequest.getUniversityName());
-        Set<Experience> experiences = addRoleDoctorRequest.getExperiences().stream()
-                .map(experienceRequest -> {
-                    Experience experience = ExperienceMapper.EXPERIENCE_MAPPER.mapToExperience(experienceRequest);
-                    experience.setSkills(experienceRequest.getSkillIds()
-                            .stream()
-                            .map(id -> skillRepository.findById(id).orElse(null))
-                            .collect(Collectors.toSet()));
-                    experience.setUser(currentUser);
-                    return experience;
-                }).collect(Collectors.toSet());
-        currentUser.setExperiences(experiences);
-        userRepository.save(currentUser);
-        return "Request to become doctor successfully. Waiting for accept...";
-    }
-
-    @Override
-    public String uploadMedicalLicense(MultipartFile multipartFile) {
-        return methodsCommon.uploadFile(multipartFile, "medical-license");
-    }
-
-    @Override
-    public String uploadMedicalDegree(MultipartFile multipartFile) {
-        return methodsCommon.uploadFile(multipartFile, "medical-degree");
     }
 
     @Override
@@ -154,7 +119,5 @@ public class UserServiceImpl implements UserService {
         bookingRepository.save(bookingAppointment);
         return "Booking appointment successfully.";
     }
-
-
 
 }

@@ -38,26 +38,11 @@ public class AdminController {
     private final ServicesRepository serviceRepository;
     private final BookingRepository bookingRepository;
 
-    @PostMapping("/approve-request-doctor/{userId}")
-    public ResponseEntity<String> approveRequestDoctor(@PathVariable("userId") Long userId) {
-        return MessageResponse.getResponseMessage(adminService.approveRequestDoctor(userId), HttpStatus.OK);
-    }
-
-    @PostMapping("/reject-request-doctor/{userId}")
-    public ResponseEntity<String> rejectRequestDoctor(@PathVariable("userId") Long userId) {
-        return MessageResponse.getResponseMessage(adminService.rejectRequestDoctor(userId), HttpStatus.OK);
-    }
-
     @GetMapping("/get-all-users")
     public ResponseEntity<UserResponse> getAllUsers(@RequestParam(defaultValue = "0") int page,
                                                     @RequestParam(defaultValue = "3") int size,
                                                     @RequestParam(defaultValue = "userId,asc") String[] sort) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllUsers(page, size, sort));
-    }
-
-    @GetMapping("/get-all-request-doctors")
-    public ResponseEntity<List<RequestDoctorResponse>> getAllRequestDoctors() {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllRequestDoctors());
     }
 
     @GetMapping("/files/{fileId}")

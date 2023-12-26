@@ -15,10 +15,7 @@ import java.io.InputStream;
 import java.util.List;
 
 public interface AdminService {
-    String approveRequestDoctor(Long userId);
-    String rejectRequestDoctor(Long userId);
     UserResponse getAllUsers(int page, int size, String[] sorts);
-    List<RequestDoctorResponse> getAllRequestDoctors();
     DoctorResponse getAllDoctors(int page, int size, String[] sorts);
     List<SpecializationResponse> getAllSpecializations();
     List<ServiceCategoryDTO> getServiceCategories(Long specializationId);

@@ -5,7 +5,6 @@ import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceException
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
 import khanhnq.project.clinicbookingmanagementsystem.response.AddressResponse;
 import khanhnq.project.clinicbookingmanagementsystem.response.FileResponse;
-import khanhnq.project.clinicbookingmanagementsystem.response.RequestDoctorResponse;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import khanhnq.project.clinicbookingmanagementsystem.service.FileService;
 import lombok.AllArgsConstructor;
@@ -34,7 +33,6 @@ public class MethodsCommon {
     private final DistrictRepository districtRepository;
     private final CityRepository cityRepository;
     private final AddressRepository addressRepository;
-    private final ExperienceRepository experienceRepository;
     private final ServicesRepository servicesRepository;
     private final BookingRepository bookingRepository;
     private final AuthService authService;
@@ -104,33 +102,33 @@ public class MethodsCommon {
         }
     }
 
-    public Cell checkBlankType (Cell cell, int rowIndex, int cellIndex) {
+    public Cell checkBlankType (Cell cell, int rowIndex, String colName) {
         if (cell.getCellType() == CellType.BLANK) {
-            throw new ResourceException("Import data failed. The value of column " + (cellIndex + 1) + " , row " + (rowIndex + 1) + " can't be blank.", HttpStatus.BAD_REQUEST);
+            throw new ResourceException("Import data failed. The value of column named '" + colName + "' in row " + (rowIndex + 1) + " can't be blank.", HttpStatus.BAD_REQUEST);
         }
         return cell;
     }
 
-    public Cell checkStringType (Cell cell, int rowIndex, int cellIndex) {
+    public Cell checkStringType (Cell cell, int rowIndex, String colName) {
         if (!cell.getCellType().equals(CellType.STRING)) {
-            throw new ResourceException("Import data failed. The value of column " + (cellIndex + 1) + " , row " + (rowIndex + 1) + " must be string type.", HttpStatus.BAD_REQUEST);
+            throw new ResourceException("Import data failed. The value of column named '" + colName + "' in row " + (rowIndex + 1) + " must be string type.", HttpStatus.BAD_REQUEST);
         }
         if (cell.getStringCellValue().length() > 255) {
-            throw new ResourceException("Import data failed. The value of column " + (cellIndex + 1) + " , row " + (rowIndex + 1) + " has a maximum of 255 characters.", HttpStatus.BAD_REQUEST);
+            throw new ResourceException("Import data failed. The value of column named '" + colName + "' in row " + (rowIndex + 1) + " has a maximum of 255 characters.", HttpStatus.BAD_REQUEST);
         }
         return cell;
     }
 
-    public Cell checkNumericType (Cell cell, int rowIndex, int cellIndex) {
+    public Cell checkNumericType (Cell cell, int rowIndex, String colName) {
         if (!cell.getCellType().equals(CellType.NUMERIC)) {
-            throw new ResourceException("Import data failed. The value of column " + (cellIndex + 1) + " , row " + (rowIndex + 1) + " must be numeric type.", HttpStatus.BAD_REQUEST);
+            throw new ResourceException("Import data failed. The value of column named '" + colName + "' in row " + (rowIndex + 1) + " must be numeric type.", HttpStatus.BAD_REQUEST);
         }
         return cell;
     }
 
-    public Cell checkDateType (Cell cell, int rowIndex, int cellIndex) {
-        if (!DateUtil.isCellDateFormatted(checkNumericType(cell, rowIndex, cellIndex))) {
-            throw new ResourceException("Import data failed. The value of column " + (cellIndex + 1) + " , row " + (rowIndex + 1) + " must be date type.", HttpStatus.BAD_REQUEST);
+    public Cell checkDateType (Cell cell, int rowIndex, String colName) {
+        if (!DateUtil.isCellDateFormatted(checkNumericType(cell, rowIndex, colName))) {
+            throw new ResourceException("Import data failed. The value of column named '" + colName + "' in row " + (rowIndex + 1) + " must be date type.", HttpStatus.BAD_REQUEST);
         }
         return cell;
     }
@@ -165,16 +163,16 @@ public class MethodsCommon {
         return (bookingRepository.findAll().size() == 0) ? "BC1" : ("BC" + (maxServiceCode+1));
     }
 
-    public String getPhoneNumberFromExcel (Cell cell, int indexRow, int indexCell) {
-        String phoneNumber = checkStringType(cell, indexRow, indexCell).getStringCellValue();
+    public String getPhoneNumberFromExcel (Cell cell, int indexRow, String colName) {
+        String phoneNumber = checkStringType(cell, indexRow, colName).getStringCellValue();
         if (!phoneNumber.matches("^0[2|3|5|7|8|9][0-9]{8}$")) {
             throw new ResourceException("Import failed. Phone number is in wrong format.", HttpStatus.BAD_REQUEST);
         }
         return phoneNumber;
     }
 
-    public Address getAddressFromExcel (Cell cell, int indexRow, int indexCell) {
-        List<String> strings = Arrays.asList(checkStringType(cell, indexRow, indexCell).getStringCellValue().split(","));
+    public Address getAddressFromExcel (Cell cell, int indexRow, String colName) {
+        List<String> strings = Arrays.asList(checkStringType(cell, indexRow, colName).getStringCellValue().split(","));
         if (strings.size() < 3) {
             throw new ResourceException("Invalid address. Must contain at least information about wards, districts, and cities of Vietnam and separated by commas.", HttpStatus.BAD_REQUEST);
         }
@@ -183,15 +181,15 @@ public class MethodsCommon {
         String cityName = strings.get(strings.size() - 1).trim();
         List<Ward> wards = wardRepository.getWardsByWardName(wardName);
         if (wards.size() == 0) {
-            throw new ResourceException("Ward named '"+ wardName +"' of column "+ (indexCell + 1) +", row "+ indexRow +" doesn't exist.", HttpStatus.BAD_REQUEST);
+            throw new ResourceException("Ward named '"+ wardName +"' of column "+ colName +", row "+ indexRow +" doesn't exist.", HttpStatus.BAD_REQUEST);
         }
         List<District> districts = districtRepository.getDistrictsByDistrictName(districtName);
         if (districts.size() == 0) {
-            throw new ResourceException("District named '"+ districtName +"' of column "+ (indexCell + 1) +", row "+ indexRow +" doesn't exist.", HttpStatus.BAD_REQUEST);
+            throw new ResourceException("District named '"+ districtName +"' of column "+ colName +", row "+ indexRow +" doesn't exist.", HttpStatus.BAD_REQUEST);
         }
         List<City> cities = cityRepository.getCitiesByCityName(cityName);
         if (cities.size() == 0) {
-            throw new ResourceException("City named '"+ cityName +"' of column "+ (indexCell + 1) +", row "+ indexRow +" doesn't exist.", HttpStatus.BAD_REQUEST);
+            throw new ResourceException("City named '"+ cityName +"' of column "+ colName +", row "+ indexRow +" doesn't exist.", HttpStatus.BAD_REQUEST);
         }
         Address address = new Address();
         for (Ward ward : wards) {
@@ -215,17 +213,6 @@ public class MethodsCommon {
         return address;
     }
 
-    public Map<Long, List<Experience>> groupExperiencesByUserId() {
-        Map<Long, List<Experience>> map = new HashMap<>();
-        for (Experience experience : experienceRepository.findAll()) {
-            if (!map.containsKey(experience.getUser().getUserId())) {
-                List<Experience> experiences = experienceRepository.getExperiencesByUserId(experience.getUser().getUserId());
-                map.put(experience.getUser().getUserId(), experiences);
-            }
-        }
-        return map;
-    }
-
     public AddressResponse getAddress(User user) {
         AddressResponse addressResponse = new AddressResponse();
         if (user.getAddress() != null) {
@@ -237,20 +224,6 @@ public class MethodsCommon {
             addressResponse.setCityName(address.getWard().getDistrict().getCity().getCityName());
         }
         return addressResponse;
-    }
-
-    public void getMedicalLicenseDegree(RequestDoctorResponse requestDoctorResponse, Long userId) {
-        for (FileResponse fileResponse : getAllFiles(userId)) {
-            if (fileResponse.getFileType().equals("medical-degree")) {
-                requestDoctorResponse.setMedicalDegreeType(fileResponse.getFileType());
-                requestDoctorResponse.setMedicalDegreeName(fileResponse.getFileName());
-                requestDoctorResponse.setMedicalDegreeUrl(fileResponse.getFileUrl());
-            } else {
-                requestDoctorResponse.setMedicalLicenseType(fileResponse.getFileType());
-                requestDoctorResponse.setMedicalLicenseName(fileResponse.getFileName());
-                requestDoctorResponse.setMedicalLicenseUrl(fileResponse.getFileUrl());
-            }
-        }
     }
 
     public void serviceCode(Services services, ServiceCategory serviceCategory) {

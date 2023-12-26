@@ -6,7 +6,6 @@ import khanhnq.project.clinicbookingmanagementsystem.dto.SkillDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.WorkScheduleDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Specialization;
 import khanhnq.project.clinicbookingmanagementsystem.repository.SpecializationRepository;
-import khanhnq.project.clinicbookingmanagementsystem.request.AddRoleDoctorRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.BookingAppointmentRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
 import khanhnq.project.clinicbookingmanagementsystem.response.MessageResponse;
@@ -49,21 +48,6 @@ public class UserController {
     @PostMapping("/upload-avatar")
     public ResponseEntity<String> uploadFile(@RequestParam("avatar") MultipartFile file) {
         return MessageResponse.getResponseMessage(userService.uploadAvatar(file), HttpStatus.OK);
-    }
-
-    @PostMapping(value = "/request-to-become-doctor")
-    public ResponseEntity<String> requestBecomeDoctor(@RequestBody AddRoleDoctorRequest addRoleDoctorRequest) {
-        return MessageResponse.getResponseMessage(userService.requestBecomeDoctor(addRoleDoctorRequest), HttpStatus.OK);
-    }
-
-    @PostMapping("/upload-medical-license")
-    public ResponseEntity<String> uploadMedicalLicense(@RequestParam("medicalLicense") MultipartFile file) {
-        return MessageResponse.getResponseMessage(userService.uploadMedicalLicense(file), HttpStatus.OK);
-    }
-
-    @PostMapping("/upload-medical-degree")
-    public ResponseEntity<String> uploadMedicalDegree(@RequestParam("medicalDegree") MultipartFile file) {
-        return MessageResponse.getResponseMessage(userService.uploadMedicalDegree(file), HttpStatus.OK);
     }
 
     @GetMapping("/get-doctors-by-specialization/{specializationId}")
