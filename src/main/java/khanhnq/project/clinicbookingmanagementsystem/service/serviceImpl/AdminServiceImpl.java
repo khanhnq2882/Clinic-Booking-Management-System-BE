@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,7 @@ public class AdminServiceImpl implements AdminService {
     private final ServiceCategoryRepository serviceCategoryRepository;
     private final ServicesRepository servicesRepository;
     private final BookingRepository bookingRepository;
+    private final WorkScheduleRepository workScheduleRepository;
     private final MethodsCommon methodsCommon;
     private final Workbook workbook = new XSSFWorkbook();
 
@@ -370,10 +372,9 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public List<Booking> importBookingsFromExcel(InputStream inputStream) {
+    public ImportBookingResponse importBookingsFromExcel(InputStream inputStream) {
         try {
             List<BookingExcelDTO> bookingExcelDTOS = new ArrayList<>();
-            List<Booking> bookings = new ArrayList<>();
             Sheet sheet = new XSSFWorkbook(inputStream).getSheet("bookings");
             if (sheet == null) {
                 throw new ResourceException("Sheet named 'bookings' doesn't exist.", HttpStatus.BAD_REQUEST);
@@ -388,23 +389,23 @@ public class AdminServiceImpl implements AdminService {
                     methodsCommon.checkBlankType(cells.get(indexCell), indexRow, colName);
                     switch (colName) {
                         case "Full Name" ->
-                            checkFullName(cells.get(indexCell), indexRow, colName, bookingExcelDTO);
+                                checkFullName(cells.get(indexCell), indexRow, colName, bookingExcelDTO);
                         case "Date Of Birth" ->
-                            bookingExcelDTO.setDateOfBirth(checkFormatDate(cells.get(indexCell), indexRow, colName));
+                                bookingExcelDTO.setDateOfBirth(checkFormatDate(cells.get(indexCell), indexRow, colName));
                         case "Gender" ->
-                            checkGender(cells.get(indexCell), indexRow, colName, bookingExcelDTO);
+                                checkGender(cells.get(indexCell), indexRow, colName, bookingExcelDTO);
                         case "Phone Number" ->
-                            bookingExcelDTO.setPhoneNumber(methodsCommon.getPhoneNumberFromExcel(cells.get(indexCell), indexRow, colName));
+                                bookingExcelDTO.setPhoneNumber(methodsCommon.getPhoneNumberFromExcel(cells.get(indexCell), indexRow, colName));
                         case "Address" ->
-                            bookingExcelDTO.setAddress(methodsCommon.getAddressFromExcel(cells.get(indexCell), indexRow, colName));
+                                bookingExcelDTO.setAddress(methodsCommon.getAddressFromExcel(cells.get(indexCell), indexRow, colName));
                         case "Appointment Date" ->
-                            bookingExcelDTO.setAppointmentDate(checkFormatDate(cells.get(indexCell), indexRow, colName));
+                                bookingExcelDTO.setAppointmentDate(checkFormatDate(cells.get(indexCell), indexRow, colName));
                         case "Specialization" ->
-                            bookingExcelDTO.setSpecializationName(methodsCommon.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue());
+                                checkSpecificationName(cells.get(indexCell), indexRow, colName, bookingExcelDTO);
                         case "Start Time" ->
-                            bookingExcelDTO.setStartTime(cells.get(indexCell).getLocalDateTimeCellValue().toLocalTime());
+                                bookingExcelDTO.setStartTime(cells.get(indexCell).getLocalDateTimeCellValue().toLocalTime());
                         case "End Time" ->
-                            bookingExcelDTO.setEndTime(cells.get(indexCell).getLocalDateTimeCellValue().toLocalTime());
+                                bookingExcelDTO.setEndTime(cells.get(indexCell).getLocalDateTimeCellValue().toLocalTime());
                         case "Describe Symptoms" ->
                                 bookingExcelDTO.setDescribeSymptoms(methodsCommon.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue());
                         default -> {
@@ -413,9 +414,7 @@ public class AdminServiceImpl implements AdminService {
                 }
                 bookingExcelDTOS.add(bookingExcelDTO);
             }
-            
-
-            return bookings;
+            return filterExcelBookingList(bookingExcelDTOS);
         } catch (IOException e) {
             throw new ResourceException("Failed to import data from file excel.", HttpStatus.BAD_REQUEST);
         }
@@ -425,7 +424,7 @@ public class AdminServiceImpl implements AdminService {
     public List<BookingDTO> getAllBookings() {
         List<Booking> bookings = bookingRepository.findAll()
                 .stream()
-                .filter(booking -> Objects.isNull(booking.getUser()) && Objects.isNull(booking.getWorkSchedule()))
+                .filter(booking -> Objects.isNull(booking.getUser()))
                 .toList();
         return bookings.stream()
                 .map(booking -> {
@@ -493,6 +492,51 @@ public class AdminServiceImpl implements AdminService {
             throw new ResourceException("Import failed. "+ colName +" in row " + (indexRow + 1) + " must be 'Male' or 'Female'.", HttpStatus.BAD_REQUEST);
         }
         bookingExcelDTO.setGender(gender.equalsIgnoreCase("Male") ? 1 : 0);
+    }
+
+    private void checkSpecificationName (Cell cell, int indexRow, String colName, BookingExcelDTO bookingExcelDTO) {
+        String specializationName = methodsCommon.checkStringType(cell, indexRow, colName).getStringCellValue();
+        Specialization specialization = specializationRepository.getSpecializationBySpecializationName(specializationName);
+        if (Objects.isNull(specialization)) {
+            throw new ResourceException("Import failed. Specialization named " + specializationName + " is not exist.", HttpStatus.BAD_REQUEST);
+        }
+        bookingExcelDTO.setSpecializationName(specializationName);
+    }
+
+    public ImportBookingResponse filterExcelBookingList (List<BookingExcelDTO> bookingExcelDTOS) {
+        ImportBookingResponse importBookingResponse = new ImportBookingResponse();
+        List<BookingExcelDTO> invalidBookings = new ArrayList<>();
+        for (BookingExcelDTO bookingExcelDTO : bookingExcelDTOS) {
+            Specialization specialization = specializationRepository.getSpecializationBySpecializationName(bookingExcelDTO.getSpecializationName());
+            User doctor = userRepository.getUserFromExcel(specialization.getSpecializationId(), bookingExcelDTO.getStartTime(), bookingExcelDTO.getEndTime());
+            if (Objects.isNull(doctor)) {
+                invalidBookings.add(bookingExcelDTO);
+                continue;
+            }
+            for (Booking booking : bookingRepository.getBookingsByDoctorId(doctor.getUserId())) {
+                Date appointmentDate = booking.getAppointmentDate();
+                LocalTime startTime = booking.getWorkSchedule().getStartTime();
+                LocalTime endTime = booking.getWorkSchedule().getEndTime();
+                if (bookingExcelDTO.getAppointmentDate().equals(appointmentDate) && bookingExcelDTO.getStartTime().equals(startTime) && bookingExcelDTO.getEndTime().equals(endTime)) {
+                    invalidBookings.add(bookingExcelDTO);
+                }
+            }
+        }
+        importBookingResponse.setInvalidBookings(convertToBookingList(invalidBookings));
+        bookingExcelDTOS.removeAll(invalidBookings);
+        importBookingResponse.setValidBookings(convertToBookingList(bookingExcelDTOS));
+        return importBookingResponse;
+    }
+
+    public List<Booking> convertToBookingList (List<BookingExcelDTO> bookingExcelDTOS) {
+        List<Booking> bookings = bookingExcelDTOS.stream().map(bookingExcelDTO -> {
+            Booking booking = BookingMapper.BOOKING_MAPPER.mapExcelToBooking(bookingExcelDTO);
+            WorkSchedule workSchedule = workScheduleRepository.getWorkScheduleByTime(bookingExcelDTO.getSpecializationName(),bookingExcelDTO.getStartTime(), bookingExcelDTO.getEndTime());
+            booking.setWorkSchedule(workSchedule);
+            booking.setBookingCode(methodsCommon.bookingCode());
+            return booking;
+        }).toList();
+        return bookings;
     }
 
 }

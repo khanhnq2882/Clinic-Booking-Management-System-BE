@@ -3,7 +3,6 @@ package khanhnq.project.clinicbookingmanagementsystem.controller;
 import khanhnq.project.clinicbookingmanagementsystem.dto.BookingDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.ServiceCategoryDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.ServicesDTO;
-import khanhnq.project.clinicbookingmanagementsystem.entity.Booking;
 import khanhnq.project.clinicbookingmanagementsystem.entity.File;
 import khanhnq.project.clinicbookingmanagementsystem.entity.ServiceCategory;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Services;
@@ -162,9 +161,10 @@ public class AdminController {
             if (!excelType.equals(file.getContentType())) {
                 return MessageResponse.getResponseMessage("Invalid file excel.", HttpStatus.BAD_REQUEST);
             }
-            List<Booking> bookings = adminService.importBookingsFromExcel(file.getInputStream());
-            bookingRepository.saveAll(bookings);
-            return MessageResponse.getResponseMessage("Import data successfully.", HttpStatus.OK);
+            ImportBookingResponse importBookingResponse = adminService.importBookingsFromExcel(file.getInputStream());
+            bookingRepository.saveAll(importBookingResponse.getValidBookings());
+            return MessageResponse.getResponseMessage("Imported "+importBookingResponse.getValidBookings().size()+" records successfully, "
+                    +importBookingResponse.getInvalidBookings().size()+" records fail", HttpStatus.OK);
         } catch (IOException e) {
             return MessageResponse.getResponseMessage("Failed to store data from file excel.", HttpStatus.BAD_REQUEST);
         }
