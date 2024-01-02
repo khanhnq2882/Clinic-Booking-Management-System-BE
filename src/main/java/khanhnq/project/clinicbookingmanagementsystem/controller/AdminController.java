@@ -161,10 +161,10 @@ public class AdminController {
             if (!excelType.equals(file.getContentType())) {
                 return MessageResponse.getResponseMessage("Invalid file excel.", HttpStatus.BAD_REQUEST);
             }
-            ImportBookingResponse importBookingResponse = adminService.importBookingsFromExcel(file.getInputStream());
-            bookingRepository.saveAll(importBookingResponse.getValidBookings());
-            return MessageResponse.getResponseMessage("Imported "+importBookingResponse.getValidBookings().size()+" records successfully, "
-                    +importBookingResponse.getInvalidBookings().size()+" records fail", HttpStatus.OK);
+            BookingImportResponse bookingImportResponse = adminService.importBookingsFromExcel(file.getInputStream());
+            bookingRepository.saveAll(bookingImportResponse.getValidBookings());
+            return MessageResponse.getResponseMessage("Imported "+ bookingImportResponse.getValidBookings().size() +" records successfully, "
+                    + bookingImportResponse.getInvalidBookings().size() +" records failed. Failed records may be due to duplicate bookings or no doctor available at the selected time.", HttpStatus.OK);
         } catch (IOException e) {
             return MessageResponse.getResponseMessage("Failed to store data from file excel.", HttpStatus.BAD_REQUEST);
         }

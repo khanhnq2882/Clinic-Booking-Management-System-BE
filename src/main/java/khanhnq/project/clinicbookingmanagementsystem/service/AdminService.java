@@ -30,6 +30,6 @@ public interface AdminService {
     ByteArrayInputStream exportUsersToExcel (List<UserDTO> users);
     List<ServiceCategory> importServiceCategoriesFromExcel (InputStream inputStream);
     List<Services> importServicesFromExcel (InputStream inputStream);
-    ImportBookingResponse importBookingsFromExcel (InputStream inputStream);
+    BookingImportResponse importBookingsFromExcel (InputStream inputStream);
     List<BookingDTO> getAllBookings();
 }

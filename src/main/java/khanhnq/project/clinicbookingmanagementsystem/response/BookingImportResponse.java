@@ -9,7 +9,7 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class ImportBookingResponse {
+public class BookingImportResponse {
     private List<Booking> validBookings;
     private List<Booking> invalidBookings;
 }
