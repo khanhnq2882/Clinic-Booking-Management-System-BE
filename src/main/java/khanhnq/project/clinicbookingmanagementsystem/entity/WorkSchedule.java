@@ -23,7 +23,7 @@ public class WorkSchedule {
     @Column(name = "end_time", columnDefinition = "TIME")
     private LocalTime endTime;
 
-    @OneToMany(mappedBy = "workSchedule", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "workSchedule", cascade = CascadeType.PERSIST)
     private Set<Booking> bookings;
 
     @ManyToOne

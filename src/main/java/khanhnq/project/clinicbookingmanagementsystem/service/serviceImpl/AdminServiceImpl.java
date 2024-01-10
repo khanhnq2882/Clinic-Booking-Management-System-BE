@@ -316,59 +316,52 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public List<Services> importServicesFromExcel(InputStream inputStream) {
-//        try {
-//            List<Services> services = new ArrayList<>();
-//            Sheet sheet = new XSSFWorkbook(inputStream).getSheet("services");
-//            if (sheet == null) {
-//                throw new ResourceException("Sheet named 'services' doesn't exist.", HttpStatus.BAD_REQUEST);
-//            }
-//            List<Row> rows = Lists.newArrayList(sheet.rowIterator());
-//            for (int indexRow = 1; indexRow < rows.size(); indexRow++) {
-//                Services service = new Services();
-//                List<Cell> cells = methodsCommon.getAllCells(rows.get(indexRow));
-//                for (int indexCell = 0; indexCell < cells.size(); indexCell++) {
-//                    methodsCommon.checkBlankType(cells.get(indexCell), indexRow, indexCell);
-//                    switch (indexCell) {
-//                        case 0 -> {
-//                            String serviceName = methodsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue();
-//                            List<String> servicesName = servicesRepository.findAll().stream().map(Services::getServiceName).toList();
-//                            for (String name : servicesName) {
-//                                if (serviceName.equals(name)) {
-//                                    throw new ResourceException("Import data failed. Service named '" + serviceName + "' is already existed.", HttpStatus.BAD_REQUEST);
-//                                }
-//                            }
-//                            service.setServiceName(serviceName);
-//                        }
-//                        case 1 ->
-//                                service.setPrice(methodsCommon.checkNumericType(cells.get(indexCell), indexRow, indexCell).getNumericCellValue());
-//                        case 2 ->
-//                                service.setDescription(methodsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue());
-//                        case 3 -> {
-//                            String serviceStatus = methodsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue();
-//                            if (!serviceStatus.equals("ACTIVE") && !serviceStatus.equals("SUSPENDED") && !serviceStatus.equals("INACTIVE")) {
-//                                throw new ResourceException("Import data failed. The value of column " + (indexCell + 1) + " , row " + indexRow + " must be 'ACTIVE' or 'SUSPENDED' or 'INACTIVE'.", HttpStatus.BAD_REQUEST);
-//                            }
-//                            service.setStatus(EServiceStatus.valueOf(serviceStatus));
-//                        }
-//                        case 4 -> {
-//                            ServiceCategory serviceCategory = serviceCategoryRepository.getServiceCategoriesByServiceCategoryName(methodsCommon.checkStringType(cells.get(indexCell), indexRow, indexCell).getStringCellValue());
-//                            if (Objects.isNull(serviceCategory)) {
-//                                throw new ResourceException("Import failed. Service category name in row " + indexRow + " is not exist.", HttpStatus.BAD_REQUEST);
-//                            }
-//                            methodsCommon.serviceCode(service, serviceCategory);
-//                            service.setServiceCategory(serviceCategory);
-//                        }
-//                        default -> {
-//                        }
-//                    }
-//                }
-//                services.add(service);
-//            }
-//            return services;
-//        } catch (IOException e) {
-//            throw new ResourceException("Failed to import data from file excel.", HttpStatus.BAD_REQUEST);
-//        }
-        return null;
+        try {
+            List<Services> services = new ArrayList<>();
+            Sheet sheet = new XSSFWorkbook(inputStream).getSheet("services");
+            if (sheet == null) {
+                throw new ResourceException("Sheet named 'services' doesn't exist.", HttpStatus.BAD_REQUEST);
+            }
+            List<Row> rows = Lists.newArrayList(sheet.rowIterator());
+            for (int indexRow = 1; indexRow < rows.size(); indexRow++) {
+                Services service = new Services();
+                List<Cell> cells = methodsCommon.getAllCells(rows.get(indexRow));
+                for (int indexCell = 0; indexCell < cells.size(); indexCell++) {
+                    String colName = serviceHeaderCellIndex(rows.get(0)).get(indexCell);
+                    methodsCommon.checkBlankType(cells.get(indexCell), indexRow, colName);
+                    switch (colName) {
+                        case "Service Name" -> {
+                            String serviceName = methodsCommon.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue();
+                            List<String> servicesName = servicesRepository.findAll().stream().map(Services::getServiceName).toList();
+                            for (String name : servicesName) {
+                                if (serviceName.equals(name)) {
+                                    throw new ResourceException("Import data failed. Service named '" + serviceName + "' is already existed.", HttpStatus.BAD_REQUEST);
+                                }
+                            }
+                            service.setServiceName(serviceName);
+                        }
+                        case "Price" ->
+                                service.setPrice(methodsCommon.checkNumericType(cells.get(indexCell), indexRow, colName).getNumericCellValue());
+                        case "Description" ->
+                                service.setDescription(methodsCommon.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue());
+                        case "Service Category Name" -> {
+                            ServiceCategory serviceCategory = serviceCategoryRepository.getServiceCategoriesByServiceCategoryName(methodsCommon.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue());
+                            if (Objects.isNull(serviceCategory)) {
+                                throw new ResourceException("Import failed. Service category name in row " + indexRow + " is not exist.", HttpStatus.BAD_REQUEST);
+                            }
+                            methodsCommon.serviceCode(service, serviceCategory);
+                            service.setServiceCategory(serviceCategory);
+                        }
+                        default -> {
+                        }
+                    }
+                }
+                services.add(service);
+            }
+            return services;
+        } catch (IOException e) {
+            throw new ResourceException("Failed to import data from file excel.", HttpStatus.BAD_REQUEST);
+        }
     }
 
     @Override
@@ -422,6 +415,10 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public List<BookingDTO> getAllBookings() {
+        User currentUser = authService.getCurrentUser();
+        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_ADMIN"))) {
+            throw new ResourceException("Invalid permissions.", HttpStatus.UNAUTHORIZED);
+        }
         List<Booking> bookings = bookingRepository.findAll()
                 .stream()
                 .filter(booking -> Objects.isNull(booking.getUser()))
@@ -444,6 +441,22 @@ public class AdminServiceImpl implements AdminService {
                 case "Service Category Name" -> headerCellIndex.put(i, "Service Category Name");
                 case "Description" -> headerCellIndex.put(i, "Description");
                 case "Specialization Name" -> headerCellIndex.put(i, "Specialization Name");
+                default -> {
+                }
+            }
+        }
+        return headerCellIndex;
+    }
+
+    public Map<Integer, String> serviceHeaderCellIndex (Row row) {
+        Map <Integer, String> headerCellIndex = new HashMap<>();
+        List<Cell> cellsHeader = methodsCommon.getAllCells(row);
+        for (int i = 0; i < cellsHeader.size(); i++) {
+            switch (cellsHeader.get(i).getStringCellValue()) {
+                case "Service Name" -> headerCellIndex.put(i, "Service Name");
+                case "Price" -> headerCellIndex.put(i, "Price");
+                case "Description" -> headerCellIndex.put(i, "Description");
+                case "Service Category Name" -> headerCellIndex.put(i, "Service Category Name");
                 default -> {
                 }
             }
