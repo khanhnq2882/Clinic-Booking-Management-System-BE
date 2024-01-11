@@ -160,7 +160,7 @@ public class MethodsCommon {
                 .stream()
                 .map(booking -> Long.parseLong(booking.getBookingCode().substring(2)))
                 .toList());
-        return (bookingRepository.findAll().size() == 0) ? "BC1" : ("BC" + (maxServiceCode+1));
+        return (bookingRepository.findAll().size() == 0) ? "BC1" : ("BC" + (++maxServiceCode));
     }
 
     public String getPhoneNumberFromExcel (Cell cell, int indexRow, String colName) {
@@ -240,7 +240,7 @@ public class MethodsCommon {
                     .stream()
                     .map(service -> Long.parseLong(service.getServiceCode().substring(s.length())))
                     .toList());
-            services.setServiceCode(code.toString() + (maxServiceCode + 1));
+            services.setServiceCode(code.toString() + (++maxServiceCode));
         }
     }
 

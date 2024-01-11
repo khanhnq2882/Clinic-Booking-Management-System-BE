@@ -544,13 +544,34 @@ public class AdminServiceImpl implements AdminService {
     }
 
     public List<Booking> convertToBookingList (List<BookingExcelDTO> bookingExcelDTOS) {
-        return bookingExcelDTOS.stream().map(bookingExcelDTO -> {
-            Booking booking = BookingMapper.BOOKING_MAPPER.mapExcelToBooking(bookingExcelDTO);
-            WorkSchedule workSchedule = workScheduleRepository.getWorkScheduleByTime(bookingExcelDTO.getSpecializationName(),bookingExcelDTO.getStartTime(), bookingExcelDTO.getEndTime());
-            booking.setWorkSchedule(workSchedule);
-            booking.setBookingCode(methodsCommon.bookingCode());
-            return booking;
-        }).toList();
+        List<Booking> bookings = bookingExcelDTOS
+                .stream()
+                .map(bookingExcelDTO -> {
+                    Booking booking = BookingMapper.BOOKING_MAPPER.mapExcelToBooking(bookingExcelDTO);
+                    WorkSchedule workSchedule = workScheduleRepository.getWorkScheduleByTime(bookingExcelDTO.getSpecializationName(),bookingExcelDTO.getStartTime(), bookingExcelDTO.getEndTime());
+                    booking.setWorkSchedule(workSchedule);
+                    return booking;
+                }).toList();
+        setBookingCode(bookings);
+        return bookings;
+    }
+
+    public void setBookingCode (List<Booking> bookings) {
+        Long maxServiceCode;
+        if (bookingRepository.findAll().size() == 0) {
+            maxServiceCode = 1L;
+            for (int i=0; i<bookings.size(); i++) {
+                bookings.get(i).setBookingCode("BC"+(maxServiceCode++));
+            }
+        } else {
+            maxServiceCode = Collections.max(bookingRepository.findAll()
+                    .stream()
+                    .map(booking -> Long.parseLong(booking.getBookingCode().substring(2)))
+                    .toList());
+            for (int i=0; i<bookings.size(); i++) {
+                bookings.get(i).setBookingCode("BC"+(++maxServiceCode));
+            }
+        }
     }
 
 }
