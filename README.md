@@ -20,3 +20,19 @@ Nếu có ->
 Nếu không -> admin thêm bookings vào danh sách booking cho bác sĩ -> bác sĩ thay đổi trạng thái booking trên list mà mình quản lý, thông báo hẹn bệnh nhân
 -> Không lưu lại lịch sử khám cho trường hợp không đăng nhập vào hệ thống
 -> Lưu lại lịch sử khám cho trường hợp đăng nhập vào hệ thống
+
+
+Cập nhật lịch làm việc của bác sĩ trong tuần (t2-t7)
+-> Check giờ làm so với các bác sĩ khác (check theo từng ngày)
+
+Booking
+- Tên
+- Số điện thoại
+- Email
+- Ngày giờ khám
+- Chuyên khoa
+- Triệu chứng
+
+Có 2 options:
+- Không chọn bác sĩ: Chọn ngày giờ khám, hệ thống tự động thêm bác sĩ trống giờ làm
+- Chọn bác sĩ : Chọn bác sĩ, ngày giờ khám theo lịch trên hệ thống

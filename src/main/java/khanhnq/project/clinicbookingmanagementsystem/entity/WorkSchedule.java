@@ -27,6 +27,6 @@ public class WorkSchedule {
     private Set<Booking> bookings;
 
     @ManyToOne
-    @JoinColumn(name = "user_id")
-    private User user;
+    @JoinColumn(name = "day_of_week_id")
+    private DayOfWeek dayOfWeek;
 }

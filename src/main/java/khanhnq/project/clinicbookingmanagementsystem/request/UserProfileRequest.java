@@ -1,8 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.request;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.NotNull;
-import khanhnq.project.clinicbookingmanagementsystem.annotation.DateConstraint;
 import khanhnq.project.clinicbookingmanagementsystem.annotation.PhoneNumberConstraint;
 import lombok.*;
 import org.hibernate.validator.constraints.Length;
@@ -20,8 +18,6 @@ public class UserProfileRequest {
     @Length(max = 20, message = "Last name has a maximum of 20 characters.")
     private String lastName;
 
-//    @DateConstraint
-//    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private Date dateOfBirth;
     private int gender;
 

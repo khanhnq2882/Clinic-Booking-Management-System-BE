@@ -1,7 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
 import khanhnq.project.clinicbookingmanagementsystem.dto.DoctorDTO;
-import khanhnq.project.clinicbookingmanagementsystem.dto.SkillDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.WorkScheduleDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EBookingStatus;
@@ -29,25 +28,14 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final WardRepository wardRepository;
     private final WorkScheduleRepository workScheduleRepository;
-    private final SkillRepository skillRepository;
     private final BookingRepository bookingRepository;
     private final AuthService authService;
     private final MethodsCommon methodsCommon;
 
     @Override
-    public String updateProfile(UserProfileRequest userProfileRequest) {
+    public String updateProfile(UserProfileRequest profileRequest) {
         User currentUser = authService.getCurrentUser();
-        List<User> users = userRepository.findAll().stream().filter(user -> Objects.nonNull(user.getPhoneNumber())).toList();
-        for (User user : users) {
-            if (userProfileRequest.getPhoneNumber().equals(user.getPhoneNumber())) {
-                throw new ResourceException("Phone number is already existed.", HttpStatus.BAD_REQUEST);
-            }
-        }
-        UserMapper.USER_MAPPER.mapToUser(currentUser, userProfileRequest);
-        currentUser.setAddress(Address.builder()
-                .specificAddress(userProfileRequest.getSpecificAddress())
-                .ward(wardRepository.findById(userProfileRequest.getWardId()).orElse(null))
-                .build());
+        methodsCommon.updateProfile(profileRequest, currentUser);
         userRepository.save(currentUser);
         return "Update profile successfully.";
     }
@@ -55,17 +43,6 @@ public class UserServiceImpl implements UserService {
     @Override
     public String uploadAvatar(MultipartFile multipartFile) {
         return methodsCommon.uploadFile(multipartFile, "avatar");
-    }
-
-    @Override
-    public List<SkillDTO> getAllSkills() {
-        return skillRepository.findAll()
-                .stream()
-                .map(skill -> SkillDTO.builder()
-                        .skillId(skill.getSkillId())
-                        .skillName(skill.getSkillName())
-                        .build())
-                .collect(Collectors.toList());
     }
 
     @Override
@@ -83,15 +60,16 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<WorkScheduleDTO> getWorkSchedulesByDoctor(Long userId) {
-        return workScheduleRepository.getWorkSchedulesByUserId(userId)
-                .stream()
-                .map(workSchedule -> WorkScheduleDTO.builder()
-                        .workScheduleId(workSchedule.getWorkScheduleId())
-                        .startTime(workSchedule.getStartTime().toString())
-                        .endTime(workSchedule.getEndTime().toString())
-                        .build())
-                .sorted(Comparator.comparing(WorkScheduleDTO::getStartTime))
-                .toList();
+//        return workScheduleRepository.getWorkSchedulesByUserId(userId)
+//                .stream()
+//                .map(workSchedule -> WorkScheduleDTO.builder()
+//                        .workScheduleId(workSchedule.getWorkScheduleId())
+//                        .startTime(workSchedule.getStartTime().toString())
+//                        .endTime(workSchedule.getEndTime().toString())
+//                        .build())
+//                .sorted(Comparator.comparing(WorkScheduleDTO::getStartTime))
+//                .toList();
+        return null;
     }
 
     @Override

@@ -520,26 +520,27 @@ public class AdminServiceImpl implements AdminService {
 
     public BookingImportResponse filterExcelBookingList (List<BookingExcelDTO> bookingExcelList) {
         BookingImportResponse bookingImportResponse = new BookingImportResponse();
-        List<BookingExcelDTO> invalidBookings = new ArrayList<>();
-        for (BookingExcelDTO bookingExcel : bookingExcelList) {
-            Specialization specialization = specializationRepository.getSpecializationBySpecializationName(bookingExcel.getSpecializationName());
-            User doctor = userRepository.getUserFromExcel(specialization.getSpecializationId(), bookingExcel.getStartTime(), bookingExcel.getEndTime());
-            if (Objects.isNull(doctor)) {
-                invalidBookings.add(bookingExcel);
-                continue;
-            }
-            bookingRepository.getBookingsByDoctorId(doctor.getUserId()).forEach(booking -> {
-                Date appointmentDate = booking.getAppointmentDate();
-                LocalTime startTime = booking.getWorkSchedule().getStartTime();
-                LocalTime endTime = booking.getWorkSchedule().getEndTime();
-                if (bookingExcel.getAppointmentDate().equals(appointmentDate) && bookingExcel.getStartTime().equals(startTime) && bookingExcel.getEndTime().equals(endTime)) {
-                    invalidBookings.add(bookingExcel);
-                }
-            });
-        }
-        bookingImportResponse.setInvalidBookings(convertToBookingList(invalidBookings));
-        bookingExcelList.removeAll(invalidBookings);
-        bookingImportResponse.setValidBookings(convertToBookingList(bookingExcelList));
+//        List<BookingExcelDTO> invalidBookings = new ArrayList<>();
+//        for (BookingExcelDTO bookingExcel : bookingExcelList) {
+//            Specialization specialization = specializationRepository.getSpecializationBySpecializationName(bookingExcel.getSpecializationName());
+//            User doctor = userRepository.getUserFromExcel(specialization.getSpecializationId(), bookingExcel.getStartTime(), bookingExcel.getEndTime());
+//            if (Objects.isNull(doctor)) {
+//                invalidBookings.add(bookingExcel);
+//                continue;
+//            }
+//            bookingRepository.getBookingsByDoctorId(doctor.getUserId()).forEach(booking -> {
+//                Date appointmentDate = booking.getAppointmentDate();
+//                LocalTime startTime = booking.getWorkSchedule().getStartTime();
+//                LocalTime endTime = booking.getWorkSchedule().getEndTime();
+//                if (bookingExcel.getAppointmentDate().equals(appointmentDate) && bookingExcel.getStartTime().equals(startTime) && bookingExcel.getEndTime().equals(endTime)) {
+//                    invalidBookings.add(bookingExcel);
+//                }
+//            });
+//        }
+//        bookingImportResponse.setInvalidBookings(convertToBookingList(invalidBookings));
+//        bookingExcelList.removeAll(invalidBookings);
+//        bookingImportResponse.setValidBookings(convertToBookingList(bookingExcelList));
+//        return bookingImportResponse;
         return bookingImportResponse;
     }
 
@@ -548,8 +549,8 @@ public class AdminServiceImpl implements AdminService {
                 .stream()
                 .map(bookingExcelDTO -> {
                     Booking booking = BookingMapper.BOOKING_MAPPER.mapExcelToBooking(bookingExcelDTO);
-                    WorkSchedule workSchedule = workScheduleRepository.getWorkScheduleByTime(bookingExcelDTO.getSpecializationName(),bookingExcelDTO.getStartTime(), bookingExcelDTO.getEndTime());
-                    booking.setWorkSchedule(workSchedule);
+//                    WorkSchedule workSchedule = workScheduleRepository.getWorkScheduleByTime(bookingExcelDTO.getSpecializationName(),bookingExcelDTO.getStartTime(), bookingExcelDTO.getEndTime());
+//                    booking.setWorkSchedule(workSchedule);
                     return booking;
                 }).toList();
         setBookingCode(bookings);

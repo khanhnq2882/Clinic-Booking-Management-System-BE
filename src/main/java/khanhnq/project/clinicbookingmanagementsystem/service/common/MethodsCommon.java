@@ -2,7 +2,9 @@ package khanhnq.project.clinicbookingmanagementsystem.service.common;
 
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceException;
+import khanhnq.project.clinicbookingmanagementsystem.mapper.UserMapper;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
+import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
 import khanhnq.project.clinicbookingmanagementsystem.response.AddressResponse;
 import khanhnq.project.clinicbookingmanagementsystem.response.FileResponse;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
@@ -135,12 +137,12 @@ public class MethodsCommon {
 
     public Map<Long, List<WorkSchedule>> groupWorkScheduleByDoctor() {
         Map<Long, List<WorkSchedule>> map = new HashMap<>();
-        for (User user : userRepository.getDoctors()) {
-            if (!map.containsKey(user.getUserId())) {
-                List<WorkSchedule> workSchedules = workScheduleRepository.getWorkSchedulesByUserId(user.getUserId());
-                map.put(user.getUserId(), workSchedules);
-            }
-        }
+//        for (User user : userRepository.getDoctors()) {
+//            if (!map.containsKey(user.getUserId())) {
+//                List<WorkSchedule> workSchedules = workScheduleRepository.getWorkSchedulesByUserId(user.getUserId());
+//                map.put(user.getUserId(), workSchedules);
+//            }
+//        }
         return map;
     }
 
@@ -309,5 +311,19 @@ public class MethodsCommon {
             }
             throw new ResourceException(errorMsg, HttpStatus.BAD_REQUEST);
         }
+    }
+
+    public void updateProfile (UserProfileRequest profileRequest, User currentUser) {
+        List<User> users = userRepository.findAll().stream().filter(user -> Objects.nonNull(user.getPhoneNumber())).toList();
+        for (User user : users) {
+            if (profileRequest.getPhoneNumber().equals(user.getPhoneNumber())) {
+                throw new ResourceException("Phone number is already existed.", HttpStatus.BAD_REQUEST);
+            }
+        }
+        UserMapper.USER_MAPPER.mapToUser(currentUser, profileRequest);
+        currentUser.setAddress(Address.builder()
+                .specificAddress(profileRequest.getSpecificAddress())
+                .ward(wardRepository.findById(profileRequest.getWardId()).orElse(null))
+                .build());
     }
 }
