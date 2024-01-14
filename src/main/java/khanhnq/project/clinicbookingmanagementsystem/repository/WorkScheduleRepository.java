@@ -1,6 +1,7 @@
 package khanhnq.project.clinicbookingmanagementsystem.repository;
 
 import khanhnq.project.clinicbookingmanagementsystem.entity.WorkSchedule;
+import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EDayOfWeek;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -20,4 +21,11 @@ public interface WorkScheduleRepository extends JpaRepository<WorkSchedule, Long
 //            "AND ws.startTime = :startTime " +
 //            "AND ws.endTime = :endTime")
 //    WorkSchedule getWorkScheduleByTime (@Param("specializationName") String specializationName, @Param("startTime")LocalTime startTime, @Param("endTime")LocalTime endTime);
+
+    @Query(value = "SELECT ws FROM WorkSchedule AS ws " +
+            "INNER JOIN ws.dayOfWeek AS d " +
+            "INNER JOIN d.user AS u " +
+            "WHERE u.specialization.specializationId = :specializationId " +
+            "AND d.dayOfWeek = :dayOfWeek")
+    List<WorkSchedule> getWorkSchedulesByDay (@Param("specializationId") Long specializationId, @Param("dayOfWeek") EDayOfWeek dayOfWeek);
 }

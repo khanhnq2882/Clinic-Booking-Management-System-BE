@@ -3,8 +3,7 @@ package khanhnq.project.clinicbookingmanagementsystem.entity;
 import jakarta.persistence.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EDayOfWeek;
 import lombok.*;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.List;
 
 @Entity
 @Getter
@@ -22,10 +21,11 @@ public class DayOfWeek {
     @Column(length = 20)
     private EDayOfWeek dayOfWeek;
 
-    @OneToMany(mappedBy = "dayOfWeek", cascade = CascadeType.ALL)
-    private Set<WorkSchedule> workSchedules = new TreeSet<>();
+    @Column
+    private int numberOfShiftsPerDay;
 
-    private int NumberOfShiftsPerDay;
+    @OneToMany(mappedBy = "dayOfWeek", cascade = CascadeType.ALL)
+    private List<WorkSchedule> workSchedules;
 
     @ManyToOne
     @JoinColumn(name = "user_id")

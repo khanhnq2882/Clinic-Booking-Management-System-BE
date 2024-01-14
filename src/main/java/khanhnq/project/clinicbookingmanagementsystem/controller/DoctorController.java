@@ -1,6 +1,7 @@
 package khanhnq.project.clinicbookingmanagementsystem.controller;
 
 import khanhnq.project.clinicbookingmanagementsystem.request.DoctorInformationRequest;
+import khanhnq.project.clinicbookingmanagementsystem.request.RegisterWorkScheduleRequest;
 import khanhnq.project.clinicbookingmanagementsystem.response.BookingResponse;
 import khanhnq.project.clinicbookingmanagementsystem.response.MessageResponse;
 import khanhnq.project.clinicbookingmanagementsystem.service.DoctorService;
@@ -9,18 +10,23 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 
 @CrossOrigin(origins = "http://localhost:4200", maxAge = 3600, allowCredentials = "true")
 @RestController
 @AllArgsConstructor
 @RequestMapping("/doctor")
 public class DoctorController {
-
     private final DoctorService doctorService;
 
     @PostMapping("/update-doctor-information")
     public ResponseEntity<String> addDoctorInformation(@RequestBody DoctorInformationRequest doctorInformationRequest) {
         return MessageResponse.getResponseMessage(doctorService.updateDoctorInformation(doctorInformationRequest), HttpStatus.OK);
+    }
+
+    @PostMapping("/register-work-schedules")
+    public ResponseEntity<String> registerWorkSchedules(@RequestBody List<RegisterWorkScheduleRequest> registerWorkScheduleRequests) {
+        return MessageResponse.getResponseMessage(doctorService.registerWorkSchedules(registerWorkScheduleRequests), HttpStatus.OK);
     }
 
     @GetMapping("/get-all-user-bookings")

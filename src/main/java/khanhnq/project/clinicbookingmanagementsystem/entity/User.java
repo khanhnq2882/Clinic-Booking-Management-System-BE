@@ -94,7 +94,7 @@ public class User {
     private Specialization specialization;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-    private Set<DayOfWeek> dayOfWeeks = new TreeSet<>();
+    private List<DayOfWeek> dayOfWeeks;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private Set<Booking> bookings = new HashSet<>();

@@ -1,6 +1,7 @@
 package khanhnq.project.clinicbookingmanagementsystem.dto;
 
 import lombok.*;
+import java.time.LocalTime;
 
 @Getter
 @Setter
@@ -8,7 +9,6 @@ import lombok.*;
 @NoArgsConstructor
 @Builder
 public class WorkScheduleDTO {
-    private Long workScheduleId;
-    private String startTime;
-    private String endTime;
+    private LocalTime startTime;
+    private LocalTime endTime;
 }
