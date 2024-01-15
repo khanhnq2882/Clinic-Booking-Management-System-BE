@@ -24,7 +24,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
@@ -520,27 +522,26 @@ public class AdminServiceImpl implements AdminService {
 
     public BookingImportResponse filterExcelBookingList (List<BookingExcelDTO> bookingExcelList) {
         BookingImportResponse bookingImportResponse = new BookingImportResponse();
-//        List<BookingExcelDTO> invalidBookings = new ArrayList<>();
-//        for (BookingExcelDTO bookingExcel : bookingExcelList) {
-//            Specialization specialization = specializationRepository.getSpecializationBySpecializationName(bookingExcel.getSpecializationName());
-//            User doctor = userRepository.getUserFromExcel(specialization.getSpecializationId(), bookingExcel.getStartTime(), bookingExcel.getEndTime());
-//            if (Objects.isNull(doctor)) {
-//                invalidBookings.add(bookingExcel);
-//                continue;
-//            }
-//            bookingRepository.getBookingsByDoctorId(doctor.getUserId()).forEach(booking -> {
-//                Date appointmentDate = booking.getAppointmentDate();
-//                LocalTime startTime = booking.getWorkSchedule().getStartTime();
-//                LocalTime endTime = booking.getWorkSchedule().getEndTime();
-//                if (bookingExcel.getAppointmentDate().equals(appointmentDate) && bookingExcel.getStartTime().equals(startTime) && bookingExcel.getEndTime().equals(endTime)) {
-//                    invalidBookings.add(bookingExcel);
-//                }
-//            });
-//        }
-//        bookingImportResponse.setInvalidBookings(convertToBookingList(invalidBookings));
-//        bookingExcelList.removeAll(invalidBookings);
-//        bookingImportResponse.setValidBookings(convertToBookingList(bookingExcelList));
-//        return bookingImportResponse;
+        List<BookingExcelDTO> invalidBookings = new ArrayList<>();
+        for (BookingExcelDTO bookingExcel : bookingExcelList) {
+            Specialization specialization = specializationRepository.getSpecializationBySpecializationName(bookingExcel.getSpecializationName());
+            LocalDate appointmentDate = bookingExcel.getAppointmentDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+            User doctor = userRepository.getUserFromExcel(specialization.getSpecializationId(), appointmentDate.getDayOfWeek(), bookingExcel.getStartTime(), bookingExcel.getEndTime());
+            if (Objects.isNull(doctor)) {
+                invalidBookings.add(bookingExcel);
+                continue;
+            }
+            bookingRepository.getBookingsByDoctor(doctor.getUserId()).forEach(booking -> {
+                LocalTime startTime = booking.getWorkSchedule().getStartTime();
+                LocalTime endTime = booking.getWorkSchedule().getEndTime();
+                if (bookingExcel.getAppointmentDate().equals(booking.getAppointmentDate()) && bookingExcel.getStartTime().equals(startTime) && bookingExcel.getEndTime().equals(endTime)) {
+                    invalidBookings.add(bookingExcel);
+                }
+            });
+        }
+        bookingExcelList.removeAll(invalidBookings);
+        bookingImportResponse.setValidBookings(convertToBookingList(bookingExcelList));
+        bookingImportResponse.setInvalidBookings(invalidBookings);
         return bookingImportResponse;
     }
 
@@ -549,8 +550,9 @@ public class AdminServiceImpl implements AdminService {
                 .stream()
                 .map(bookingExcelDTO -> {
                     Booking booking = BookingMapper.BOOKING_MAPPER.mapExcelToBooking(bookingExcelDTO);
-//                    WorkSchedule workSchedule = workScheduleRepository.getWorkScheduleByTime(bookingExcelDTO.getSpecializationName(),bookingExcelDTO.getStartTime(), bookingExcelDTO.getEndTime());
-//                    booking.setWorkSchedule(workSchedule);
+                    LocalDate appointmentDate = bookingExcelDTO.getAppointmentDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+                    WorkSchedule workSchedule = workScheduleRepository.getWorkScheduleByTime(bookingExcelDTO.getSpecializationName(), appointmentDate.getDayOfWeek(), bookingExcelDTO.getStartTime(), bookingExcelDTO.getEndTime());
+                    booking.setWorkSchedule(workSchedule);
                     return booking;
                 }).toList();
         setBookingCode(bookings);
@@ -561,16 +563,16 @@ public class AdminServiceImpl implements AdminService {
         Long maxServiceCode;
         if (bookingRepository.findAll().size() == 0) {
             maxServiceCode = 1L;
-            for (int i=0; i<bookings.size(); i++) {
-                bookings.get(i).setBookingCode("BC"+(maxServiceCode++));
+            for (Booking booking : bookings) {
+                booking.setBookingCode("BC" + (maxServiceCode++));
             }
         } else {
             maxServiceCode = Collections.max(bookingRepository.findAll()
                     .stream()
                     .map(booking -> Long.parseLong(booking.getBookingCode().substring(2)))
                     .toList());
-            for (int i=0; i<bookings.size(); i++) {
-                bookings.get(i).setBookingCode("BC"+(++maxServiceCode));
+            for (Booking booking : bookings) {
+                booking.setBookingCode("BC" + (++maxServiceCode));
             }
         }
     }

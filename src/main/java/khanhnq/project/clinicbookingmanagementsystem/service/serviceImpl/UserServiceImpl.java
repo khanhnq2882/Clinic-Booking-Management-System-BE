@@ -6,7 +6,6 @@ import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EBookingStatus;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceException;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.BookingMapper;
-import khanhnq.project.clinicbookingmanagementsystem.mapper.UserMapper;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
 import khanhnq.project.clinicbookingmanagementsystem.request.BookingAppointmentRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
@@ -60,16 +59,15 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<WorkScheduleDTO> getWorkSchedulesByDoctor(Long userId) {
-//        return workScheduleRepository.getWorkSchedulesByUserId(userId)
-//                .stream()
-//                .map(workSchedule -> WorkScheduleDTO.builder()
-//                        .workScheduleId(workSchedule.getWorkScheduleId())
-//                        .startTime(workSchedule.getStartTime().toString())
-//                        .endTime(workSchedule.getEndTime().toString())
-//                        .build())
-//                .sorted(Comparator.comparing(WorkScheduleDTO::getStartTime))
-//                .toList();
-        return null;
+        return workScheduleRepository.getWorkSchedulesByUserId(userId)
+                .stream()
+                .map(workSchedule -> WorkScheduleDTO.builder()
+                        .workScheduleId(workSchedule.getWorkScheduleId())
+                        .startTime(workSchedule.getStartTime())
+                        .endTime(workSchedule.getEndTime())
+                        .build())
+                .sorted(Comparator.comparing(WorkScheduleDTO::getStartTime))
+                .toList();
     }
 
     @Override

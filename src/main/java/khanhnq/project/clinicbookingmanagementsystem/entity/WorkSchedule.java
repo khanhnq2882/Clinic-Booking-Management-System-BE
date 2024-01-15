@@ -25,7 +25,7 @@ public class WorkSchedule {
 
     @ManyToOne
     @JoinColumn(name = "day_of_week_id")
-    private DayOfWeek dayOfWeek;
+    private DaysOfWeek daysOfWeek;
 
     @OneToMany(mappedBy = "workSchedule", cascade = CascadeType.PERSIST)
     private Set<Booking> bookings;

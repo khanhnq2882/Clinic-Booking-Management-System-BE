@@ -137,12 +137,12 @@ public class MethodsCommon {
 
     public Map<Long, List<WorkSchedule>> groupWorkScheduleByDoctor() {
         Map<Long, List<WorkSchedule>> map = new HashMap<>();
-//        for (User user : userRepository.getDoctors()) {
-//            if (!map.containsKey(user.getUserId())) {
-//                List<WorkSchedule> workSchedules = workScheduleRepository.getWorkSchedulesByUserId(user.getUserId());
-//                map.put(user.getUserId(), workSchedules);
-//            }
-//        }
+        for (User user : userRepository.getDoctors()) {
+            if (!map.containsKey(user.getUserId())) {
+                List<WorkSchedule> workSchedules = workScheduleRepository.getWorkSchedulesByUserId(user.getUserId());
+                map.put(user.getUserId(), workSchedules);
+            }
+        }
         return map;
     }
 

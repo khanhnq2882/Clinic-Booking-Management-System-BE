@@ -1,14 +1,13 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
+import khanhnq.project.clinicbookingmanagementsystem.dto.BookingDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.WorkScheduleDTO;
-import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EDayOfWeek;
+import khanhnq.project.clinicbookingmanagementsystem.mapper.BookingMapper;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.ExperienceMapper;
 import khanhnq.project.clinicbookingmanagementsystem.request.RegisterWorkScheduleRequest;
 import khanhnq.project.clinicbookingmanagementsystem.service.common.MethodsCommon;
-import khanhnq.project.clinicbookingmanagementsystem.dto.BookingDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceException;
-import khanhnq.project.clinicbookingmanagementsystem.mapper.BookingMapper;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
 import khanhnq.project.clinicbookingmanagementsystem.request.DoctorInformationRequest;
 import khanhnq.project.clinicbookingmanagementsystem.response.BookingResponse;
@@ -18,6 +17,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -54,63 +54,66 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
-    public String registerWorkSchedules(List<RegisterWorkScheduleRequest> registerWorkScheduleRequests) {
+    public String registerWorkSchedules(RegisterWorkScheduleRequest registerWorkSchedule) {
         User currentUser = authService.getCurrentUser();
         if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_DOCTOR"))) {
             throw new ResourceException("You don't have permission to do this.", HttpStatus.UNAUTHORIZED);
         }
-        List<DayOfWeek> dayOfWeeks = new ArrayList<>();
-        String invalidMessage = "";
-        for (RegisterWorkScheduleRequest registerWorkSchedule : registerWorkScheduleRequests) {
-            if (Arrays.stream(EDayOfWeek.values()).noneMatch(eDayOfWeek -> registerWorkSchedule.getDayOfWeek().equalsIgnoreCase(eDayOfWeek.name()))) {
-                throw new ResourceException("Day of week invalid.", HttpStatus.BAD_REQUEST);
-            }
-            if (registerWorkSchedule.getWorkSchedules().size() != registerWorkSchedule.getNumberOfShiftsPerDay()) {
-                throw new ResourceException("You have not registered for "+registerWorkSchedule.getNumberOfShiftsPerDay()+" shifts on "
-                        +registerWorkSchedule.getDayOfWeek().toUpperCase(), HttpStatus.BAD_REQUEST);
-            }
-            EDayOfWeek day = EDayOfWeek.valueOf(registerWorkSchedule.getDayOfWeek().toUpperCase());
-            DayOfWeek oldDayOfWeek = dayOfWeekRepository.getDayOfWeekByDay(currentUser.getUserId(), day);
-            if (Objects.nonNull(oldDayOfWeek)) {
-                dayOfWeekRepository.delete(oldDayOfWeek);
-            }
-            DayOfWeek newDayOfWeek = DayOfWeek.builder()
-                    .dayOfWeek(day)
-                    .numberOfShiftsPerDay(registerWorkSchedule.getNumberOfShiftsPerDay())
-                    .user(currentUser)
-                    .build();
-            List<WorkSchedule> existWorkSchedules = workScheduleRepository.getWorkSchedulesByDay(currentUser.getSpecialization().getSpecializationId(), day);
-            List<WorkScheduleDTO> invalidWorkSchedules = new ArrayList<>();
-            for (WorkSchedule workSchedule : existWorkSchedules) {
-                for (WorkScheduleDTO workScheduleDTO : registerWorkSchedule.getWorkSchedules()) {
-                    LocalTime newStartTime = workScheduleDTO.getStartTime();
-                    LocalTime newEndTime = workScheduleDTO.getEndTime();
-                    if((newStartTime.isAfter(workSchedule.getStartTime()) && newEndTime.isBefore(workSchedule.getEndTime()))
-                    || (newStartTime.equals(workSchedule.getStartTime()) && newEndTime.equals(workSchedule.getEndTime()))) {
-                        invalidWorkSchedules.add(workScheduleDTO);
-                    }
+        List<DaysOfWeek> daysOfWeeks = new ArrayList<>();
+        StringBuilder invalidMessage = new StringBuilder();
+        if (Arrays.stream(DayOfWeek.values()).noneMatch(dayOfWeek -> registerWorkSchedule.getDayOfWeek().equalsIgnoreCase(dayOfWeek.name()))) {
+            throw new ResourceException("Day of week invalid.", HttpStatus.BAD_REQUEST);
+        }
+        if (registerWorkSchedule.getWorkSchedules().size() != registerWorkSchedule.getNumberOfShiftsPerDay()) {
+            throw new ResourceException("You have not registered for "+registerWorkSchedule.getNumberOfShiftsPerDay()+" shifts on "
+                    +registerWorkSchedule.getDayOfWeek().toUpperCase(), HttpStatus.BAD_REQUEST);
+        }
+        DayOfWeek day = DayOfWeek.valueOf(registerWorkSchedule.getDayOfWeek().toUpperCase());
+        DaysOfWeek oldDaysOfWeek = dayOfWeekRepository.getDayOfWeekByDay(currentUser.getUserId(), day);
+        if (Objects.nonNull(oldDaysOfWeek)) {
+            dayOfWeekRepository.delete(oldDaysOfWeek);
+        }
+        DaysOfWeek newDaysOfWeek = DaysOfWeek.builder()
+                .dayOfWeek(day)
+                .numberOfShiftsPerDay(registerWorkSchedule.getNumberOfShiftsPerDay())
+                .user(currentUser)
+                .build();
+        List<WorkSchedule> existWorkSchedules = workScheduleRepository.getWorkSchedulesByDay(currentUser.getSpecialization().getSpecializationId(), day);
+        List<WorkScheduleDTO> invalidWorkSchedules = new ArrayList<>();
+        for (WorkSchedule workSchedule : existWorkSchedules) {
+            for (WorkScheduleDTO workScheduleDTO : registerWorkSchedule.getWorkSchedules()) {
+                LocalTime newStartTime = workScheduleDTO.getStartTime();
+                LocalTime newEndTime = workScheduleDTO.getEndTime();
+                if((newStartTime.isAfter(workSchedule.getStartTime()) && newEndTime.isBefore(workSchedule.getEndTime()))
+                        || (newStartTime.equals(workSchedule.getStartTime()) && newEndTime.equals(workSchedule.getEndTime()))) {
+                    invalidWorkSchedules.add(workScheduleDTO);
                 }
             }
-            registerWorkSchedule.getWorkSchedules().removeAll(invalidWorkSchedules);
-            List<WorkSchedule> newWorkSchedules = registerWorkSchedule.getWorkSchedules()
-                    .stream()
-                    .map(workScheduleDTO -> WorkSchedule
-                            .builder()
-                            .startTime(workScheduleDTO.getStartTime())
-                            .endTime(workScheduleDTO.getEndTime())
-                            .dayOfWeek(newDayOfWeek)
-                            .build())
-                    .toList();
-            newDayOfWeek.setWorkSchedules(newWorkSchedules);
-            dayOfWeeks.add(newDayOfWeek);
-
-            for (WorkScheduleDTO invalidWorkSchedule : invalidWorkSchedules) {
-                invalidMessage += invalidWorkSchedule.getStartTime() + " - " +invalidWorkSchedule.getEndTime() + ", ";
-            }
         }
-        currentUser.setDayOfWeeks(dayOfWeeks);
+        registerWorkSchedule.getWorkSchedules().removeAll(invalidWorkSchedules);
+        List<WorkSchedule> newWorkSchedules = registerWorkSchedule.getWorkSchedules()
+                .stream()
+                .map(workScheduleDTO -> WorkSchedule
+                        .builder()
+                        .startTime(workScheduleDTO.getStartTime())
+                        .endTime(workScheduleDTO.getEndTime())
+                        .daysOfWeek(newDaysOfWeek)
+                        .build())
+                .toList();
+        newDaysOfWeek.setWorkSchedules(newWorkSchedules);
+        daysOfWeeks.add(newDaysOfWeek);
+        currentUser.setDaysOfWeeks(daysOfWeeks);
         userRepository.save(currentUser);
-        return "Successfully registered work schedule. Schedule "+invalidMessage+" cannot be registered because someone has already registered";
+        String message = "";
+        if (invalidWorkSchedules.size() == 0) {
+            message += "Successfully registered for work schedules for "+day;
+        } else {
+            for (WorkScheduleDTO invalidWorkSchedule : invalidWorkSchedules) {
+                invalidMessage.append(invalidWorkSchedule.getStartTime()).append(" - ").append(invalidWorkSchedule.getEndTime()).append(", ");
+            }
+            message += "Successfully registered for work schedules for "+day+". Except for work schedules "+invalidMessage+" because someone has already registered.";
+        }
+        return message;
     }
 
     @Override
@@ -120,7 +123,7 @@ public class DoctorServiceImpl implements DoctorService {
             throw new ResourceException("You don't have permission to do this.", HttpStatus.UNAUTHORIZED);
         }
         bookingRepository.confirmedBooking(bookingId);
-        return "Successful booking confirmation.";
+        return "Successful confirm booking.";
     }
 
     @Override
@@ -130,31 +133,28 @@ public class DoctorServiceImpl implements DoctorService {
             throw new ResourceException("You don't have permission to do this.", HttpStatus.UNAUTHORIZED);
         }
         bookingRepository.cancelledBooking(bookingId);
-        return "Successful booking cancelled. Please provide reasons why booking is cancelled for the patient.";
+        return "Successful cancel booking.";
     }
 
     @Override
     public BookingResponse getAllBookings(int page, int size, String[] sorts) {
-//        User currentUser = authService.getCurrentUser();
-//        Page<Booking> bookingPage = bookingRepository.getAllBookings(currentUser.getUserId() , methodsCommon.pagingSort(page, size, sorts));
-//        List<BookingDTO> bookings = bookingPage.getContent()
-//                .stream()
-//                .map(booking -> {
-//                    BookingDTO bookingDTO = BookingMapper.BOOKING_MAPPER.mapToBookingDTO(booking);
-//                    bookingDTO.setUserAddress(methodsCommon.getAddress(booking));
-//                    bookingDTO.setStartTime(DateTimeFormatter.ofPattern("HH:mm").format(booking.getWorkSchedule().getStartTime()));
-//                    bookingDTO.setEndTime(DateTimeFormatter.ofPattern("HH:mm").format(booking.getWorkSchedule().getEndTime()));
-//                    return bookingDTO;
-//                }).toList();
-//        return BookingResponse.builder()
-//                .totalItems(bookingPage.getTotalElements())
-//                .totalPages(bookingPage.getTotalPages())
-//                .currentPage(bookingPage.getNumber())
-//                .bookings(bookings)
-//                .build();
-        return null;
+        User currentUser = authService.getCurrentUser();
+        Page<Booking> bookingPage = bookingRepository.getAllBookings(currentUser.getUserId() , methodsCommon.pagingSort(page, size, sorts));
+        List<BookingDTO> bookings = bookingPage.getContent()
+                .stream()
+                .map(booking -> {
+                    BookingDTO bookingDTO = BookingMapper.BOOKING_MAPPER.mapToBookingDTO(booking);
+                    bookingDTO.setUserAddress(methodsCommon.getAddress(booking));
+                    bookingDTO.setStartTime(DateTimeFormatter.ofPattern("HH:mm").format(booking.getWorkSchedule().getStartTime()));
+                    bookingDTO.setEndTime(DateTimeFormatter.ofPattern("HH:mm").format(booking.getWorkSchedule().getEndTime()));
+                    return bookingDTO;
+                }).toList();
+        return BookingResponse.builder()
+                .totalItems(bookingPage.getTotalElements())
+                .totalPages(bookingPage.getTotalPages())
+                .currentPage(bookingPage.getNumber())
+                .bookings(bookings)
+                .build();
     }
-
-
 
 }

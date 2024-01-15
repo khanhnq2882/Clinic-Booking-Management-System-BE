@@ -10,7 +10,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import java.util.List;
 
 @CrossOrigin(origins = "http://localhost:4200", maxAge = 3600, allowCredentials = "true")
 @RestController
@@ -25,8 +24,8 @@ public class DoctorController {
     }
 
     @PostMapping("/register-work-schedules")
-    public ResponseEntity<String> registerWorkSchedules(@RequestBody List<RegisterWorkScheduleRequest> registerWorkScheduleRequests) {
-        return MessageResponse.getResponseMessage(doctorService.registerWorkSchedules(registerWorkScheduleRequests), HttpStatus.OK);
+    public ResponseEntity<String> registerWorkSchedules(@RequestBody RegisterWorkScheduleRequest registerWorkScheduleRequest) {
+        return MessageResponse.getResponseMessage(doctorService.registerWorkSchedules(registerWorkScheduleRequest), HttpStatus.OK);
     }
 
     @GetMapping("/get-all-user-bookings")

@@ -1,8 +1,8 @@
 package khanhnq.project.clinicbookingmanagementsystem.entity;
 
 import jakarta.persistence.*;
-import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EDayOfWeek;
 import lombok.*;
+import java.time.DayOfWeek;
 import java.util.List;
 
 @Entity
@@ -12,19 +12,19 @@ import java.util.List;
 @AllArgsConstructor
 @Table(name = "day_of_week")
 @Builder
-public class DayOfWeek {
+public class DaysOfWeek {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long dayOfWeekId;
 
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
-    private EDayOfWeek dayOfWeek;
+    private DayOfWeek dayOfWeek;
 
     @Column
     private int numberOfShiftsPerDay;
 
-    @OneToMany(mappedBy = "dayOfWeek", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "daysOfWeek", cascade = CascadeType.ALL)
     private List<WorkSchedule> workSchedules;
 
     @ManyToOne
