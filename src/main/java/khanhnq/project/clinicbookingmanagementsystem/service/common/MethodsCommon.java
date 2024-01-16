@@ -193,18 +193,20 @@ public class MethodsCommon {
         if (cities.size() == 0) {
             throw new ResourceException("City named '"+ cityName +"' of column "+ colName +", row "+ indexRow +" doesn't exist.", HttpStatus.BAD_REQUEST);
         }
-        Address address = new Address();
-        for (Ward ward : wards) {
-            for (District district : districts) {
-                if (ward.getDistrict().getDistrictName().equals(district.getDistrictName())) {
-                    for (City city : cities) {
-                        if (district.getCity().getCityName().equals(city.getCityName())) {
-                            address.setWard(ward);
-                        }
-                    }
-                }
-            }
-        }
+        Address address = wards.stream()
+                .flatMap(ward -> districts.stream()
+                        .filter(district -> ward.getDistrict().getDistrictName().equals(district.getDistrictName()))
+                        .flatMap(district -> cities.stream()
+                                .filter(city -> district.getCity().getCityName().equals(city.getCityName()))
+                                .map(city -> {
+                                    Address newAddress = new Address();
+                                    newAddress.setWard(ward);
+                                    return newAddress;
+                                })
+                        )
+                )
+                .findFirst()
+                .orElse(null);
         List<String> specificAddressElements = strings.stream()
                 .filter(s -> !s.trim().equalsIgnoreCase(cityName) && !s.trim().equalsIgnoreCase(districtName) && !s.trim().equalsIgnoreCase(wardName)).toList();
         StringBuilder specificAddress = new StringBuilder();

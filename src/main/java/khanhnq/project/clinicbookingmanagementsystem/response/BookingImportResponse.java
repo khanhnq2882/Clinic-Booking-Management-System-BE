@@ -1,6 +1,5 @@
 package khanhnq.project.clinicbookingmanagementsystem.response;
 
-import khanhnq.project.clinicbookingmanagementsystem.dto.BookingExcelDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Booking;
 import lombok.*;
 import java.util.List;
@@ -12,5 +11,5 @@ import java.util.List;
 @Builder
 public class BookingImportResponse {
     private List<Booking> validBookings;
-    private List<BookingExcelDTO> invalidBookings;
+    private List<BookingExcelResponse> invalidBookings;
 }

@@ -18,7 +18,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import java.time.DayOfWeek;
-import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -61,35 +61,32 @@ public class DoctorServiceImpl implements DoctorService {
         }
         List<DaysOfWeek> daysOfWeeks = new ArrayList<>();
         StringBuilder invalidMessage = new StringBuilder();
-        if (Arrays.stream(DayOfWeek.values()).noneMatch(dayOfWeek -> registerWorkSchedule.getDayOfWeek().equalsIgnoreCase(dayOfWeek.name()))) {
+        DayOfWeek dayOfWeek = registerWorkSchedule.getDayOfWeek().toInstant().atZone(ZoneId.systemDefault()).toLocalDate().getDayOfWeek();
+        if (Arrays.stream(DayOfWeek.values()).noneMatch(dayOfWeek::equals)) {
             throw new ResourceException("Day of week invalid.", HttpStatus.BAD_REQUEST);
         }
         if (registerWorkSchedule.getWorkSchedules().size() != registerWorkSchedule.getNumberOfShiftsPerDay()) {
-            throw new ResourceException("You have not registered for "+registerWorkSchedule.getNumberOfShiftsPerDay()+" shifts on "
-                    +registerWorkSchedule.getDayOfWeek().toUpperCase(), HttpStatus.BAD_REQUEST);
+            throw new ResourceException("You have not registered for "+registerWorkSchedule.getNumberOfShiftsPerDay()+" shifts on " +dayOfWeek, HttpStatus.BAD_REQUEST);
         }
-        DayOfWeek day = DayOfWeek.valueOf(registerWorkSchedule.getDayOfWeek().toUpperCase());
-        DaysOfWeek oldDaysOfWeek = dayOfWeekRepository.getDayOfWeekByDay(currentUser.getUserId(), day);
-        if (Objects.nonNull(oldDaysOfWeek)) {
-            dayOfWeekRepository.delete(oldDaysOfWeek);
+        DaysOfWeek oldDayOfWeek = dayOfWeekRepository.getDayOfWeekByDay(currentUser.getUserId(), dayOfWeek);
+        if (Objects.nonNull(oldDayOfWeek)) {
+            dayOfWeekRepository.delete(oldDayOfWeek);
         }
-        DaysOfWeek newDaysOfWeek = DaysOfWeek.builder()
-                .dayOfWeek(day)
+        DaysOfWeek newDayOfWeek = DaysOfWeek.builder()
+                .dayOfWeek(dayOfWeek)
                 .numberOfShiftsPerDay(registerWorkSchedule.getNumberOfShiftsPerDay())
                 .user(currentUser)
                 .build();
-        List<WorkSchedule> existWorkSchedules = workScheduleRepository.getWorkSchedulesByDay(currentUser.getSpecialization().getSpecializationId(), day);
-        List<WorkScheduleDTO> invalidWorkSchedules = new ArrayList<>();
-        for (WorkSchedule workSchedule : existWorkSchedules) {
-            for (WorkScheduleDTO workScheduleDTO : registerWorkSchedule.getWorkSchedules()) {
-                LocalTime newStartTime = workScheduleDTO.getStartTime();
-                LocalTime newEndTime = workScheduleDTO.getEndTime();
-                if((newStartTime.isAfter(workSchedule.getStartTime()) && newEndTime.isBefore(workSchedule.getEndTime()))
-                        || (newStartTime.equals(workSchedule.getStartTime()) && newEndTime.equals(workSchedule.getEndTime()))) {
-                    invalidWorkSchedules.add(workScheduleDTO);
-                }
-            }
-        }
+        List<WorkSchedule> existWorkSchedules = workScheduleRepository.getWorkSchedulesByDay(currentUser.getSpecialization().getSpecializationId(), dayOfWeek);
+        List<WorkScheduleDTO> invalidWorkSchedules = existWorkSchedules.stream()
+                .flatMap(workSchedule -> registerWorkSchedule.getWorkSchedules().stream()
+                        .filter(workScheduleDTO ->
+                                (workScheduleDTO.getStartTime().isAfter(workSchedule.getStartTime()) &&
+                                        workScheduleDTO.getEndTime().isBefore(workSchedule.getEndTime())) ||
+                                        (workScheduleDTO.getStartTime().equals(workSchedule.getStartTime()) &&
+                                                workScheduleDTO.getEndTime().equals(workSchedule.getEndTime()))
+                        )
+                ).toList();
         registerWorkSchedule.getWorkSchedules().removeAll(invalidWorkSchedules);
         List<WorkSchedule> newWorkSchedules = registerWorkSchedule.getWorkSchedules()
                 .stream()
@@ -97,23 +94,23 @@ public class DoctorServiceImpl implements DoctorService {
                         .builder()
                         .startTime(workScheduleDTO.getStartTime())
                         .endTime(workScheduleDTO.getEndTime())
-                        .daysOfWeek(newDaysOfWeek)
+                        .daysOfWeek(newDayOfWeek)
                         .build())
                 .toList();
-        newDaysOfWeek.setWorkSchedules(newWorkSchedules);
-        daysOfWeeks.add(newDaysOfWeek);
+        newDayOfWeek.setWorkSchedules(newWorkSchedules);
+        daysOfWeeks.add(newDayOfWeek);
         currentUser.setDaysOfWeeks(daysOfWeeks);
         userRepository.save(currentUser);
-        String message = "";
+        String responseMessage = "";
         if (invalidWorkSchedules.size() == 0) {
-            message += "Successfully registered for work schedules for "+day;
+            responseMessage = "Successfully registered for work schedules for "+dayOfWeek;
         } else {
             for (WorkScheduleDTO invalidWorkSchedule : invalidWorkSchedules) {
                 invalidMessage.append(invalidWorkSchedule.getStartTime()).append(" - ").append(invalidWorkSchedule.getEndTime()).append(", ");
             }
-            message += "Successfully registered for work schedules for "+day+". Except for work schedules "+invalidMessage+" because someone has already registered.";
+            responseMessage = "Successfully registered for work schedules for "+dayOfWeek+". Except for work schedules "+invalidMessage+" because someone has already registered.";
         }
-        return message;
+        return responseMessage;
     }
 
     @Override

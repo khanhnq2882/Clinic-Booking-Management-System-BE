@@ -40,46 +40,38 @@ public class AddressServiceImpl implements AddressService {
     }
 
     @Override
-    public List<City> getAllCities() {
-        return cityRepository.findAll();
-    }
-
-    @Override
     public List<CityResponse> getCities() {
-        List<CityResponse> cities = new ArrayList<>();
-        for (City city : getAllCities()) {
-            cities.add(CityResponse.builder()
-                    .cityId(city.getCityId())
-                    .cityName(city.getCityName())
-                    .build());
-        }
-        return cities;
+        return cityRepository.findAll()
+                .stream()
+                .map(city -> CityResponse.builder()
+                        .cityId(city.getCityId())
+                        .cityName(city.getCityName())
+                        .build())
+                .toList();
     }
 
     @Override
     public List<DistrictResponse> getDistrictsById(Long cityId) {
-        List<DistrictResponse> districts = new ArrayList<>();
-        for (District district : districtRepository.getDistrictsByCityId(cityId)) {
-            districts.add(DistrictResponse.builder()
-                    .districtId(district.getDistrictId())
-                    .districtName(district.getDistrictName())
-                    .cityId(cityId)
-                    .build());
-        }
-        return districts;
+        return districtRepository.getDistrictsByCityId(cityId)
+                .stream()
+                .map(district -> DistrictResponse.builder()
+                        .districtId(district.getDistrictId())
+                        .districtName(district.getDistrictName())
+                        .cityId(cityId)
+                        .build())
+                .toList();
     }
 
     @Override
     public List<WardResponse> getWardsById(Long districtId) {
-        List<WardResponse> wards = new ArrayList<>();
-        for (Ward ward : wardRepository.getWardsByDistrictId(districtId)) {
-            wards.add(WardResponse.builder()
-                    .wardId(ward.getWardId())
-                    .wardName(ward.getWardName())
-                    .districtId(districtId)
-                    .build());
-        }
-        return wards;
+        return wardRepository.getWardsByDistrictId(districtId)
+                .stream()
+                .map(ward -> WardResponse.builder()
+                        .wardId(ward.getWardId())
+                        .wardName(ward.getWardName())
+                        .districtId(districtId)
+                        .build())
+                .toList();
     }
 
     public List<City> getCities(CityDTO[] cities) {
@@ -88,13 +80,14 @@ public class AddressServiceImpl implements AddressService {
                         .cityId(cityDTO.getCode())
                         .cityName(cityDTO.getName())
                         .build())
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public List<District> getDistricts(CityDTO[] cities) {
         List<District> districtList = new ArrayList<>();
         for (CityDTO cityDTO : cities) {
-            List<District> districts = cityDTO.getDistricts().stream()
+            List<District> districts = cityDTO.getDistricts()
+                    .stream()
                     .map(districtDTO -> District.builder()
                             .districtId(districtDTO.getCode())
                             .districtName(districtDTO.getName())
@@ -119,17 +112,16 @@ public class AddressServiceImpl implements AddressService {
     }
 
     public List<Ward> getWards(List<District> districtList) {
-        List<Ward> wardList = new ArrayList<>();
-        for (District district : districtList) {
-            for (Ward ward : district.getWards()) {
-                wardList.add(Ward.builder()
-                        .wardId(ward.getWardId())
-                        .wardName(ward.getWardName())
-                        .district(district)
-                        .build());
-            }
-        }
-        return wardList;
+        return districtList
+                .stream()
+                .flatMap(district -> district.getWards().stream()
+                        .map(ward -> Ward.builder()
+                                .wardId(ward.getWardId())
+                                .wardName(ward.getWardName())
+                                .district(district)
+                                .build()
+                        )
+                ).toList();
     }
 
 
