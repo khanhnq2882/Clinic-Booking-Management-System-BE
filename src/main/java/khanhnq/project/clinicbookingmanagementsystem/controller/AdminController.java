@@ -157,14 +157,24 @@ public class AdminController {
     @PostMapping("/import-bookings-from-excel")
     public ResponseEntity<String> importBookingsFromExcel (@RequestParam("file") MultipartFile file){
         try {
+            String responseMessage;
             String excelType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
             if (!excelType.equals(file.getContentType())) {
                 return MessageResponse.getResponseMessage("Invalid file excel.", HttpStatus.BAD_REQUEST);
             }
             BookingImportResponse bookingImportResponse = adminService.importBookingsFromExcel(file.getInputStream());
             bookingRepository.saveAll(bookingImportResponse.getValidBookings());
-            return MessageResponse.getResponseMessage("Imported "+ bookingImportResponse.getValidBookings().size() +" records successfully, "
-                    + bookingImportResponse.getInvalidBookings().size() +" records failed. Failed records may be due to duplicate bookings or no doctor available at the selected time.", HttpStatus.OK);
+            if (bookingImportResponse.getInvalidBookings().size() == 0) {
+                responseMessage = "Successfully imported all rows from excel file.";
+            } else {
+                StringBuilder rowsErrorMessage = new StringBuilder();
+                for (BookingExcelResponse bookingExcelResponse : bookingImportResponse.getInvalidBookings()) {
+                    rowsErrorMessage.append(bookingExcelResponse.getRowIndex()+1).append(",");
+                }
+                responseMessage = "Successfully imported "+bookingImportResponse.getValidBookings().size()+" rows from excel file. " +
+                        "Rows "+rowsErrorMessage+" were imported unsuccessfully.Please check your booking information again.";
+            }
+            return MessageResponse.getResponseMessage(responseMessage, HttpStatus.OK);
         } catch (IOException e) {
             return MessageResponse.getResponseMessage("Failed to store data from file excel.", HttpStatus.BAD_REQUEST);
         }

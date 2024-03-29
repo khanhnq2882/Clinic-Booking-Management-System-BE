@@ -11,5 +11,5 @@ import java.util.List;
 @Builder
 public class BookingImportResponse {
     private List<Booking> validBookings;
-    private List<Booking> invalidBookings;
+    private List<BookingExcelResponse> invalidBookings;
 }

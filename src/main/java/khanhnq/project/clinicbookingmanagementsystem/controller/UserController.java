@@ -2,7 +2,6 @@ package khanhnq.project.clinicbookingmanagementsystem.controller;
 
 import jakarta.validation.Valid;
 import khanhnq.project.clinicbookingmanagementsystem.dto.DoctorDTO;
-import khanhnq.project.clinicbookingmanagementsystem.dto.SkillDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.WorkScheduleDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Specialization;
 import khanhnq.project.clinicbookingmanagementsystem.repository.SpecializationRepository;
@@ -28,11 +27,6 @@ public class UserController {
     private final UserService userService;
     private final SpecializationRepository specializationRepository;
     private final MethodsCommon methodsCommon;
-
-    @GetMapping("/skills")
-    public ResponseEntity<List<SkillDTO>> getAllSkills() {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(userService.getAllSkills());
-    }
 
     @GetMapping("/specializations")
     public ResponseEntity<List<Specialization>> getAllSpecializations() {

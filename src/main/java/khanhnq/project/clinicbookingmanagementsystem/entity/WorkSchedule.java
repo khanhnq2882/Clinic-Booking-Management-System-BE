@@ -23,10 +23,11 @@ public class WorkSchedule {
     @Column(name = "end_time", columnDefinition = "TIME")
     private LocalTime endTime;
 
+    @ManyToOne
+    @JoinColumn(name = "day_of_week_id")
+    private DaysOfWeek daysOfWeek;
+
     @OneToMany(mappedBy = "workSchedule", cascade = CascadeType.PERSIST)
     private Set<Booking> bookings;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id")
-    private User user;
 }

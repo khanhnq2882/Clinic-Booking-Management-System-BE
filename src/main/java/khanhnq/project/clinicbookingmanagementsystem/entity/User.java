@@ -1,10 +1,10 @@
 package khanhnq.project.clinicbookingmanagementsystem.entity;
 
 import java.util.*;
-import java.util.stream.Collectors;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ERoleDoctor;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EUserStatus;
 import lombok.*;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -76,46 +76,34 @@ public class User {
             inverseJoinColumns = @JoinColumn(name = "role_id"))
     private Set<Role> roles = new HashSet<>();
 
-    @Column(length = 50)
-    @Size(max = 50)
-    private String universityName;
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private ERoleDoctor roleDoctor;
 
-    //    medicalLicense, avatar, medicalDegree;
     @OneToMany(mappedBy = "user", cascade = CascadeType.PERSIST)
     private Set<File> files = new HashSet<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-    private Set<Experience> experiences;
+    private Set<Experience> experiences = new HashSet<>();
+
+    @Column
+    private String professionalDescription;
 
     @ManyToOne
     @JoinColumn(name = "specialization_id")
     private Specialization specialization;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-    private Set<WorkSchedule> workSchedules = new TreeSet<>();
-
-    @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(name = "users_skills",
-            joinColumns = @JoinColumn(name = "user_id"),
-            inverseJoinColumns = @JoinColumn(name = "skill_id"))
-    private Set<Skill> skills = new HashSet<>();
-
-    @Column
-    private String describeExperiences;
+    private List<DaysOfWeek> daysOfWeeks;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-    private Set<Booking> bookings;
+    private Set<Booking> bookings = new HashSet<>();
 
     @ManyToOne
     @JoinColumn(name = "clinic_id")
     private Clinic clinic;
 
-    public Set<String> roleNames() {
-        return roles.stream().map(role -> role.getRoleName().name()).collect(Collectors.toSet());
-    }
-
     public String specializationName() {
         return specialization.getSpecializationName();
     }
-
 }

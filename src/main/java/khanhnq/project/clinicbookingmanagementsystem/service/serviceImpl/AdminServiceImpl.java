@@ -24,7 +24,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
@@ -158,7 +160,7 @@ public class AdminServiceImpl implements AdminService {
                         .specializationId(specialization.getSpecializationId())
                         .specializationName(specialization.getSpecializationName())
                         .build())
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
@@ -170,7 +172,7 @@ public class AdminServiceImpl implements AdminService {
                         .serviceCategoryName(serviceCategory.getServiceCategoryName())
                         .specializationId(specializationId)
                         .build())
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
@@ -203,7 +205,7 @@ public class AdminServiceImpl implements AdminService {
                     ServicesDTO servicesResponse = ServicesMapper.SERVICES_MAPPER.mapToServicesResponse(services);
                     servicesResponse.setServiceCategoryName(services.serviceCategoryName());
                     return servicesResponse;
-                }).collect(Collectors.toList());
+                }).toList();
         return ServicesResponse.builder()
                 .totalItems(servicesPage.getTotalElements())
                 .totalPages(servicesPage.getTotalPages())
@@ -367,14 +369,15 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public BookingImportResponse importBookingsFromExcel(InputStream inputStream) {
         try {
-            List<BookingExcelDTO> bookingExcelList = new ArrayList<>();
+            List<BookingExcelResponse> bookingExcelResponses = new ArrayList<>();
             Sheet sheet = new XSSFWorkbook(inputStream).getSheet("bookings");
             if (sheet == null) {
                 throw new ResourceException("Sheet named 'bookings' doesn't exist.", HttpStatus.BAD_REQUEST);
             }
             List<Row> rows = Lists.newArrayList(sheet.rowIterator());
             for (int indexRow = 1; indexRow < rows.size(); indexRow++) {
-                BookingExcelDTO bookingExcel = new BookingExcelDTO();
+                BookingExcelResponse bookingExcelResponse = new BookingExcelResponse();
+                bookingExcelResponse.setRowIndex(indexRow);
                 List<Cell> cells = methodsCommon.getAllCells(rows.get(indexRow));
                 for (int indexCell = 0; indexCell < cells.size(); indexCell++) {
                     Map<Integer, String> headerCellIndex = bookingHeaderCellIndex(rows.get(0));
@@ -382,32 +385,32 @@ public class AdminServiceImpl implements AdminService {
                     methodsCommon.checkBlankType(cells.get(indexCell), indexRow, colName);
                     switch (colName) {
                         case "Full Name" ->
-                                checkFullName(cells.get(indexCell), indexRow, colName, bookingExcel);
+                                checkFullName(cells.get(indexCell), indexRow, colName, bookingExcelResponse);
                         case "Date Of Birth" ->
-                                bookingExcel.setDateOfBirth(checkFormatDate(cells.get(indexCell), indexRow, colName));
+                                bookingExcelResponse.getBookingExcelDTO().setDateOfBirth(checkFormatDate(cells.get(indexCell), indexRow, colName));
                         case "Gender" ->
-                                checkGender(cells.get(indexCell), indexRow, colName, bookingExcel);
+                                checkGender(cells.get(indexCell), indexRow, colName, bookingExcelResponse);
                         case "Phone Number" ->
-                                bookingExcel.setPhoneNumber(methodsCommon.getPhoneNumberFromExcel(cells.get(indexCell), indexRow, colName));
+                                bookingExcelResponse.getBookingExcelDTO().setPhoneNumber(methodsCommon.getPhoneNumberFromExcel(cells.get(indexCell), indexRow, colName));
                         case "Address" ->
-                                bookingExcel.setAddress(methodsCommon.getAddressFromExcel(cells.get(indexCell), indexRow, colName));
+                                bookingExcelResponse.getBookingExcelDTO().setAddress(methodsCommon.getAddressFromExcel(cells.get(indexCell), indexRow, colName));
                         case "Appointment Date" ->
-                                bookingExcel.setAppointmentDate(checkFormatDate(cells.get(indexCell), indexRow, colName));
+                                bookingExcelResponse.getBookingExcelDTO().setAppointmentDate(checkFormatDate(cells.get(indexCell), indexRow, colName));
                         case "Specialization" ->
-                                checkSpecificationName(cells.get(indexCell), indexRow, colName, bookingExcel);
+                                checkSpecificationName(cells.get(indexCell), indexRow, colName, bookingExcelResponse);
                         case "Start Time" ->
-                                bookingExcel.setStartTime(methodsCommon.checkNumericType(cells.get(indexCell), indexRow, colName).getLocalDateTimeCellValue().toLocalTime());
+                                bookingExcelResponse.getBookingExcelDTO().setStartTime(methodsCommon.checkNumericType(cells.get(indexCell), indexRow, colName).getLocalDateTimeCellValue().toLocalTime());
                         case "End Time" ->
-                                bookingExcel.setEndTime(methodsCommon.checkNumericType(cells.get(indexCell), indexRow, colName).getLocalDateTimeCellValue().toLocalTime());
+                                bookingExcelResponse.getBookingExcelDTO().setEndTime(methodsCommon.checkNumericType(cells.get(indexCell), indexRow, colName).getLocalDateTimeCellValue().toLocalTime());
                         case "Describe Symptoms" ->
-                                bookingExcel.setDescribeSymptoms(methodsCommon.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue());
+                                bookingExcelResponse.getBookingExcelDTO().setDescribeSymptoms(methodsCommon.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue());
                         default -> {
                         }
                     }
                 }
-                bookingExcelList.add(bookingExcel);
+                bookingExcelResponses.add(bookingExcelResponse);
             }
-            return filterExcelBookingList(bookingExcelList);
+            return filterExcelBookingList(bookingExcelResponses);
         } catch (IOException e) {
             throw new ResourceException("Failed to import data from file excel.", HttpStatus.BAD_REQUEST);
         }
@@ -495,60 +498,70 @@ public class AdminServiceImpl implements AdminService {
         return date;
     }
 
-    private void checkFullName (Cell cell, int indexRow, String colName, BookingExcelDTO bookingExcelDTO) {
+    private void checkFullName (Cell cell, int indexRow, String colName, BookingExcelResponse bookingExcelResponse) {
         String fullName = methodsCommon.checkStringType(cell, indexRow, colName).getStringCellValue();
-        bookingExcelDTO.setFirstName(fullName.split(" ")[0]);
-        bookingExcelDTO.setLastName(fullName.substring(fullName.split(" ")[0].length() + 1));
+        bookingExcelResponse.getBookingExcelDTO().setFirstName(fullName.split(" ")[0]);
+        bookingExcelResponse.getBookingExcelDTO().setLastName(fullName.substring(fullName.split(" ")[0].length() + 1));
     }
 
-    private void checkGender (Cell cell, int indexRow, String colName, BookingExcelDTO bookingExcelDTO) {
+    private void checkGender (Cell cell, int indexRow, String colName, BookingExcelResponse bookingExcelResponse) {
         String gender = methodsCommon.checkStringType(cell, indexRow, colName).getStringCellValue();
         if (!gender.equalsIgnoreCase("Male") && !gender.equalsIgnoreCase("Female")) {
             throw new ResourceException("Import failed. "+ colName +" in row " + (indexRow + 1) + " must be 'Male' or 'Female'.", HttpStatus.BAD_REQUEST);
         }
-        bookingExcelDTO.setGender(gender.equalsIgnoreCase("Male") ? 1 : 0);
+        bookingExcelResponse.getBookingExcelDTO().setGender(gender.equalsIgnoreCase("Male") ? 1 : 0);
     }
 
-    private void checkSpecificationName (Cell cell, int indexRow, String colName, BookingExcelDTO bookingExcelDTO) {
+    private void checkSpecificationName (Cell cell, int indexRow, String colName, BookingExcelResponse bookingExcelResponse) {
         String specializationName = methodsCommon.checkStringType(cell, indexRow, colName).getStringCellValue();
         Specialization specialization = specializationRepository.getSpecializationBySpecializationName(specializationName);
         if (Objects.isNull(specialization)) {
             throw new ResourceException("Import failed. Specialization named " + specializationName + " is not exist.", HttpStatus.BAD_REQUEST);
         }
-        bookingExcelDTO.setSpecializationName(specializationName);
+        bookingExcelResponse.getBookingExcelDTO().setSpecializationName(specializationName);
     }
 
-    public BookingImportResponse filterExcelBookingList (List<BookingExcelDTO> bookingExcelList) {
+    public BookingImportResponse filterExcelBookingList (List<BookingExcelResponse> bookingExcelResponses) {
         BookingImportResponse bookingImportResponse = new BookingImportResponse();
-        List<BookingExcelDTO> invalidBookings = new ArrayList<>();
-        for (BookingExcelDTO bookingExcel : bookingExcelList) {
-            Specialization specialization = specializationRepository.getSpecializationBySpecializationName(bookingExcel.getSpecializationName());
-            User doctor = userRepository.getUserFromExcel(specialization.getSpecializationId(), bookingExcel.getStartTime(), bookingExcel.getEndTime());
+        List<BookingExcelResponse> invalidBookings = new ArrayList<>();
+        for (BookingExcelResponse bookingExcelResponse : bookingExcelResponses) {
+            Specialization specialization = specializationRepository.getSpecializationBySpecializationName(bookingExcelResponse.getBookingExcelDTO().getSpecializationName());
+            LocalDate appointmentDate = bookingExcelResponse.getBookingExcelDTO().getAppointmentDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+            User doctor = userRepository.getUserFromExcel(specialization.getSpecializationId(), appointmentDate.getDayOfWeek(),
+                    bookingExcelResponse.getBookingExcelDTO().getStartTime(), bookingExcelResponse.getBookingExcelDTO().getEndTime());
             if (Objects.isNull(doctor)) {
-                invalidBookings.add(bookingExcel);
+                invalidBookings.add(bookingExcelResponse);
                 continue;
             }
-            bookingRepository.getBookingsByDoctorId(doctor.getUserId()).forEach(booking -> {
-                Date appointmentDate = booking.getAppointmentDate();
+            bookingRepository.getBookingsByDoctor(doctor.getUserId()).forEach(booking -> {
                 LocalTime startTime = booking.getWorkSchedule().getStartTime();
                 LocalTime endTime = booking.getWorkSchedule().getEndTime();
-                if (bookingExcel.getAppointmentDate().equals(appointmentDate) && bookingExcel.getStartTime().equals(startTime) && bookingExcel.getEndTime().equals(endTime)) {
-                    invalidBookings.add(bookingExcel);
+                if (bookingExcelResponse.getBookingExcelDTO().getAppointmentDate().equals(booking.getAppointmentDate())
+                        && bookingExcelResponse.getBookingExcelDTO().getStartTime().equals(startTime)
+                        && bookingExcelResponse.getBookingExcelDTO().getEndTime().equals(endTime)) {
+                    invalidBookings.add(bookingExcelResponse);
                 }
             });
         }
-        bookingImportResponse.setInvalidBookings(convertToBookingList(invalidBookings));
-        bookingExcelList.removeAll(invalidBookings);
-        bookingImportResponse.setValidBookings(convertToBookingList(bookingExcelList));
+        bookingImportResponse.setInvalidBookings(invalidBookings);
+        if (invalidBookings.size() > 0) {
+            invalidBookings.stream()
+                    .map(BookingExcelResponse::getBookingExcelDTO)
+                    .forEach(bookingExcelDTO -> bookingExcelResponses.removeIf(response -> response.getBookingExcelDTO().equals(bookingExcelDTO)));
+        }
+        bookingImportResponse.setValidBookings(convertToBookingList(bookingExcelResponses));
         return bookingImportResponse;
     }
 
-    public List<Booking> convertToBookingList (List<BookingExcelDTO> bookingExcelDTOS) {
-        List<Booking> bookings = bookingExcelDTOS
+    public List<Booking> convertToBookingList (List<BookingExcelResponse> bookingExcelResponses) {
+        List<Booking> bookings = bookingExcelResponses
                 .stream()
-                .map(bookingExcelDTO -> {
-                    Booking booking = BookingMapper.BOOKING_MAPPER.mapExcelToBooking(bookingExcelDTO);
-                    WorkSchedule workSchedule = workScheduleRepository.getWorkScheduleByTime(bookingExcelDTO.getSpecializationName(),bookingExcelDTO.getStartTime(), bookingExcelDTO.getEndTime());
+                .map(bookingExcelResponse -> {
+                    Booking booking = BookingMapper.BOOKING_MAPPER.mapExcelToBooking(bookingExcelResponse.getBookingExcelDTO());
+                    LocalDate appointmentDate = bookingExcelResponse.getBookingExcelDTO().getAppointmentDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+                    WorkSchedule workSchedule = workScheduleRepository.getWorkScheduleByTime(
+                            bookingExcelResponse.getBookingExcelDTO().getSpecializationName(), appointmentDate.getDayOfWeek(),
+                            bookingExcelResponse.getBookingExcelDTO().getStartTime(), bookingExcelResponse.getBookingExcelDTO().getEndTime());
                     booking.setWorkSchedule(workSchedule);
                     return booking;
                 }).toList();
@@ -560,16 +573,16 @@ public class AdminServiceImpl implements AdminService {
         Long maxServiceCode;
         if (bookingRepository.findAll().size() == 0) {
             maxServiceCode = 1L;
-            for (int i=0; i<bookings.size(); i++) {
-                bookings.get(i).setBookingCode("BC"+(maxServiceCode++));
+            for (Booking booking : bookings) {
+                booking.setBookingCode("BC" + (maxServiceCode++));
             }
         } else {
             maxServiceCode = Collections.max(bookingRepository.findAll()
                     .stream()
                     .map(booking -> Long.parseLong(booking.getBookingCode().substring(2)))
                     .toList());
-            for (int i=0; i<bookings.size(); i++) {
-                bookings.get(i).setBookingCode("BC"+(++maxServiceCode));
+            for (Booking booking : bookings) {
+                booking.setBookingCode("BC" + (++maxServiceCode));
             }
         }
     }
