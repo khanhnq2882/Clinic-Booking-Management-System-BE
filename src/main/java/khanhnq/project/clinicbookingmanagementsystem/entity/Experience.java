@@ -11,7 +11,7 @@ import lombok.*;
 @AllArgsConstructor
 @Table(name = "experience")
 @Builder
-public class Experience {
+public class Experience extends BaseEntity{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long experienceId;

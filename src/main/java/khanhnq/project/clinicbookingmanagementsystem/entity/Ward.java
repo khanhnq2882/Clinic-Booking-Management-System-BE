@@ -3,7 +3,6 @@ package khanhnq.project.clinicbookingmanagementsystem.entity;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
-import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -13,7 +12,7 @@ import java.util.Set;
 @AllArgsConstructor
 @Table(name = "ward")
 @Builder
-public class Ward {
+public class Ward extends BaseEntity{
     @Id
     private Long wardId;
 

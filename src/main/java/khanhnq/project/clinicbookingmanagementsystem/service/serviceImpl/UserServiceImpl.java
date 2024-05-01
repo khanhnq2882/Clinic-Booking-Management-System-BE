@@ -1,19 +1,18 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
+import khanhnq.project.clinicbookingmanagementsystem.constant.MessageConstants;
 import khanhnq.project.clinicbookingmanagementsystem.dto.DoctorDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.WorkScheduleDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EBookingStatus;
-import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceException;
+import khanhnq.project.clinicbookingmanagementsystem.exception.BusinessException;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.BookingMapper;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
 import khanhnq.project.clinicbookingmanagementsystem.request.BookingAppointmentRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import khanhnq.project.clinicbookingmanagementsystem.service.UserService;
-import khanhnq.project.clinicbookingmanagementsystem.service.common.MethodsCommon;
 import lombok.AllArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import java.text.DateFormat;
@@ -29,19 +28,19 @@ public class UserServiceImpl implements UserService {
     private final WorkScheduleRepository workScheduleRepository;
     private final BookingRepository bookingRepository;
     private final AuthService authService;
-    private final MethodsCommon methodsCommon;
+    private final CommonServiceImpl commonServiceImpl;
 
     @Override
     public String updateProfile(UserProfileRequest profileRequest) {
         User currentUser = authService.getCurrentUser();
-        methodsCommon.updateProfile(profileRequest, currentUser);
+        commonServiceImpl.updateProfile(profileRequest, currentUser);
         userRepository.save(currentUser);
-        return "Update profile successfully.";
+        return MessageConstants.UPDATE_PROFILE_SUCCESS;
     }
 
     @Override
     public String uploadAvatar(MultipartFile multipartFile) {
-        return methodsCommon.uploadFile(multipartFile, "avatar");
+        return commonServiceImpl.uploadFile(multipartFile, "avatar");
     }
 
     @Override
@@ -79,8 +78,8 @@ public class UserServiceImpl implements UserService {
         for (Booking booking : bookingRepository.findAll()) {
             if (bookingAppointmentRequest.getWorkScheduleId().equals(booking.getWorkSchedule().getWorkScheduleId())
             && appointmentDate.equals(booking.getAppointmentDate().toString())) {
-                throw new ResourceException("You cannot schedule an appointment at time "
-                        + Objects.requireNonNull(workSchedule).getStartTime() +" - "+ workSchedule.getEndTime() +" on day "+appointmentDate, HttpStatus.BAD_REQUEST);
+                throw new BusinessException("You cannot schedule an appointment at time "
+                        + Objects.requireNonNull(workSchedule).getStartTime() +" - "+ workSchedule.getEndTime() +" on day "+appointmentDate);
             }
         }
         Booking bookingAppointment = BookingMapper.BOOKING_MAPPER.mapToBooking(bookingAppointmentRequest);
@@ -88,12 +87,13 @@ public class UserServiceImpl implements UserService {
                 .specificAddress(bookingAppointmentRequest.getSpecificAddress())
                 .ward(wardRepository.findById(bookingAppointmentRequest.getWardId()).orElse(null))
                 .build());
-        bookingAppointment.setBookingCode(methodsCommon.bookingCode());
+        bookingAppointment.setBookingCode(commonServiceImpl.bookingCode());
         bookingAppointment.setWorkSchedule(workSchedule);
         bookingAppointment.setStatus(EBookingStatus.PENDING);
         bookingAppointment.setUser(currentUser);
         bookingRepository.save(bookingAppointment);
         return "Booking appointment successfully.";
     }
+
 
 }

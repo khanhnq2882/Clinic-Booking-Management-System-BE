@@ -13,7 +13,7 @@ import java.util.Set;
 @AllArgsConstructor
 @Table(name = "clinic")
 @Builder
-public class Clinic {
+public class Clinic extends BaseEntity{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long clinicId;

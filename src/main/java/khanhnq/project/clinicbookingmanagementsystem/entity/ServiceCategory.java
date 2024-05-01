@@ -13,7 +13,7 @@ import java.util.Set;
 @AllArgsConstructor
 @Table(name = "service_category")
 @Builder
-public class ServiceCategory {
+public class ServiceCategory extends BaseEntity{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long serviceCategoryId;
@@ -23,7 +23,7 @@ public class ServiceCategory {
 
     @NotBlank
     @Size(max = 255)
-    @Column(nullable = false, length = 255)
+    @Column(nullable = false)
     private String description;
 
     @ManyToOne

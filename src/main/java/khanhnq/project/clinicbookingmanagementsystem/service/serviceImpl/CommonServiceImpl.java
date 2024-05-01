@@ -1,7 +1,9 @@
-package khanhnq.project.clinicbookingmanagementsystem.service.common;
+package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
-import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceException;
+import khanhnq.project.clinicbookingmanagementsystem.exception.BusinessException;
+import khanhnq.project.clinicbookingmanagementsystem.exception.FileUploadFailedException;
+import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceAlreadyExistException;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.UserMapper;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
 import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
@@ -14,10 +16,8 @@ import org.apache.poi.ss.usermodel.*;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import org.springframework.validation.BindingResult;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.util.*;
@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 
 @Component
 @AllArgsConstructor
-public class MethodsCommon {
+public class CommonServiceImpl {
 
     private final UserRepository userRepository;
     private final WorkScheduleRepository workScheduleRepository;
@@ -106,31 +106,31 @@ public class MethodsCommon {
 
     public Cell checkBlankType (Cell cell, int rowIndex, String colName) {
         if (cell.getCellType() == CellType.BLANK) {
-            throw new ResourceException("Import data failed. The value of column named '" + colName + "' in row " + (rowIndex + 1) + " can't be blank.", HttpStatus.BAD_REQUEST);
+            throw new BusinessException("Import data failed. The value of column named '" + colName + "' in row " + (rowIndex + 1) + " can't be blank.");
         }
         return cell;
     }
 
     public Cell checkStringType (Cell cell, int rowIndex, String colName) {
         if (!cell.getCellType().equals(CellType.STRING)) {
-            throw new ResourceException("Import data failed. The value of column named '" + colName + "' in row " + (rowIndex + 1) + " must be string type.", HttpStatus.BAD_REQUEST);
+            throw new BusinessException("Import data failed. The value of column named '" + colName + "' in row " + (rowIndex + 1) + " must be string type.");
         }
         if (cell.getStringCellValue().length() > 255) {
-            throw new ResourceException("Import data failed. The value of column named '" + colName + "' in row " + (rowIndex + 1) + " has a maximum of 255 characters.", HttpStatus.BAD_REQUEST);
+            throw new BusinessException("Import data failed. The value of column named '" + colName + "' in row " + (rowIndex + 1) + " has a maximum of 255 characters.");
         }
         return cell;
     }
 
     public Cell checkNumericType (Cell cell, int rowIndex, String colName) {
         if (!cell.getCellType().equals(CellType.NUMERIC)) {
-            throw new ResourceException("Import data failed. The value of column named '" + colName + "' in row " + (rowIndex + 1) + " must be numeric type.", HttpStatus.BAD_REQUEST);
+            throw new BusinessException("Import data failed. The value of column named '" + colName + "' in row " + (rowIndex + 1) + " must be numeric type.");
         }
         return cell;
     }
 
     public Cell checkDateType (Cell cell, int rowIndex, String colName) {
         if (!DateUtil.isCellDateFormatted(checkNumericType(cell, rowIndex, colName))) {
-            throw new ResourceException("Import data failed. The value of column named '" + colName + "' in row " + (rowIndex + 1) + " must be date type.", HttpStatus.BAD_REQUEST);
+            throw new BusinessException("Import data failed. The value of column named '" + colName + "' in row " + (rowIndex + 1) + " must be date type.");
         }
         return cell;
     }
@@ -168,7 +168,7 @@ public class MethodsCommon {
     public String getPhoneNumberFromExcel (Cell cell, int indexRow, String colName) {
         String phoneNumber = checkStringType(cell, indexRow, colName).getStringCellValue();
         if (!phoneNumber.matches("^0[2|3|5|7|8|9][0-9]{8}$")) {
-            throw new ResourceException("Import failed. Phone number is in wrong format.", HttpStatus.BAD_REQUEST);
+            throw new BusinessException("Import failed. Phone number is in wrong format.");
         }
         return phoneNumber;
     }
@@ -176,22 +176,22 @@ public class MethodsCommon {
     public Address getAddressFromExcel (Cell cell, int indexRow, String colName) {
         List<String> strings = Arrays.asList(checkStringType(cell, indexRow, colName).getStringCellValue().split(","));
         if (strings.size() < 3) {
-            throw new ResourceException("Invalid address. Must contain at least information about wards, districts, and cities of Vietnam and separated by commas.", HttpStatus.BAD_REQUEST);
+            throw new BusinessException("Invalid address. Must contain at least information about wards, districts, and cities of Vietnam and separated by commas.");
         }
         String wardName = strings.get(strings.size() - 3).trim();
         String districtName = strings.get(strings.size() - 2).trim();
         String cityName = strings.get(strings.size() - 1).trim();
         List<Ward> wards = wardRepository.getWardsByWardName(wardName);
         if (wards.size() == 0) {
-            throw new ResourceException("Ward named '"+ wardName +"' of column "+ colName +", row "+ indexRow +" doesn't exist.", HttpStatus.BAD_REQUEST);
+            throw new BusinessException("Ward named '"+ wardName +"' of column "+ colName +", row "+ indexRow +" doesn't exist.");
         }
         List<District> districts = districtRepository.getDistrictsByDistrictName(districtName);
         if (districts.size() == 0) {
-            throw new ResourceException("District named '"+ districtName +"' of column "+ colName +", row "+ indexRow +" doesn't exist.", HttpStatus.BAD_REQUEST);
+            throw new BusinessException("District named '"+ districtName +"' of column "+ colName +", row "+ indexRow +" doesn't exist.");
         }
         List<City> cities = cityRepository.getCitiesByCityName(cityName);
         if (cities.size() == 0) {
-            throw new ResourceException("City named '"+ cityName +"' of column "+ colName +", row "+ indexRow +" doesn't exist.", HttpStatus.BAD_REQUEST);
+            throw new BusinessException("City named '"+ cityName +"' of column "+ colName +", row "+ indexRow +" doesn't exist.");
         }
         Address address = wards.stream()
                 .flatMap(ward -> districts.stream()
@@ -248,24 +248,24 @@ public class MethodsCommon {
         }
     }
 
-    public List<FileResponse> getAllFiles(Long userId) {
-        return fileService.loadFilesByUserId(userId).map(file -> {
-            String fileUrl = ServletUriComponentsBuilder.fromCurrentContextPath().path("/admin/files/").path(file.getFileId().toString()).toUriString();
-            return new FileResponse(file.getFilePath().split("/")[1], file.getFilePath().split("/")[2], fileUrl);
-        }).collect(Collectors.toList());
-    }
-
-    public Set<WorkSchedule> filterWorkSchedules(Set<WorkSchedule> workSchedulesRequest, Long specializationId) {
-        Set<WorkSchedule> resultWorkSchedule = workSchedulesRequest;
-        for (User doctor : groupDoctorsBySpecialization().get(specializationId)) {
-            resultWorkSchedule = resultWorkSchedule.stream()
-                    .filter(request -> groupWorkScheduleByDoctor().get(doctor.getUserId()).stream()
-                            .noneMatch(workSchedule -> workSchedule.getStartTime().equals(request.getStartTime())
-                                    && workSchedule.getEndTime().equals(request.getEndTime())))
-                    .collect(Collectors.toSet());
-        }
-        return resultWorkSchedule;
-    }
+//    public List<FileResponse> getAllFiles(Long userId) {
+//        return fileService.loadFilesByUserId(userId).map(file -> {
+//            String fileUrl = ServletUriComponentsBuilder.fromCurrentContextPath().path("/admin/files/").path(file.getFileId().toString()).toUriString();
+//            return new FileResponse(file.getFilePath().split("/")[1], file.getFilePath().split("/")[2], fileUrl);
+//        }).collect(Collectors.toList());
+//    }
+//
+//    public Set<WorkSchedule> filterWorkSchedules(Set<WorkSchedule> workSchedulesRequest, Long specializationId) {
+//        Set<WorkSchedule> resultWorkSchedule = workSchedulesRequest;
+//        for (User doctor : groupDoctorsBySpecialization().get(specializationId)) {
+//            resultWorkSchedule = resultWorkSchedule.stream()
+//                    .filter(request -> groupWorkScheduleByDoctor().get(doctor.getUserId()).stream()
+//                            .noneMatch(workSchedule -> workSchedule.getStartTime().equals(request.getStartTime())
+//                                    && workSchedule.getEndTime().equals(request.getEndTime())))
+//                    .collect(Collectors.toSet());
+//        }
+//        return resultWorkSchedule;
+//    }
 
     public AddressResponse getAddress(Booking booking) {
         Address address = addressRepository.findById(booking.getAddress().getAddressId()).orElse(null);
@@ -287,42 +287,30 @@ public class MethodsCommon {
                 file.setFilePath(currentUser.getUsername()+"/"+typeImage+"/"+ StringUtils.cleanPath(Objects.requireNonNull(multipartFile.getOriginalFilename())));
                 file.setData(multipartFile.getBytes());
                 file.setUser(currentUser);
+                file.setUpdatedBy(currentUser.getUsername());
                 currentUser.getFiles().add(file);
             } else {
                 file = fileRepository.getFileByType(typeImage, currentUser.getUserId());
                 file.setFilePath(currentUser.getUsername()+"/"+typeImage+"/"+StringUtils.cleanPath(Objects.requireNonNull(multipartFile.getOriginalFilename())));
                 file.setData(multipartFile.getBytes());
                 file.setUser(currentUser);
+                file.setUpdatedBy(currentUser.getUsername());
             }
             fileRepository.save(file);
             userRepository.save(currentUser);
-            return "Uploaded the file" +typeImage+ " successfully: " + multipartFile.getOriginalFilename();
+            return "Uploaded " +typeImage+ " file successfully: " + multipartFile.getOriginalFilename();
         } catch (Exception e) {
-            throw new ResourceException("Could not upload the file"+ typeImage+ " : " + multipartFile.getOriginalFilename() + ". Error: " + e.getMessage(), HttpStatus.EXPECTATION_FAILED);
-        }
-    }
-
-    public void handleErrors (BindingResult bindingResult) {
-        if(bindingResult.hasErrors()){
-            Map<String, String> errors= new HashMap<>();
-            bindingResult.getFieldErrors().forEach(
-                    error -> errors.put(error.getField(), error.getDefaultMessage()));
-            String errorMsg = "";
-            for (String key: errors.keySet()) {
-                errorMsg += key + " : " + errors.get(key) + " ; ";
-            }
-            throw new ResourceException(errorMsg, HttpStatus.BAD_REQUEST);
+            throw new FileUploadFailedException("Could not upload "+ typeImage+ " file: " + multipartFile.getOriginalFilename() + ". Error: " + e.getMessage());
         }
     }
 
     public void updateProfile (UserProfileRequest profileRequest, User currentUser) {
-        List<User> users = userRepository.findAll().stream().filter(user -> Objects.nonNull(user.getPhoneNumber())).toList();
-        for (User user : users) {
-            if (profileRequest.getPhoneNumber().equals(user.getPhoneNumber())) {
-                throw new ResourceException("Phone number is already existed.", HttpStatus.BAD_REQUEST);
-            }
-        }
+        userRepository.findAll().stream().filter(user -> Objects.nonNull(user.getPhoneNumber())).toList().forEach(user -> {
+            if (profileRequest.getPhoneNumber().equals(user.getPhoneNumber()))
+                throw new ResourceAlreadyExistException("Phone number", profileRequest.getPhoneNumber());
+        });
         UserMapper.USER_MAPPER.mapToUser(currentUser, profileRequest);
+        currentUser.setUpdatedBy(currentUser.getUsername());
         currentUser.setAddress(Address.builder()
                 .specificAddress(profileRequest.getSpecificAddress())
                 .ward(wardRepository.findById(profileRequest.getWardId()).orElse(null))

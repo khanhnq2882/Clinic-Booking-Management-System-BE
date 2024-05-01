@@ -12,7 +12,7 @@ import java.util.Set;
 @AllArgsConstructor
 @Table(name = "specialization")
 @Builder
-public class Specialization {
+public class Specialization extends BaseEntity{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long specializationId;

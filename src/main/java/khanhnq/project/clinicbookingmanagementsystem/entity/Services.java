@@ -12,7 +12,7 @@ import lombok.*;
 @AllArgsConstructor
 @Table(name = "service")
 @Builder
-public class Services {
+public class Services extends BaseEntity{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long serviceId;

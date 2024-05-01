@@ -12,7 +12,7 @@ import java.util.Set;
 @AllArgsConstructor
 @Table(name = "work_schedule")
 @Builder
-public class WorkSchedule {
+public class WorkSchedule extends BaseEntity{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long workScheduleId;

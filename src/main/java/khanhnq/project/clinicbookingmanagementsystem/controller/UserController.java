@@ -9,12 +9,10 @@ import khanhnq.project.clinicbookingmanagementsystem.request.BookingAppointmentR
 import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
 import khanhnq.project.clinicbookingmanagementsystem.response.MessageResponse;
 import khanhnq.project.clinicbookingmanagementsystem.service.UserService;
-import khanhnq.project.clinicbookingmanagementsystem.service.common.MethodsCommon;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
@@ -26,16 +24,13 @@ import java.util.List;
 public class UserController {
     private final UserService userService;
     private final SpecializationRepository specializationRepository;
-    private final MethodsCommon methodsCommon;
-
     @GetMapping("/specializations")
     public ResponseEntity<List<Specialization>> getAllSpecializations() {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(specializationRepository.findAll());
     }
 
     @PostMapping("/update-profile")
-    public ResponseEntity<String> updateProfile(@Valid @RequestBody UserProfileRequest userProfileRequest, BindingResult bindingResult) {
-        methodsCommon.handleErrors(bindingResult);
+    public ResponseEntity<String> updateProfile(@Valid @RequestBody UserProfileRequest userProfileRequest) {
         return MessageResponse.getResponseMessage(userService.updateProfile(userProfileRequest), HttpStatus.OK);
     }
 

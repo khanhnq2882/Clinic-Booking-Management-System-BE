@@ -5,16 +5,14 @@ import khanhnq.project.clinicbookingmanagementsystem.annotation.EmailConstraint;
 import khanhnq.project.clinicbookingmanagementsystem.annotation.PasswordConstraint;
 import lombok.*;
 import org.hibernate.validator.constraints.Length;
-import java.util.HashSet;
 import java.util.Set;
 
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
 public class RegisterRequest {
 
     @NotNull(message = "User name can't be empty.")
-    @Length(max = 20, message = "User name has a maximum of 20 characters")
+    @Length(min = 5, max = 20, message = "Username must have a minimum of 5 characters and a maximum of 20 characters")
     private String username;
 
     @EmailConstraint
@@ -23,5 +21,5 @@ public class RegisterRequest {
     @PasswordConstraint
     private String password;
 
-    private Set<String> roles = new HashSet<>();
+    private Set<String> roles;
 }

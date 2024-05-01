@@ -13,6 +13,5 @@ public class ChangePasswordRequest {
     @PasswordConstraint
     private String newPassword;
 
-    @PasswordConstraint
     private String confirmPassword;
 }

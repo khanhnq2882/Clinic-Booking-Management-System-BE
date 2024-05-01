@@ -12,7 +12,7 @@ import java.util.List;
 @AllArgsConstructor
 @Table(name = "district")
 @Builder
-public class District {
+public class District extends BaseEntity{
     @Id
     private Long districtId;
 

@@ -1,11 +1,12 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
+import khanhnq.project.clinicbookingmanagementsystem.constant.MessageConstants;
+import khanhnq.project.clinicbookingmanagementsystem.exception.BusinessException;
+import khanhnq.project.clinicbookingmanagementsystem.exception.UnauthorizedException;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.*;
-import khanhnq.project.clinicbookingmanagementsystem.service.common.MethodsCommon;
 import khanhnq.project.clinicbookingmanagementsystem.dto.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EServiceStatus;
-import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceException;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
 import khanhnq.project.clinicbookingmanagementsystem.request.ServiceCategoryRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.ServiceRequest;
@@ -17,7 +18,6 @@ import org.apache.commons.compress.utils.Lists;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.data.domain.Page;
-import org.springframework.http.HttpStatus;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -41,17 +41,17 @@ public class AdminServiceImpl implements AdminService {
     private final ServicesRepository servicesRepository;
     private final BookingRepository bookingRepository;
     private final WorkScheduleRepository workScheduleRepository;
-    private final MethodsCommon methodsCommon;
+    private final CommonServiceImpl commonServiceImpl;
     private final Workbook workbook = new XSSFWorkbook();
 
     @Override
     public UserResponse getAllUsers(int page, int size, String[] sorts) {
-        Page<User> userPage = userRepository.getAllUsers(methodsCommon.pagingSort(page, size, sorts));
+        Page<User> userPage = userRepository.getAllUsers(commonServiceImpl.pagingSort(page, size, sorts));
         List<UserDTO> users = userPage.getContent()
                 .stream()
                 .map(user -> {
                     UserDTO userDTO = UserMapper.USER_MAPPER.mapToUserDTO(user);
-                    userDTO.setUserAddress(methodsCommon.getAddress(user));
+                    userDTO.setUserAddress(commonServiceImpl.getAddress(user));
                     return userDTO;
                 }).collect(Collectors.toList());
         return UserResponse.builder()
@@ -64,13 +64,13 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public DoctorResponse getAllDoctors(int page, int size, String[] sorts) {
-        Page<User> doctorPage = userRepository.getAllDoctors(methodsCommon.pagingSort(page, size, sorts));
+        Page<User> doctorPage = userRepository.getAllDoctors(commonServiceImpl.pagingSort(page, size, sorts));
         List<DoctorDTO> doctors = doctorPage.getContent().stream().map(user -> {
             DoctorDTO doctorDTO = UserMapper.USER_MAPPER.mapToDoctorResponse(user);
             if (user.getSpecialization() != null) {
                 doctorDTO.setSpecializationName(user.specializationName());
             }
-            doctorDTO.setDoctorAddress(methodsCommon.getAddress(user));
+            doctorDTO.setDoctorAddress(commonServiceImpl.getAddress(user));
             return doctorDTO;
         }).collect(Collectors.toList());
         return DoctorResponse.builder()
@@ -85,7 +85,7 @@ public class AdminServiceImpl implements AdminService {
     public String addServiceCategory(ServiceCategoryRequest serviceCategoryRequest) {
         User currentUser = authService.getCurrentUser();
         if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_ADMIN"))) {
-            throw new ResourceException("You do not have permission to add service category.", HttpStatus.UNAUTHORIZED);
+            throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
         }
         Specialization specialization = specializationRepository.findById(serviceCategoryRequest.getSpecializationId()).orElse(null);
         ServiceCategory serviceCategory = ServiceCategoryMapper.SERVICE_CATEGORY_MAPPER.mapToServiceCategory(serviceCategoryRequest);
@@ -98,13 +98,13 @@ public class AdminServiceImpl implements AdminService {
     public String addService(ServiceRequest serviceRequest) {
         User currentUser = authService.getCurrentUser();
         if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_ADMIN"))) {
-            throw new ResourceException("You do not have permission to add service.", HttpStatus.UNAUTHORIZED);
+            throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
         }
         ServiceCategory serviceCategory = serviceCategoryRepository.findById(serviceRequest.getServiceCategoryId()).orElse(null);
         Services services = ServicesMapper.SERVICES_MAPPER.mapToServices(serviceRequest);
         services.setStatus(EServiceStatus.ACTIVE);
         services.setServiceCategory(serviceCategory);
-        methodsCommon.serviceCode(services, Objects.requireNonNull(serviceCategory));
+        commonServiceImpl.serviceCode(services, Objects.requireNonNull(serviceCategory));
         servicesRepository.save(services);
         return "Add service successfully.";
     }
@@ -127,11 +127,11 @@ public class AdminServiceImpl implements AdminService {
     public String updateService(ServiceRequest serviceRequest, Long serviceId) {
         User currentUser = authService.getCurrentUser();
         if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_ADMIN"))) {
-            throw new ResourceException("You do not have permission to update service category.", HttpStatus.UNAUTHORIZED);
+            throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
         }
         Services service = servicesRepository.findById(serviceId).orElse(null);
         ServiceCategory serviceCategory = serviceCategoryRepository.findById(serviceRequest.getServiceCategoryId()).orElse(null);
-        methodsCommon.serviceCode(service, Objects.requireNonNull(serviceCategory));
+        commonServiceImpl.serviceCode(service, Objects.requireNonNull(serviceCategory));
         Objects.requireNonNull(service).setServiceCategory(serviceCategory);
         service.setServiceName(serviceRequest.getServiceName());
         service.setPrice(serviceRequest.getPrice());
@@ -146,7 +146,7 @@ public class AdminServiceImpl implements AdminService {
                 .stream()
                 .map(user -> {
                     UserDTO userDTO = UserMapper.USER_MAPPER.mapToUserDTO(user);
-                    userDTO.setUserAddress(methodsCommon.getAddress(user));
+                    userDTO.setUserAddress(commonServiceImpl.getAddress(user));
                     return userDTO;
                 })
                 .toList();
@@ -177,7 +177,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public ServiceCategoryResponse getAllServiceCategories(int page, int size, String[] sorts) {
-        Page<ServiceCategory> serviceCategoryPage = serviceCategoryRepository.findAll(methodsCommon.pagingSort(page, size, sorts));
+        Page<ServiceCategory> serviceCategoryPage = serviceCategoryRepository.findAll(commonServiceImpl.pagingSort(page, size, sorts));
         List<ServiceCategoryDTO> serviceCategories = serviceCategoryPage.getContent()
                 .stream()
                 .map(serviceCategory -> ServiceCategoryDTO.builder()
@@ -198,7 +198,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public ServicesResponse getAllServices(int page, int size, String[] sorts) {
-        Page<Services> servicesPage = servicesRepository.findAll(methodsCommon.pagingSort(page, size, sorts));
+        Page<Services> servicesPage = servicesRepository.findAll(commonServiceImpl.pagingSort(page, size, sorts));
         List<ServicesDTO> servicesResponses = servicesPage.getContent()
                 .stream()
                 .map(services -> {
@@ -230,7 +230,7 @@ public class AdminServiceImpl implements AdminService {
     public String updateServiceCategory(ServiceCategoryRequest serviceCategoryRequest, Long serviceCategoryId) {
         User currentUser = authService.getCurrentUser();
         if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_ADMIN"))) {
-            throw new ResourceException("You do not have permission to update service category.", HttpStatus.UNAUTHORIZED);
+            throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
         }
         ServiceCategory serviceCategory = serviceCategoryRepository.findById(serviceCategoryId).orElse(null);
         Objects.requireNonNull(serviceCategory).setSpecialization(specializationRepository.findById(serviceCategoryRequest.getSpecializationId()).orElse(null));
@@ -247,26 +247,26 @@ public class AdminServiceImpl implements AdminService {
             Sheet sheet = workbook.createSheet("Users");
             String[] headers = {"User Code", "Email", "Full Name", "Date Of Birth",
                     "Gender", "Phone Number", "Address", "Status"};
-            methodsCommon.createHeader(workbook, sheet, headers);
+            commonServiceImpl.createHeader(workbook, sheet, headers);
             int firstRow = 1;
             for (UserDTO userDTO : users) {
                 Row currentRow = sheet.createRow(firstRow++);
                 String fullName = userDTO.getFirstName() + " " + userDTO.getLastName();
                 AddressResponse userAddress = userDTO.getUserAddress();
                 String address = userAddress.getSpecificAddress() + ", " + userAddress.getWardName() + ", " + userAddress.getDistrictName() + ", " + userAddress.getCityName();
-                methodsCommon.createCell(workbook, currentRow, 0, userDTO.getUserCode());
-                methodsCommon.createCell(workbook, currentRow, 1, userDTO.getEmail());
-                methodsCommon.createCell(workbook, currentRow, 2, (Objects.isNull(userDTO.getFirstName()) && Objects.isNull(userDTO.getLastName())) ? " " : fullName);
-                methodsCommon.createCell(workbook, currentRow, 3, Objects.isNull(userDTO.getDateOfBirth()) ? " " : userDTO.getDateOfBirth());
-                methodsCommon.createCell(workbook, currentRow, 4, userDTO.getGender() == 1 ? "Male" : "Female");
-                methodsCommon.createCell(workbook, currentRow, 5, Objects.isNull(userDTO.getPhoneNumber()) ? " " : userDTO.getPhoneNumber());
-                methodsCommon.createCell(workbook, currentRow, 6, Objects.isNull(userDTO.getUserAddress().getSpecificAddress()) ? " " : address);
-                methodsCommon.createCell(workbook, currentRow, 7, userDTO.getStatus());
+                commonServiceImpl.createCell(workbook, currentRow, 0, userDTO.getUserCode());
+                commonServiceImpl.createCell(workbook, currentRow, 1, userDTO.getEmail());
+                commonServiceImpl.createCell(workbook, currentRow, 2, (Objects.isNull(userDTO.getFirstName()) && Objects.isNull(userDTO.getLastName())) ? " " : fullName);
+                commonServiceImpl.createCell(workbook, currentRow, 3, Objects.isNull(userDTO.getDateOfBirth()) ? " " : userDTO.getDateOfBirth());
+                commonServiceImpl.createCell(workbook, currentRow, 4, userDTO.getGender() == 1 ? "Male" : "Female");
+                commonServiceImpl.createCell(workbook, currentRow, 5, Objects.isNull(userDTO.getPhoneNumber()) ? " " : userDTO.getPhoneNumber());
+                commonServiceImpl.createCell(workbook, currentRow, 6, Objects.isNull(userDTO.getUserAddress().getSpecificAddress()) ? " " : address);
+                commonServiceImpl.createCell(workbook, currentRow, 7, userDTO.getStatus());
             }
             workbook.write(outputStream);
             return new ByteArrayInputStream(outputStream.toByteArray());
         } catch (IOException ex) {
-            throw new ResourceException("Failed export data to file excel.", HttpStatus.BAD_REQUEST);
+            throw new BusinessException(MessageConstants.FAILED_EXPORT_DATA_EXCEL);
         }
     }
 
@@ -276,35 +276,33 @@ public class AdminServiceImpl implements AdminService {
             List<ServiceCategory> serviceCategories = new ArrayList<>();
             Sheet sheet = new XSSFWorkbook(inputStream).getSheet("service category");
             if (sheet == null) {
-                throw new ResourceException("Sheet named 'service category' doesn't not exist.", HttpStatus.BAD_REQUEST);
+                throw new BusinessException("Sheet named 'service category' don't exist.");
             }
             List<Row> rows = Lists.newArrayList(sheet.rowIterator());
             for (int indexRow = 1; indexRow < rows.size(); indexRow++) {
                 ServiceCategory serviceCategory = new ServiceCategory();
-                List<Cell> cells = methodsCommon.getAllCells(rows.get(indexRow));
+                List<Cell> cells = commonServiceImpl.getAllCells(rows.get(indexRow));
                 for (int indexCell = 0; indexCell < cells.size(); indexCell++) {
                     String colName = serviceCategoryHeaderCellIndex(rows.get(0)).get(indexCell);
-                    methodsCommon.checkBlankType(cells.get(indexCell), indexRow, colName);
+                    commonServiceImpl.checkBlankType(cells.get(indexCell), indexRow, colName);
                     switch (colName) {
                         case "Service Category Name" -> {
-                            String serviceCategoryName = methodsCommon.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue();
+                            String serviceCategoryName = commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue();
                             List<String> serviceCategoriesName = serviceCategoryRepository.findAll().stream().map(ServiceCategory::getServiceCategoryName).toList();
                             if (serviceCategoriesName.stream().anyMatch(s -> s.equalsIgnoreCase(serviceCategoryName))) {
-                                throw new ResourceException("Import data failed. Service category named '" + serviceCategoryName + "' is already existed.", HttpStatus.BAD_REQUEST);
+                                throw new BusinessException("Import data failed. Service category named '" + serviceCategoryName + "' is already existed.");
                             }
                             serviceCategory.setServiceCategoryName(serviceCategoryName);
                         }
                         case "Description" ->
-                                serviceCategory.setDescription(methodsCommon.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue());
+                                serviceCategory.setDescription(commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue());
                         case "Specialization Name" -> {
-                            String specializationName = methodsCommon.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue();
+                            String specializationName = commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue();
                             Specialization specialization = specializationRepository.getSpecializationBySpecializationName(specializationName);
                             if (Objects.isNull(specialization)) {
-                                throw new ResourceException("Import failed. Specialization named '"+specializationName+"' in row " + indexRow + " is not exist.", HttpStatus.BAD_REQUEST);
+                                throw new BusinessException("Import failed. Specialization named '"+specializationName+"' in row " + indexRow + " is not exist.");
                             }
                             serviceCategory.setSpecialization(specialization);
-                        }
-                        default -> {
                         }
                     }
                 }
@@ -312,7 +310,7 @@ public class AdminServiceImpl implements AdminService {
             }
             return serviceCategories;
         } catch (IOException e) {
-            throw new ResourceException("Failed to import data from file excel.", HttpStatus.BAD_REQUEST);
+            throw new BusinessException(MessageConstants.FAILED_IMPORT_DATA_EXCEL);
         }
     }
 
@@ -322,36 +320,36 @@ public class AdminServiceImpl implements AdminService {
             List<Services> services = new ArrayList<>();
             Sheet sheet = new XSSFWorkbook(inputStream).getSheet("services");
             if (sheet == null) {
-                throw new ResourceException("Sheet named 'services' doesn't exist.", HttpStatus.BAD_REQUEST);
+                throw new BusinessException("Sheet named 'services' doesn't exist.");
             }
             List<Row> rows = Lists.newArrayList(sheet.rowIterator());
             for (int indexRow = 1; indexRow < rows.size(); indexRow++) {
                 Services service = new Services();
-                List<Cell> cells = methodsCommon.getAllCells(rows.get(indexRow));
+                List<Cell> cells = commonServiceImpl.getAllCells(rows.get(indexRow));
                 for (int indexCell = 0; indexCell < cells.size(); indexCell++) {
                     String colName = serviceHeaderCellIndex(rows.get(0)).get(indexCell);
-                    methodsCommon.checkBlankType(cells.get(indexCell), indexRow, colName);
+                    commonServiceImpl.checkBlankType(cells.get(indexCell), indexRow, colName);
                     switch (colName) {
                         case "Service Name" -> {
-                            String serviceName = methodsCommon.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue();
+                            String serviceName = commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue();
                             List<String> servicesName = servicesRepository.findAll().stream().map(Services::getServiceName).toList();
                             for (String name : servicesName) {
                                 if (serviceName.equals(name)) {
-                                    throw new ResourceException("Import data failed. Service named '" + serviceName + "' is already existed.", HttpStatus.BAD_REQUEST);
+                                    throw new BusinessException("Import data failed. Service named '" + serviceName + "' is already existed.");
                                 }
                             }
                             service.setServiceName(serviceName);
                         }
                         case "Price" ->
-                                service.setPrice(methodsCommon.checkNumericType(cells.get(indexCell), indexRow, colName).getNumericCellValue());
+                                service.setPrice(commonServiceImpl.checkNumericType(cells.get(indexCell), indexRow, colName).getNumericCellValue());
                         case "Description" ->
-                                service.setDescription(methodsCommon.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue());
+                                service.setDescription(commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue());
                         case "Service Category Name" -> {
-                            ServiceCategory serviceCategory = serviceCategoryRepository.getServiceCategoriesByServiceCategoryName(methodsCommon.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue());
+                            ServiceCategory serviceCategory = serviceCategoryRepository.getServiceCategoriesByServiceCategoryName(commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue());
                             if (Objects.isNull(serviceCategory)) {
-                                throw new ResourceException("Import failed. Service category name in row " + indexRow + " is not exist.", HttpStatus.BAD_REQUEST);
+                                throw new BusinessException("Import failed. Service category name in row " + indexRow + " is not exist.");
                             }
-                            methodsCommon.serviceCode(service, serviceCategory);
+                            commonServiceImpl.serviceCode(service, serviceCategory);
                             service.setServiceCategory(serviceCategory);
                         }
                         default -> {
@@ -362,7 +360,7 @@ public class AdminServiceImpl implements AdminService {
             }
             return services;
         } catch (IOException e) {
-            throw new ResourceException("Failed to import data from file excel.", HttpStatus.BAD_REQUEST);
+            throw new BusinessException(MessageConstants.FAILED_IMPORT_DATA_EXCEL);
         }
     }
 
@@ -372,17 +370,17 @@ public class AdminServiceImpl implements AdminService {
             List<BookingExcelResponse> bookingExcelResponses = new ArrayList<>();
             Sheet sheet = new XSSFWorkbook(inputStream).getSheet("bookings");
             if (sheet == null) {
-                throw new ResourceException("Sheet named 'bookings' doesn't exist.", HttpStatus.BAD_REQUEST);
+                throw new BusinessException("Sheet named 'bookings' don't exist.");
             }
             List<Row> rows = Lists.newArrayList(sheet.rowIterator());
             for (int indexRow = 1; indexRow < rows.size(); indexRow++) {
                 BookingExcelResponse bookingExcelResponse = new BookingExcelResponse();
                 bookingExcelResponse.setRowIndex(indexRow);
-                List<Cell> cells = methodsCommon.getAllCells(rows.get(indexRow));
+                List<Cell> cells = commonServiceImpl.getAllCells(rows.get(indexRow));
                 for (int indexCell = 0; indexCell < cells.size(); indexCell++) {
                     Map<Integer, String> headerCellIndex = bookingHeaderCellIndex(rows.get(0));
                     String colName = headerCellIndex.get(indexCell);
-                    methodsCommon.checkBlankType(cells.get(indexCell), indexRow, colName);
+                    commonServiceImpl.checkBlankType(cells.get(indexCell), indexRow, colName);
                     switch (colName) {
                         case "Full Name" ->
                                 checkFullName(cells.get(indexCell), indexRow, colName, bookingExcelResponse);
@@ -391,19 +389,19 @@ public class AdminServiceImpl implements AdminService {
                         case "Gender" ->
                                 checkGender(cells.get(indexCell), indexRow, colName, bookingExcelResponse);
                         case "Phone Number" ->
-                                bookingExcelResponse.getBookingExcelDTO().setPhoneNumber(methodsCommon.getPhoneNumberFromExcel(cells.get(indexCell), indexRow, colName));
+                                bookingExcelResponse.getBookingExcelDTO().setPhoneNumber(commonServiceImpl.getPhoneNumberFromExcel(cells.get(indexCell), indexRow, colName));
                         case "Address" ->
-                                bookingExcelResponse.getBookingExcelDTO().setAddress(methodsCommon.getAddressFromExcel(cells.get(indexCell), indexRow, colName));
+                                bookingExcelResponse.getBookingExcelDTO().setAddress(commonServiceImpl.getAddressFromExcel(cells.get(indexCell), indexRow, colName));
                         case "Appointment Date" ->
                                 bookingExcelResponse.getBookingExcelDTO().setAppointmentDate(checkFormatDate(cells.get(indexCell), indexRow, colName));
                         case "Specialization" ->
                                 checkSpecificationName(cells.get(indexCell), indexRow, colName, bookingExcelResponse);
                         case "Start Time" ->
-                                bookingExcelResponse.getBookingExcelDTO().setStartTime(methodsCommon.checkNumericType(cells.get(indexCell), indexRow, colName).getLocalDateTimeCellValue().toLocalTime());
+                                bookingExcelResponse.getBookingExcelDTO().setStartTime(commonServiceImpl.checkNumericType(cells.get(indexCell), indexRow, colName).getLocalDateTimeCellValue().toLocalTime());
                         case "End Time" ->
-                                bookingExcelResponse.getBookingExcelDTO().setEndTime(methodsCommon.checkNumericType(cells.get(indexCell), indexRow, colName).getLocalDateTimeCellValue().toLocalTime());
+                                bookingExcelResponse.getBookingExcelDTO().setEndTime(commonServiceImpl.checkNumericType(cells.get(indexCell), indexRow, colName).getLocalDateTimeCellValue().toLocalTime());
                         case "Describe Symptoms" ->
-                                bookingExcelResponse.getBookingExcelDTO().setDescribeSymptoms(methodsCommon.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue());
+                                bookingExcelResponse.getBookingExcelDTO().setDescribeSymptoms(commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue());
                         default -> {
                         }
                     }
@@ -412,7 +410,7 @@ public class AdminServiceImpl implements AdminService {
             }
             return filterExcelBookingList(bookingExcelResponses);
         } catch (IOException e) {
-            throw new ResourceException("Failed to import data from file excel.", HttpStatus.BAD_REQUEST);
+            throw new BusinessException(MessageConstants.FAILED_IMPORT_DATA_EXCEL);
         }
     }
 
@@ -420,7 +418,7 @@ public class AdminServiceImpl implements AdminService {
     public List<BookingDTO> getAllBookings() {
         User currentUser = authService.getCurrentUser();
         if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_ADMIN"))) {
-            throw new ResourceException("Invalid permissions.", HttpStatus.UNAUTHORIZED);
+            throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
         }
         List<Booking> bookings = bookingRepository.findAll()
                 .stream()
@@ -429,7 +427,7 @@ public class AdminServiceImpl implements AdminService {
         return bookings.stream()
                 .map(booking -> {
                     BookingDTO bookingDTO = BookingMapper.BOOKING_MAPPER.mapToBookingDTO(booking);
-                    bookingDTO.setUserAddress(methodsCommon.getAddress(booking));
+                    bookingDTO.setUserAddress(commonServiceImpl.getAddress(booking));
                     bookingDTO.setStartTime(booking.getWorkSchedule().getStartTime().toString());
                     bookingDTO.setEndTime(booking.getWorkSchedule().getEndTime().toString());
                     return bookingDTO;
@@ -438,7 +436,7 @@ public class AdminServiceImpl implements AdminService {
 
     public Map<Integer, String> serviceCategoryHeaderCellIndex (Row row) {
         Map <Integer, String> headerCellIndex = new HashMap<>();
-        List<Cell> cellsHeader = methodsCommon.getAllCells(row);
+        List<Cell> cellsHeader = commonServiceImpl.getAllCells(row);
         for (int i = 0; i < cellsHeader.size(); i++) {
             switch (cellsHeader.get(i).getStringCellValue()) {
                 case "Service Category Name" -> headerCellIndex.put(i, "Service Category Name");
@@ -453,7 +451,7 @@ public class AdminServiceImpl implements AdminService {
 
     public Map<Integer, String> serviceHeaderCellIndex (Row row) {
         Map <Integer, String> headerCellIndex = new HashMap<>();
-        List<Cell> cellsHeader = methodsCommon.getAllCells(row);
+        List<Cell> cellsHeader = commonServiceImpl.getAllCells(row);
         for (int i = 0; i < cellsHeader.size(); i++) {
             switch (cellsHeader.get(i).getStringCellValue()) {
                 case "Service Name" -> headerCellIndex.put(i, "Service Name");
@@ -469,7 +467,7 @@ public class AdminServiceImpl implements AdminService {
 
     public Map<Integer, String> bookingHeaderCellIndex (Row row) {
         Map <Integer, String> headerCellIndex = new HashMap<>();
-        List<Cell> cellsHeader = methodsCommon.getAllCells(row);
+        List<Cell> cellsHeader = commonServiceImpl.getAllCells(row);
         for (int i = 0; i < cellsHeader.size(); i++) {
             switch (cellsHeader.get(i).getStringCellValue()) {
                 case "Full Name" -> headerCellIndex.put(i, "Full Name");
@@ -490,33 +488,33 @@ public class AdminServiceImpl implements AdminService {
     }
 
     private Date checkFormatDate (Cell cell, int indexRow, String colName) {
-        Date date = methodsCommon.checkDateType(cell, indexRow, colName).getDateCellValue();
+        Date date = commonServiceImpl.checkDateType(cell, indexRow, colName).getDateCellValue();
         DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
         if (!dateFormat.format(date).matches("^\\d{4}-(0?[1-9]|1[012])-(0?[1-9]|[12][0-9]|3[01])$")) {
-            throw new ResourceException("Import failed. "+ colName +" in row " + (indexRow + 1) + " must be yyyy-MM-dd format.", HttpStatus.BAD_REQUEST);
+            throw new BusinessException("Import failed. "+ colName +" in row " + (indexRow + 1) + " must be yyyy-MM-dd format.");
         }
         return date;
     }
 
     private void checkFullName (Cell cell, int indexRow, String colName, BookingExcelResponse bookingExcelResponse) {
-        String fullName = methodsCommon.checkStringType(cell, indexRow, colName).getStringCellValue();
+        String fullName = commonServiceImpl.checkStringType(cell, indexRow, colName).getStringCellValue();
         bookingExcelResponse.getBookingExcelDTO().setFirstName(fullName.split(" ")[0]);
         bookingExcelResponse.getBookingExcelDTO().setLastName(fullName.substring(fullName.split(" ")[0].length() + 1));
     }
 
     private void checkGender (Cell cell, int indexRow, String colName, BookingExcelResponse bookingExcelResponse) {
-        String gender = methodsCommon.checkStringType(cell, indexRow, colName).getStringCellValue();
+        String gender = commonServiceImpl.checkStringType(cell, indexRow, colName).getStringCellValue();
         if (!gender.equalsIgnoreCase("Male") && !gender.equalsIgnoreCase("Female")) {
-            throw new ResourceException("Import failed. "+ colName +" in row " + (indexRow + 1) + " must be 'Male' or 'Female'.", HttpStatus.BAD_REQUEST);
+            throw new BusinessException("Import failed. "+ colName +" in row " + (indexRow + 1) + " must be 'Male' or 'Female'.");
         }
         bookingExcelResponse.getBookingExcelDTO().setGender(gender.equalsIgnoreCase("Male") ? 1 : 0);
     }
 
     private void checkSpecificationName (Cell cell, int indexRow, String colName, BookingExcelResponse bookingExcelResponse) {
-        String specializationName = methodsCommon.checkStringType(cell, indexRow, colName).getStringCellValue();
+        String specializationName = commonServiceImpl.checkStringType(cell, indexRow, colName).getStringCellValue();
         Specialization specialization = specializationRepository.getSpecializationBySpecializationName(specializationName);
         if (Objects.isNull(specialization)) {
-            throw new ResourceException("Import failed. Specialization named " + specializationName + " is not exist.", HttpStatus.BAD_REQUEST);
+            throw new BusinessException("Import failed. Specialization named " + specializationName + " is not exist.");
         }
         bookingExcelResponse.getBookingExcelDTO().setSpecializationName(specializationName);
     }

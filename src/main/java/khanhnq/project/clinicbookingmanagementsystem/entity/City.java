@@ -11,7 +11,7 @@ import java.util.List;
 @AllArgsConstructor
 @Table(name = "city")
 @Builder
-public class City {
+public class City extends BaseEntity{
     @Id
     private Long cityId;
 

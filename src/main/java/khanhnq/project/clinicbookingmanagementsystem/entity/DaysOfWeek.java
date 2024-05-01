@@ -12,7 +12,7 @@ import java.util.List;
 @AllArgsConstructor
 @Table(name = "day_of_week")
 @Builder
-public class DaysOfWeek {
+public class DaysOfWeek extends BaseEntity{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long dayOfWeekId;

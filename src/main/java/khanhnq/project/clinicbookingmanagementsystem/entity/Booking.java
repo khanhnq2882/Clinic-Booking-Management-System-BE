@@ -14,7 +14,7 @@ import java.util.Date;
 @AllArgsConstructor
 @Table(name = "booking")
 @Builder
-public class Booking {
+public class Booking extends BaseEntity{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long bookingId;

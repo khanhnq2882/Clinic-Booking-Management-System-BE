@@ -11,7 +11,7 @@ import lombok.*;
 @AllArgsConstructor
 @Table(name = "roles")
 @Builder
-public class Role {
+public class Role extends BaseEntity{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer roleId;
