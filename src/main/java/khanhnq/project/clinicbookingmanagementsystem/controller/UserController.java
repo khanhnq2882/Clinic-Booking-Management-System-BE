@@ -20,14 +20,15 @@ import java.util.List;
 @CrossOrigin(origins = "http://localhost:4200", maxAge = 3600, allowCredentials="true")
 @RestController
 @AllArgsConstructor
-@RequestMapping("/user")
+@RequestMapping(path = "/user", produces = {MediaType.APPLICATION_JSON_VALUE})
 public class UserController {
     private final UserService userService;
-    private final SpecializationRepository specializationRepository;
-    @GetMapping("/specializations")
-    public ResponseEntity<List<Specialization>> getAllSpecializations() {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(specializationRepository.findAll());
-    }
+//    private final SpecializationRepository specializationRepository;
+
+//    @GetMapping("/specializations")
+//    public ResponseEntity<List<Specialization>> getAllSpecializations() {
+//        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(specializationRepository.findAll());
+//    }
 
     @PostMapping("/update-profile")
     public ResponseEntity<String> updateProfile(@Valid @RequestBody UserProfileRequest userProfileRequest) {

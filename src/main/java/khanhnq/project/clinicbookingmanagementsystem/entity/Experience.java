@@ -1,7 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.entity;
 
 import jakarta.persistence.*;
-import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ERoleDoctor;
 import lombok.*;
 
 @Entity
@@ -16,9 +15,8 @@ public class Experience extends BaseEntity{
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long experienceId;
 
-    @Enumerated(EnumType.STRING)
-    @Column(length = 20)
-    private ERoleDoctor position;
+    @Column(nullable = false)
+    private String position;
 
     @Column(nullable = false)
     private String specialization;
@@ -27,10 +25,10 @@ public class Experience extends BaseEntity{
     private String workPlace;
 
     @Column(nullable = false)
-    private int startWork;
+    private int yearOfStartWork;
 
     @Column(nullable = false)
-    private int endWork;
+    private int yearOfEndWork;
 
     @ManyToOne
     @JoinColumn(name = "user_id")

@@ -30,16 +30,18 @@ public class User extends BaseEntity{
     @Column(nullable = false)
     private String userCode;
 
+    @NotBlank
+    @Size(max = 20)
     @Column(nullable = false)
     private String username;
 
     @NotBlank
-    @Size(max = 50)
+    @Size(max = 30)
     @Column(nullable = false)
     private String email;
 
     @NotBlank
-    @Size(max = 120)
+    @Size(max = 50)
     @Column(nullable = false)
     private String password;
 
@@ -87,7 +89,7 @@ public class User extends BaseEntity{
     private Set<Experience> experiences = new HashSet<>();
 
     @Column
-    private String professionalDescription;
+    private String careerDescription;
 
     @ManyToOne
     @JoinColumn(name = "specialization_id")

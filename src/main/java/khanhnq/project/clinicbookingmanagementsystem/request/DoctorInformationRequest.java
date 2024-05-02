@@ -1,6 +1,7 @@
 package khanhnq.project.clinicbookingmanagementsystem.request;
 
 import khanhnq.project.clinicbookingmanagementsystem.dto.ExperienceDTO;
+import khanhnq.project.clinicbookingmanagementsystem.entity.Specialization;
 import lombok.*;
 import java.util.Set;
 
@@ -9,7 +10,7 @@ import java.util.Set;
 @NoArgsConstructor
 @Builder
 public class DoctorInformationRequest {
-    private UserProfileRequest profileRequest;
+    private Specialization specialization;
     private Set<ExperienceDTO> workExperiences;
-    private String professionalDescription;
+    private String careerDescription;
 }

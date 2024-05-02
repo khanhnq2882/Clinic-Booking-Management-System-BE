@@ -13,17 +13,18 @@ import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @CrossOrigin(origins = "http://localhost:4200", maxAge = 3600, allowCredentials="true")
 @RestController
 @AllArgsConstructor
-@RequestMapping("/auth")
+@RequestMapping(path = "/auth", produces = {MediaType.APPLICATION_JSON_VALUE})
 @Validated
 public class AuthController {
+
     private final AuthService authService;
+
     @PostMapping("/register")
     public ResponseEntity<String> register(@Valid @RequestBody RegisterRequest registerRequest) {
         return MessageResponse.getResponseMessage(authService.register(registerRequest), HttpStatus.CREATED);
@@ -51,12 +52,7 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<String> logout(HttpServletRequest request) {
-        if (request.getHeader("Authorization") != null && request.getHeader("Authorization").startsWith("Bearer ")) {
-            SecurityContextHolder.clearContext();
-        } else {
-            return MessageResponse.getResponseMessage("Logout failed.", HttpStatus.OK);
-        }
-        return MessageResponse.getResponseMessage("Logout successfully.", HttpStatus.OK);
+        return MessageResponse.getResponseMessage(authService.logout(request), HttpStatus.OK);
     }
 
 }

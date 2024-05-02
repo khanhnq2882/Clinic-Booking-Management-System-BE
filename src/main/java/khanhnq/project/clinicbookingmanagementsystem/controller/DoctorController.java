@@ -2,6 +2,7 @@ package khanhnq.project.clinicbookingmanagementsystem.controller;
 
 import khanhnq.project.clinicbookingmanagementsystem.request.DoctorInformationRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.RegisterWorkScheduleRequest;
+import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
 import khanhnq.project.clinicbookingmanagementsystem.response.BookingResponse;
 import khanhnq.project.clinicbookingmanagementsystem.response.MessageResponse;
 import khanhnq.project.clinicbookingmanagementsystem.service.DoctorService;
@@ -10,16 +11,29 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @CrossOrigin(origins = "http://localhost:4200", maxAge = 3600, allowCredentials = "true")
 @RestController
 @AllArgsConstructor
-@RequestMapping("/doctor")
+@RequestMapping(path = "/doctor", produces = {MediaType.APPLICATION_JSON_VALUE})
 public class DoctorController {
     private final DoctorService doctorService;
 
+    @PostMapping("/update-profile")
+    public ResponseEntity<String> updateProfile(@RequestBody UserProfileRequest userProfileRequest) {
+        return MessageResponse.getResponseMessage(doctorService.updateProfile(userProfileRequest), HttpStatus.OK);
+    }
+
+    @PostMapping("/upload-avatar")
+    public ResponseEntity<String> uploadAvatar(@RequestParam("avatar") MultipartFile file) {
+        return MessageResponse.getResponseMessage(doctorService.uploadAvatar(file), HttpStatus.OK);
+    }
+
     @PostMapping("/update-doctor-information")
-    public ResponseEntity<String> addDoctorInformation(@RequestBody DoctorInformationRequest doctorInformationRequest) {
+    public ResponseEntity<String> updateDoctorInformation(@RequestBody DoctorInformationRequest doctorInformationRequest,
+                                                          @RequestParam("medical-degree") MultipartFile medicalDegree,
+                                                          @RequestParam("specialty-degree") MultipartFile specialtyDegree) {
         return MessageResponse.getResponseMessage(doctorService.updateDoctorInformation(doctorInformationRequest), HttpStatus.OK);
     }
 

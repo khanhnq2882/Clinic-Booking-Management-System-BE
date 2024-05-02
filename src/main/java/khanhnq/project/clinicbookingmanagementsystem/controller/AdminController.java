@@ -28,7 +28,7 @@ import java.util.List;
 @CrossOrigin(origins = "http://localhost:4200", maxAge = 3600, allowCredentials = "true")
 @RestController
 @AllArgsConstructor
-@RequestMapping("/admin")
+@RequestMapping(path = "/admin", produces = {MediaType.APPLICATION_JSON_VALUE})
 
 public class AdminController {
     private final AdminService adminService;

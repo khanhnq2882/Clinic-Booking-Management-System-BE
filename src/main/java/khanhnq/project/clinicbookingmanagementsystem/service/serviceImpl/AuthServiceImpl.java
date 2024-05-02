@@ -1,5 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
+import jakarta.servlet.http.HttpServletRequest;
 import khanhnq.project.clinicbookingmanagementsystem.constant.MessageConstants;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ERole;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Role;
@@ -99,6 +100,16 @@ public class AuthServiceImpl implements AuthService {
         SecurityContextHolder.getContext().setAuthentication(authentication);
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
         return new JwtResponse(jwtUtils.generateTokenFromUsername(userDetails.getUsername()));
+    }
+
+    @Override
+    public String logout(HttpServletRequest request) {
+        if (request.getHeader("Authorization") != null && request.getHeader("Authorization").startsWith("Bearer ")) {
+            SecurityContextHolder.clearContext();
+        } else {
+            return MessageConstants.LOGOUT_FAILED;
+        }
+        return MessageConstants.LOGOUT_SUCCESS;
     }
 
     @Override

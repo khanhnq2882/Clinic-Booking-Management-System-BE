@@ -6,22 +6,22 @@ import khanhnq.project.clinicbookingmanagementsystem.dto.WorkScheduleDTO;
 import khanhnq.project.clinicbookingmanagementsystem.exception.BusinessException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.UnauthorizedException;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.BookingMapper;
-import khanhnq.project.clinicbookingmanagementsystem.mapper.ExperienceMapper;
 import khanhnq.project.clinicbookingmanagementsystem.request.RegisterWorkScheduleRequest;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
 import khanhnq.project.clinicbookingmanagementsystem.request.DoctorInformationRequest;
+import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
 import khanhnq.project.clinicbookingmanagementsystem.response.BookingResponse;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import khanhnq.project.clinicbookingmanagementsystem.service.DoctorService;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import java.time.DayOfWeek;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
@@ -34,22 +34,38 @@ public class DoctorServiceImpl implements DoctorService {
     private final CommonServiceImpl commonServiceImpl;
 
     @Override
+    public String updateProfile(UserProfileRequest userProfileRequest) {
+        User currentUser = authService.getCurrentUser();
+        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_DOCTOR"))) {
+            throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
+        }
+        commonServiceImpl.updateProfile(userProfileRequest, currentUser);
+        userRepository.save(currentUser);
+        return MessageConstants.UPDATE_PROFILE_SUCCESS;
+    }
+
+    @Override
+    public String uploadAvatar(MultipartFile multipartFile) {
+        return commonServiceImpl.uploadFile(multipartFile, "avatar");
+    }
+
+    @Override
     public String updateDoctorInformation(DoctorInformationRequest doctorInformationRequest) {
         User currentUser = authService.getCurrentUser();
         if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_DOCTOR"))) {
             throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
         }
-        commonServiceImpl.updateProfile(doctorInformationRequest.getProfileRequest(), currentUser);
-        Set<Experience> experiences = doctorInformationRequest.getWorkExperiences()
-                .stream()
-                .map(experienceDTO -> {
-                    Experience experience = ExperienceMapper.EXPERIENCE_MAPPER.mapToExperience(experienceDTO);
-                    experience.setUser(currentUser);
-                    return experience;
-                }).collect(Collectors.toSet());
-        currentUser.setProfessionalDescription(doctorInformationRequest.getProfessionalDescription());
-        currentUser.setExperiences(experiences);
-        userRepository.save(currentUser);
+//        commonServiceImpl.updateProfile(doctorInformationRequest.getProfileRequest(), currentUser);
+//        Set<Experience> experiences = doctorInformationRequest.getWorkExperiences()
+//                .stream()
+//                .map(experienceDTO -> {
+//                    Experience experience = ExperienceMapper.EXPERIENCE_MAPPER.mapToExperience(experienceDTO);
+//                    experience.setUser(currentUser);
+//                    return experience;
+//                }).collect(Collectors.toSet());
+//        currentUser.setProfessionalDescription(doctorInformationRequest.getProfessionalDescription());
+//        currentUser.setExperiences(experiences);
+//        userRepository.save(currentUser);
         return "Update doctor information successfully.";
     }
 
