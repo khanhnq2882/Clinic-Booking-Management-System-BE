@@ -1,5 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.repository;
 
+import khanhnq.project.clinicbookingmanagementsystem.entity.DaysOfWeek;
 import khanhnq.project.clinicbookingmanagementsystem.entity.WorkSchedule;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -16,12 +17,8 @@ public interface WorkScheduleRepository extends JpaRepository<WorkSchedule, Long
             "WHERE d.user.userId = :userId")
     List<WorkSchedule> getWorkSchedulesByUserId(@Param("userId") Long userId);
 
-    @Query(value = "SELECT ws FROM WorkSchedule AS ws " +
-            "INNER JOIN ws.daysOfWeek AS d " +
-            "INNER JOIN d.user AS u " +
-            "WHERE u.specialization.specializationId = :specializationId " +
-            "AND d.dayOfWeek = :dayOfWeek")
-    List<WorkSchedule> getWorkSchedulesByDay (@Param("specializationId") Long specializationId, @Param("dayOfWeek") DayOfWeek dayOfWeek);
+    @Query(value = "SELECT ws FROM WorkSchedule AS ws WHERE ws.daysOfWeek = :dayOfWeek")
+    List<WorkSchedule> getWorkSchedulesByDayOfWeek (@Param("dayOfWeek") DaysOfWeek dayOfWeek);
 
     @Query(value = "SELECT ws FROM WorkSchedule AS ws " +
             "INNER JOIN ws.daysOfWeek AS d " +

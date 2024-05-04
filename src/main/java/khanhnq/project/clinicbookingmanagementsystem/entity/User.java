@@ -4,7 +4,6 @@ import java.util.*;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ERoleDoctor;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EUserStatus;
 import lombok.*;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -40,8 +39,6 @@ public class User extends BaseEntity{
     @Column(nullable = false)
     private String email;
 
-    @NotBlank
-    @Size(max = 50)
     @Column(nullable = false)
     private String password;
 
@@ -78,10 +75,6 @@ public class User extends BaseEntity{
             inverseJoinColumns = @JoinColumn(name = "role_id"))
     private Set<Role> roles = new HashSet<>();
 
-    @Enumerated(EnumType.STRING)
-    @Column(length = 20)
-    private ERoleDoctor roleDoctor;
-
     @OneToMany(mappedBy = "user", cascade = CascadeType.PERSIST)
     private Set<File> files = new HashSet<>();
 
@@ -96,7 +89,7 @@ public class User extends BaseEntity{
     private Specialization specialization;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-    private List<DaysOfWeek> daysOfWeeks;
+    private List<DaysOfWeek> daysOfWeeks = new ArrayList<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private Set<Booking> bookings = new HashSet<>();
@@ -107,5 +100,12 @@ public class User extends BaseEntity{
 
     public String specializationName() {
         return specialization.getSpecializationName();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (Objects.isNull(o)) return false;
+        User user = (User) o;
+        return Objects.equals(this.getUserId(), user.getUserId());
     }
 }

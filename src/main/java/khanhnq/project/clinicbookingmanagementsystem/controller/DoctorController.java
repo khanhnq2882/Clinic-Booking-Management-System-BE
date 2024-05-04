@@ -31,10 +31,18 @@ public class DoctorController {
     }
 
     @PostMapping("/update-doctor-information")
-    public ResponseEntity<String> updateDoctorInformation(@RequestBody DoctorInformationRequest doctorInformationRequest,
-                                                          @RequestParam("medical-degree") MultipartFile medicalDegree,
-                                                          @RequestParam("specialty-degree") MultipartFile specialtyDegree) {
+    public ResponseEntity<String> updateDoctorInformation(@RequestBody DoctorInformationRequest doctorInformationRequest) {
         return MessageResponse.getResponseMessage(doctorService.updateDoctorInformation(doctorInformationRequest), HttpStatus.OK);
+    }
+
+    @PostMapping("/upload-medical-degree")
+    public ResponseEntity<String> uploadMedicalDegree(@RequestParam("medical-degree") MultipartFile file) {
+        return MessageResponse.getResponseMessage(doctorService.uploadMedicalDegree(file), HttpStatus.OK);
+    }
+
+    @PostMapping("/upload-specialty-degree")
+    public ResponseEntity<String> uploadSpecialtyDegree(@RequestParam("specialty-degree") MultipartFile file) {
+        return MessageResponse.getResponseMessage(doctorService.uploadSpecialtyDegree(file), HttpStatus.OK);
     }
 
     @PostMapping("/register-work-schedules")

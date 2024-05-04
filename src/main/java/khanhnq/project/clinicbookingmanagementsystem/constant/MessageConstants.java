@@ -12,4 +12,6 @@ public class MessageConstants {
     public static final String INVALID_DAY_OF_WEEK = "Day of week invalid.";
     public static final String FAILED_IMPORT_DATA_EXCEL = "Failed to import data from file excel.";
     public static final String FAILED_EXPORT_DATA_EXCEL = "Failed to export data to file excel.";
+    public static final String UPDATE_DOCTOR_INFORMATION_SUCCESS = "Successfully updated doctor information. Please wait for a response from the administrator.";
+    public static final String INVALID_WORK_SCHEDULES = "The number of work schedules must be equal to the number of shifts per day.";
 }

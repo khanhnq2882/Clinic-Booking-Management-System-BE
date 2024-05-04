@@ -2,6 +2,7 @@ package khanhnq.project.clinicbookingmanagementsystem.dto;
 
 import lombok.*;
 import java.time.LocalTime;
+import java.util.Objects;
 
 @Getter
 @Setter
@@ -9,7 +10,15 @@ import java.time.LocalTime;
 @NoArgsConstructor
 @Builder
 public class WorkScheduleDTO {
-    private Long workScheduleId;
     private LocalTime startTime;
     private LocalTime endTime;
+
+    @Override
+    public boolean equals(Object o) {
+        if (Objects.isNull(o)) return false;
+        WorkScheduleDTO workSchedule = (WorkScheduleDTO) o;
+        return Objects.equals(this.getStartTime(), workSchedule.getStartTime())
+                && Objects.equals(this.getEndTime(), workSchedule.getEndTime());
+    }
+
 }

@@ -2,10 +2,16 @@ package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
 import khanhnq.project.clinicbookingmanagementsystem.constant.MessageConstants;
 import khanhnq.project.clinicbookingmanagementsystem.dto.BookingDTO;
+import khanhnq.project.clinicbookingmanagementsystem.dto.SpecializationDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.WorkScheduleDTO;
+import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EUserStatus;
 import khanhnq.project.clinicbookingmanagementsystem.exception.BusinessException;
+import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceNotFoundException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.UnauthorizedException;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.BookingMapper;
+import khanhnq.project.clinicbookingmanagementsystem.mapper.ExperienceMapper;
+import khanhnq.project.clinicbookingmanagementsystem.mapper.SpecializationMapper;
+import khanhnq.project.clinicbookingmanagementsystem.mapper.WorkScheduleMapper;
 import khanhnq.project.clinicbookingmanagementsystem.request.RegisterWorkScheduleRequest;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
@@ -19,14 +25,15 @@ import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import java.time.DayOfWeek;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
 public class DoctorServiceImpl implements DoctorService {
     private final AuthService authService;
+    private final SpecializationRepository specializationRepository;
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
     private final WorkScheduleRepository workScheduleRepository;
@@ -55,84 +62,83 @@ public class DoctorServiceImpl implements DoctorService {
         if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_DOCTOR"))) {
             throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
         }
-//        commonServiceImpl.updateProfile(doctorInformationRequest.getProfileRequest(), currentUser);
-//        Set<Experience> experiences = doctorInformationRequest.getWorkExperiences()
-//                .stream()
-//                .map(experienceDTO -> {
-//                    Experience experience = ExperienceMapper.EXPERIENCE_MAPPER.mapToExperience(experienceDTO);
-//                    experience.setUser(currentUser);
-//                    return experience;
-//                }).collect(Collectors.toSet());
-//        currentUser.setProfessionalDescription(doctorInformationRequest.getProfessionalDescription());
-//        currentUser.setExperiences(experiences);
-//        userRepository.save(currentUser);
-        return "Update doctor information successfully.";
+        List<SpecializationDTO> specializations = specializationRepository.findAll()
+                .stream().map(SpecializationMapper.SPECIALIZATION_MAPPER::mapToSpecializationDTO).toList();
+        if (!checkSpecializationExist(specializations, doctorInformationRequest.getSpecialization())) {
+            throw new ResourceNotFoundException("Specialization",doctorInformationRequest.getSpecialization().getSpecializationName());
+        }
+        Set<Experience> experiences = doctorInformationRequest.getWorkExperiences()
+                .stream().map(experienceDTO -> {
+                    Experience experience = ExperienceMapper.EXPERIENCE_MAPPER.mapToExperience(experienceDTO);
+                    experience.setUser(currentUser);
+                    experience.setCreatedBy(currentUser.getUsername());
+                    return experience;
+                }).collect(Collectors.toSet());
+        currentUser.setSpecialization(specializationRepository.getSpecializationBySpecializationName(doctorInformationRequest.getSpecialization().getSpecializationName()));
+        currentUser.setExperiences(experiences);
+        currentUser.setCareerDescription(doctorInformationRequest.getCareerDescription());
+        currentUser.setStatus(EUserStatus.PENDING);
+        currentUser.setUpdatedBy(currentUser.getUsername());
+        userRepository.save(currentUser);
+        return MessageConstants.UPDATE_DOCTOR_INFORMATION_SUCCESS;
+    }
+
+    @Override
+    public String uploadMedicalDegree(MultipartFile file) {
+        return commonServiceImpl.uploadFile(file, "medical-degree");
+    }
+
+    @Override
+    public String uploadSpecialtyDegree(MultipartFile file) {
+        return commonServiceImpl.uploadFile(file, "specialty-degree");
     }
 
     @Override
     public String registerWorkSchedules(RegisterWorkScheduleRequest registerWorkSchedule) {
         User currentUser = authService.getCurrentUser();
-        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_DOCTOR"))) {
+        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_DOCTOR")) && currentUser.getStatus().equals(EUserStatus.PENDING)) {
             throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
         }
-        List<DaysOfWeek> daysOfWeeks = new ArrayList<>();
-        StringBuilder invalidMessage = new StringBuilder();
-        DayOfWeek dayOfWeek = registerWorkSchedule.getDayOfWeek().toInstant().atZone(ZoneId.systemDefault()).toLocalDate().getDayOfWeek();
-        if (Arrays.stream(DayOfWeek.values()).noneMatch(dayOfWeek::equals)) {
+        if (Arrays.stream(DayOfWeek.values()).noneMatch(registerWorkSchedule.getDayOfWeek()::equals)) {
             throw new BusinessException(MessageConstants.INVALID_DAY_OF_WEEK);
         }
-        if (registerWorkSchedule.getWorkSchedules().size() != registerWorkSchedule.getNumberOfShiftsPerDay()) {
-            throw new BusinessException("You have not registered for "+registerWorkSchedule.getNumberOfShiftsPerDay()+" shifts on " +dayOfWeek);
+        List<WorkScheduleDTO> newWorkSchedules = registerWorkSchedule.getWorkSchedules();
+        if (newWorkSchedules.size() != registerWorkSchedule.getNumberOfShiftsPerDay()) {
+            throw new BusinessException(MessageConstants.INVALID_WORK_SCHEDULES);
         }
-        DaysOfWeek oldDayOfWeek = dayOfWeekRepository.getDayOfWeekByDay(currentUser.getUserId(), dayOfWeek);
-        if (Objects.nonNull(oldDayOfWeek)) {
-            dayOfWeekRepository.delete(oldDayOfWeek);
+        DaysOfWeek oldDaysOfWeek = dayOfWeekRepository.getDayOfWeekByDay(currentUser.getUserId(), registerWorkSchedule.getDayOfWeek());
+        if (Objects.nonNull(oldDaysOfWeek)) {
+            dayOfWeekRepository.delete(oldDaysOfWeek);
         }
+        List<User> doctors = userRepository.getDoctorsBySpecializationId(currentUser.getSpecialization().getSpecializationId())
+                .stream().filter(user -> !user.equals(currentUser)).toList();
+        List<WorkScheduleDTO> invalidWorkSchedules = getInvalidWorkSchedules(doctors, registerWorkSchedule);
         DaysOfWeek newDayOfWeek = DaysOfWeek.builder()
-                .dayOfWeek(dayOfWeek)
-                .numberOfShiftsPerDay(registerWorkSchedule.getNumberOfShiftsPerDay())
+                .dayOfWeek(registerWorkSchedule.getDayOfWeek())
                 .user(currentUser)
                 .build();
-        List<WorkSchedule> existWorkSchedules = workScheduleRepository.getWorkSchedulesByDay(currentUser.getSpecialization().getSpecializationId(), dayOfWeek);
-        List<WorkScheduleDTO> invalidWorkSchedules = existWorkSchedules.stream()
-                .flatMap(workSchedule -> registerWorkSchedule.getWorkSchedules().stream()
-                        .filter(workScheduleDTO ->
-                                (workScheduleDTO.getStartTime().isAfter(workSchedule.getStartTime()) &&
-                                        workScheduleDTO.getEndTime().isBefore(workSchedule.getEndTime())) ||
-                                        (workScheduleDTO.getStartTime().equals(workSchedule.getStartTime()) &&
-                                                workScheduleDTO.getEndTime().equals(workSchedule.getEndTime()))
-                        )
-                ).toList();
-        registerWorkSchedule.getWorkSchedules().removeAll(invalidWorkSchedules);
-        List<WorkSchedule> newWorkSchedules = registerWorkSchedule.getWorkSchedules()
-                .stream()
-                .map(workScheduleDTO -> WorkSchedule
-                        .builder()
-                        .startTime(workScheduleDTO.getStartTime())
-                        .endTime(workScheduleDTO.getEndTime())
-                        .daysOfWeek(newDayOfWeek)
-                        .build())
-                .toList();
-        newDayOfWeek.setWorkSchedules(newWorkSchedules);
+        List<WorkSchedule> validWorkSchedules = newWorkSchedules.stream()
+                .filter(workScheduleDTO -> !invalidWorkSchedules.contains(workScheduleDTO))
+                .map(workScheduleDTO -> {
+                    WorkSchedule workSchedule = WorkScheduleMapper.WORK_SCHEDULE_MAPPER.mapToWorkSchedule(workScheduleDTO);
+                    workSchedule.setDaysOfWeek(newDayOfWeek);
+                    workSchedule.setCreatedBy(currentUser.getUsername());
+                    return workSchedule;
+                }).toList();
+        newDayOfWeek.setNumberOfShiftsPerDay(validWorkSchedules.size());
+        newDayOfWeek.setWorkSchedules(validWorkSchedules);
+        newDayOfWeek.setCreatedBy(currentUser.getUsername());
+        List<DaysOfWeek> daysOfWeeks = currentUser.getDaysOfWeeks();
         daysOfWeeks.add(newDayOfWeek);
         currentUser.setDaysOfWeeks(daysOfWeeks);
         userRepository.save(currentUser);
-        String responseMessage = "";
-        if (invalidWorkSchedules.size() == 0) {
-            responseMessage = "Successfully registered for work schedules for "+dayOfWeek;
-        } else {
-            for (WorkScheduleDTO invalidWorkSchedule : invalidWorkSchedules) {
-                invalidMessage.append(invalidWorkSchedule.getStartTime()).append(" - ").append(invalidWorkSchedule.getEndTime()).append(", ");
-            }
-            responseMessage = "Successfully registered for work schedules for "+dayOfWeek+". Except for work schedules "+invalidMessage+" because someone has already registered.";
-        }
-        return responseMessage;
+        return workSchedulesMessage(invalidWorkSchedules, registerWorkSchedule.getDayOfWeek());
     }
 
     @Override
     public String confirmedBooking(Long bookingId) {
         User currentUser = authService.getCurrentUser();
-        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_DOCTOR"))) {
+        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_DOCTOR")) && currentUser.getStatus().equals(EUserStatus.PENDING)) {
             throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
         }
         bookingRepository.confirmedBooking(bookingId);
@@ -142,7 +148,7 @@ public class DoctorServiceImpl implements DoctorService {
     @Override
     public String cancelledBooking(Long bookingId) {
         User currentUser = authService.getCurrentUser();
-        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_DOCTOR"))) {
+        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_DOCTOR")) && currentUser.getStatus().equals(EUserStatus.PENDING)) {
             throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
         }
         bookingRepository.cancelledBooking(bookingId);
@@ -168,6 +174,48 @@ public class DoctorServiceImpl implements DoctorService {
                 .currentPage(bookingPage.getNumber())
                 .bookings(bookings)
                 .build();
+    }
+
+    public boolean checkSpecializationExist(List<SpecializationDTO> specializations, SpecializationDTO specializationDTO) {
+        boolean isExist = false;
+        for (SpecializationDTO specialization : specializations) {
+            if (specialization.equals(specializationDTO)) {
+                isExist = true;
+                break;
+            }
+        }
+        return isExist;
+    }
+
+    public List<WorkScheduleDTO> getInvalidWorkSchedules (List<User> doctors, RegisterWorkScheduleRequest registerWorkSchedule) {
+        List<WorkScheduleDTO> invalidWorkSchedules = new ArrayList<>();
+        doctors.forEach(doctor -> {
+            DaysOfWeek daysOfWeek = dayOfWeekRepository.getDayOfWeekByDay(doctor.getUserId(), registerWorkSchedule.getDayOfWeek());
+            List<WorkScheduleDTO> existWorkSchedules = workScheduleRepository.getWorkSchedulesByDayOfWeek(daysOfWeek)
+                    .stream().map(WorkScheduleMapper.WORK_SCHEDULE_MAPPER::mapToWorkScheduleDTO).toList();
+            List<WorkScheduleDTO> workSchedules = registerWorkSchedule.getWorkSchedules().stream()
+                    .flatMap(newWorkSchedule -> existWorkSchedules.stream()
+                            .filter(newWorkSchedule::equals)).toList();
+            invalidWorkSchedules.addAll(workSchedules);
+        });
+        return invalidWorkSchedules;
+    }
+
+    public String workSchedulesMessage(List<WorkScheduleDTO> invalidWorkSchedules, DayOfWeek dayOfWeek) {
+        String workSchedulesMessage;
+        if (invalidWorkSchedules.size() == 0) {
+            workSchedulesMessage = "Successfully registered work schedule for " + dayOfWeek + ".";
+        } else {
+            StringBuilder invalidMessage = new StringBuilder();
+            int size = invalidWorkSchedules.size();
+            for (int i=0; i<size; i++) {
+                invalidMessage.append(invalidWorkSchedules.get(i).getStartTime()).append("-")
+                        .append(invalidWorkSchedules.get(i).getEndTime()).append((i != size-1) ? ", " : "");
+            }
+            workSchedulesMessage = "Successfully registered for work schedules for "+ dayOfWeek
+                    +". Except for work schedules "+invalidMessage+" because someone has already registered.";
+        }
+        return workSchedulesMessage;
     }
 
 }
