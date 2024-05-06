@@ -25,6 +25,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import java.time.DayOfWeek;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -99,24 +100,22 @@ public class DoctorServiceImpl implements DoctorService {
         if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_DOCTOR")) && currentUser.getStatus().equals(EUserStatus.PENDING)) {
             throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
         }
-        if (Arrays.stream(DayOfWeek.values()).noneMatch(registerWorkSchedule.getDayOfWeek()::equals)) {
+        DayOfWeek dayOfWeek = registerWorkSchedule.getDayOfWeek().toInstant().atZone(ZoneId.systemDefault()).toLocalDate().getDayOfWeek();
+        if (Arrays.stream(DayOfWeek.values()).noneMatch(dayOfWeek::equals)) {
             throw new BusinessException(MessageConstants.INVALID_DAY_OF_WEEK);
         }
         List<WorkScheduleDTO> newWorkSchedules = registerWorkSchedule.getWorkSchedules();
         if (newWorkSchedules.size() != registerWorkSchedule.getNumberOfShiftsPerDay()) {
             throw new BusinessException(MessageConstants.INVALID_WORK_SCHEDULES);
         }
-        DaysOfWeek oldDaysOfWeek = dayOfWeekRepository.getDayOfWeekByDay(currentUser.getUserId(), registerWorkSchedule.getDayOfWeek());
+        DaysOfWeek oldDaysOfWeek = dayOfWeekRepository.getDayOfWeekByDay(currentUser.getUserId(), dayOfWeek);
         if (Objects.nonNull(oldDaysOfWeek)) {
             dayOfWeekRepository.delete(oldDaysOfWeek);
         }
         List<User> doctors = userRepository.getDoctorsBySpecializationId(currentUser.getSpecialization().getSpecializationId())
                 .stream().filter(user -> !user.equals(currentUser)).toList();
         List<WorkScheduleDTO> invalidWorkSchedules = getInvalidWorkSchedules(doctors, registerWorkSchedule);
-        DaysOfWeek newDayOfWeek = DaysOfWeek.builder()
-                .dayOfWeek(registerWorkSchedule.getDayOfWeek())
-                .user(currentUser)
-                .build();
+        DaysOfWeek newDayOfWeek = DaysOfWeek.builder().dayOfWeek(dayOfWeek).user(currentUser).build();
         List<WorkSchedule> validWorkSchedules = newWorkSchedules.stream()
                 .filter(workScheduleDTO -> !invalidWorkSchedules.contains(workScheduleDTO))
                 .map(workScheduleDTO -> {
@@ -132,7 +131,7 @@ public class DoctorServiceImpl implements DoctorService {
         daysOfWeeks.add(newDayOfWeek);
         currentUser.setDaysOfWeeks(daysOfWeeks);
         userRepository.save(currentUser);
-        return workSchedulesMessage(invalidWorkSchedules, registerWorkSchedule.getDayOfWeek());
+        return workSchedulesMessage(invalidWorkSchedules, dayOfWeek);
     }
 
     @Override
@@ -190,7 +189,8 @@ public class DoctorServiceImpl implements DoctorService {
     public List<WorkScheduleDTO> getInvalidWorkSchedules (List<User> doctors, RegisterWorkScheduleRequest registerWorkSchedule) {
         List<WorkScheduleDTO> invalidWorkSchedules = new ArrayList<>();
         doctors.forEach(doctor -> {
-            DaysOfWeek daysOfWeek = dayOfWeekRepository.getDayOfWeekByDay(doctor.getUserId(), registerWorkSchedule.getDayOfWeek());
+            DaysOfWeek daysOfWeek = dayOfWeekRepository.getDayOfWeekByDay(doctor.getUserId(),
+                    registerWorkSchedule.getDayOfWeek().toInstant().atZone(ZoneId.systemDefault()).toLocalDate().getDayOfWeek());
             List<WorkScheduleDTO> existWorkSchedules = workScheduleRepository.getWorkSchedulesByDayOfWeek(daysOfWeek)
                     .stream().map(WorkScheduleMapper.WORK_SCHEDULE_MAPPER::mapToWorkScheduleDTO).toList();
             List<WorkScheduleDTO> workSchedules = registerWorkSchedule.getWorkSchedules().stream()
