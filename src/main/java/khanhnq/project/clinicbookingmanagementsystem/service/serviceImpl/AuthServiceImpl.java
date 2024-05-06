@@ -87,6 +87,10 @@ public class AuthServiceImpl implements AuthService {
             });
             Set<Role> roles = registerRequest.getRoles().stream()
                     .map(r -> roleRepository.findRoleByRoleName(ERole.valueOf(r)).get()).collect(Collectors.toSet());
+            if (roles.stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_ADMIN"))
+                    || roles.stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_DOCTOR"))) {
+                user.setStatus(EUserStatus.PENDING);
+            }
             user.setRoles(roles);
         }
         userRepository.save(user);
