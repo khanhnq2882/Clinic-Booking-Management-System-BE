@@ -61,7 +61,6 @@ public class UserServiceImpl implements UserService {
         return workScheduleRepository.getWorkSchedulesByUserId(userId)
                 .stream()
                 .map(workSchedule -> WorkScheduleDTO.builder()
-//                        .workScheduleId(workSchedule.getWorkScheduleId())
                         .startTime(workSchedule.getStartTime())
                         .endTime(workSchedule.getEndTime())
                         .build())
@@ -94,6 +93,5 @@ public class UserServiceImpl implements UserService {
         bookingRepository.save(bookingAppointment);
         return "Booking appointment successfully.";
     }
-
 
 }

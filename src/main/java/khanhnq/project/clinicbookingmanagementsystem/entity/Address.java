@@ -26,6 +26,9 @@ public class Address extends BaseEntity{
     @JoinColumn(name = "ward_id")
     private Ward ward;
 
+    @OneToOne(mappedBy = "address")
+    private User user;
+
     @JsonBackReference
     @ManyToOne
     @JoinColumn(name = "clinic_id")

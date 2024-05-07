@@ -3,8 +3,6 @@ package khanhnq.project.clinicbookingmanagementsystem.controller;
 import jakarta.validation.Valid;
 import khanhnq.project.clinicbookingmanagementsystem.dto.DoctorDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.WorkScheduleDTO;
-import khanhnq.project.clinicbookingmanagementsystem.entity.Specialization;
-import khanhnq.project.clinicbookingmanagementsystem.repository.SpecializationRepository;
 import khanhnq.project.clinicbookingmanagementsystem.request.BookingAppointmentRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
 import khanhnq.project.clinicbookingmanagementsystem.response.MessageResponse;
@@ -23,12 +21,6 @@ import java.util.List;
 @RequestMapping(path = "/user", produces = {MediaType.APPLICATION_JSON_VALUE})
 public class UserController {
     private final UserService userService;
-//    private final SpecializationRepository specializationRepository;
-
-//    @GetMapping("/specializations")
-//    public ResponseEntity<List<Specialization>> getAllSpecializations() {
-//        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(specializationRepository.findAll());
-//    }
 
     @PostMapping("/update-profile")
     public ResponseEntity<String> updateProfile(@Valid @RequestBody UserProfileRequest userProfileRequest) {

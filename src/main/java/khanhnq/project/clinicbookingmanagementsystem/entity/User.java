@@ -66,7 +66,6 @@ public class User extends BaseEntity{
     private Address address;
 
     @Enumerated(EnumType.STRING)
-    @Column(length = 20)
     private EUserStatus status;
 
     @ManyToMany(fetch = FetchType.EAGER, cascade = CascadeType.PERSIST)
@@ -81,7 +80,7 @@ public class User extends BaseEntity{
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private Set<Experience> experiences = new HashSet<>();
 
-    @Column
+    @Size(max = 10)
     private String careerDescription;
 
     @ManyToOne

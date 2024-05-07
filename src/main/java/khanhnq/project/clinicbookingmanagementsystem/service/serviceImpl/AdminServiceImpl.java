@@ -28,7 +28,6 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.*;
-import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -46,14 +45,17 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public UserResponse getAllUsers(int page, int size, String[] sorts) {
+        User currentUser = authService.getCurrentUser();
+        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_ADMIN"))) {
+            throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
+        }
         Page<User> userPage = userRepository.getAllUsers(commonServiceImpl.pagingSort(page, size, sorts));
-        List<UserDTO> users = userPage.getContent()
-                .stream()
+        List<UserDTO> users = userPage.getContent().stream()
                 .map(user -> {
                     UserDTO userDTO = UserMapper.USER_MAPPER.mapToUserDTO(user);
                     userDTO.setUserAddress(commonServiceImpl.getAddress(user));
                     return userDTO;
-                }).collect(Collectors.toList());
+                }).toList();
         return UserResponse.builder()
                 .totalItems(userPage.getTotalElements())
                 .totalPages(userPage.getTotalPages())
@@ -64,15 +66,20 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public DoctorResponse getAllDoctors(int page, int size, String[] sorts) {
+        User currentUser = authService.getCurrentUser();
+        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_ADMIN"))) {
+            throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
+        }
         Page<User> doctorPage = userRepository.getAllDoctors(commonServiceImpl.pagingSort(page, size, sorts));
-        List<DoctorDTO> doctors = doctorPage.getContent().stream().map(user -> {
-            DoctorDTO doctorDTO = UserMapper.USER_MAPPER.mapToDoctorResponse(user);
-            if (user.getSpecialization() != null) {
-                doctorDTO.setSpecializationName(user.specializationName());
-            }
-            doctorDTO.setDoctorAddress(commonServiceImpl.getAddress(user));
-            return doctorDTO;
-        }).collect(Collectors.toList());
+        List<DoctorDTO> doctors = doctorPage.getContent().stream()
+                .map(user -> {
+                    DoctorDTO doctorDTO = UserMapper.USER_MAPPER.mapToDoctorResponse(user);
+                    if (user.getSpecialization() != null) {
+                        doctorDTO.setSpecializationName(user.specializationName());
+                    }
+                    doctorDTO.setDoctorAddress(commonServiceImpl.getAddress(user));
+                    return doctorDTO;
+                }).toList();
         return DoctorResponse.builder()
                 .totalItems(doctorPage.getTotalElements())
                 .totalPages(doctorPage.getTotalPages())
@@ -148,8 +155,7 @@ public class AdminServiceImpl implements AdminService {
                     UserDTO userDTO = UserMapper.USER_MAPPER.mapToUserDTO(user);
                     userDTO.setUserAddress(commonServiceImpl.getAddress(user));
                     return userDTO;
-                })
-                .toList();
+                }).toList();
     }
 
     @Override
@@ -187,7 +193,7 @@ public class AdminServiceImpl implements AdminService {
                         .specializationId(serviceCategory.getSpecialization().getSpecializationId())
                         .specializationName(serviceCategory.getSpecialization().getSpecializationName())
                         .build())
-                .collect(Collectors.toList());
+                .toList();
         return ServiceCategoryResponse.builder()
                 .totalItems(serviceCategoryPage.getTotalElements())
                 .totalPages(serviceCategoryPage.getTotalPages())

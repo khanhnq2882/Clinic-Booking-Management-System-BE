@@ -8,9 +8,7 @@ import khanhnq.project.clinicbookingmanagementsystem.mapper.UserMapper;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
 import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
 import khanhnq.project.clinicbookingmanagementsystem.response.AddressResponse;
-import khanhnq.project.clinicbookingmanagementsystem.response.FileResponse;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
-import khanhnq.project.clinicbookingmanagementsystem.service.FileService;
 import lombok.AllArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
 import org.springframework.data.domain.PageRequest;
@@ -19,9 +17,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Component
 @AllArgsConstructor
@@ -30,10 +26,9 @@ public class CommonServiceImpl {
     private final UserRepository userRepository;
     private final WorkScheduleRepository workScheduleRepository;
     private final SpecializationRepository specializationRepository;
-    private final FileService fileService;
-    private final WardRepository wardRepository;
-    private final DistrictRepository districtRepository;
     private final CityRepository cityRepository;
+    private final DistrictRepository districtRepository;
+    private final WardRepository wardRepository;
     private final AddressRepository addressRepository;
     private final ServicesRepository servicesRepository;
     private final BookingRepository bookingRepository;
@@ -311,9 +306,11 @@ public class CommonServiceImpl {
         });
         UserMapper.USER_MAPPER.mapToUser(currentUser, profileRequest);
         currentUser.setUpdatedBy(currentUser.getUsername());
-        currentUser.setAddress(Address.builder()
+        Address address = Address.builder()
                 .specificAddress(profileRequest.getSpecificAddress())
                 .ward(wardRepository.findById(profileRequest.getWardId()).orElse(null))
-                .build());
+                .build();
+        address.setCreatedBy(currentUser.getUsername());
+        currentUser.setAddress(address);
     }
 }
