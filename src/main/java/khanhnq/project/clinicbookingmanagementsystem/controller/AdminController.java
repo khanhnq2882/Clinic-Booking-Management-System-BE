@@ -3,6 +3,7 @@ package khanhnq.project.clinicbookingmanagementsystem.controller;
 import khanhnq.project.clinicbookingmanagementsystem.dto.BookingDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.ServiceCategoryDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.ServicesDTO;
+import khanhnq.project.clinicbookingmanagementsystem.dto.SpecializationDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.File;
 import khanhnq.project.clinicbookingmanagementsystem.entity.ServiceCategory;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Services;
@@ -13,7 +14,7 @@ import khanhnq.project.clinicbookingmanagementsystem.request.ServiceCategoryRequ
 import khanhnq.project.clinicbookingmanagementsystem.request.ServiceRequest;
 import khanhnq.project.clinicbookingmanagementsystem.response.*;
 import khanhnq.project.clinicbookingmanagementsystem.service.AdminService;
-import khanhnq.project.clinicbookingmanagementsystem.service.FileService;
+import khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl.CommonServiceImpl;
 import lombok.AllArgsConstructor;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
@@ -32,7 +33,7 @@ import java.util.List;
 
 public class AdminController {
     private final AdminService adminService;
-    private final FileService fileService;
+    private final CommonServiceImpl commonService;
     private final ServiceCategoryRepository serviceCategoryRepository;
     private final ServicesRepository serviceRepository;
     private final BookingRepository bookingRepository;
@@ -46,10 +47,9 @@ public class AdminController {
 
     @GetMapping("/files/{fileId}")
     public ResponseEntity<byte[]> getFile(@PathVariable Long fileId) {
-        File file = fileService.getFileById(fileId);
-        String fileName = file.getFilePath().split("/")[2];
+        File file = commonService.getFileById(fileId);
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getFileName() + "\"")
                 .body(file.getData());
     }
 
@@ -61,7 +61,7 @@ public class AdminController {
     }
 
     @GetMapping("/get-all-specializations")
-    public ResponseEntity<List<SpecializationResponse>> getAllSpecializations() {
+    public ResponseEntity<List<SpecializationDTO>> getAllSpecializations() {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllSpecializations());
     }
 

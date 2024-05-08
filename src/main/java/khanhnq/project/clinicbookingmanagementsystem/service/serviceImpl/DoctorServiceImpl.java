@@ -6,6 +6,7 @@ import khanhnq.project.clinicbookingmanagementsystem.dto.SpecializationDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.WorkScheduleDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EUserStatus;
 import khanhnq.project.clinicbookingmanagementsystem.exception.BusinessException;
+import khanhnq.project.clinicbookingmanagementsystem.exception.ForbiddenException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceNotFoundException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.UnauthorizedException;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.BookingMapper;
@@ -43,10 +44,7 @@ public class DoctorServiceImpl implements DoctorService {
 
     @Override
     public String updateProfile(UserProfileRequest userProfileRequest) {
-        User currentUser = authService.getCurrentUser();
-        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_DOCTOR"))) {
-            throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
-        }
+        User currentUser = checkAccess();
         commonServiceImpl.updateProfile(userProfileRequest, currentUser);
         userRepository.save(currentUser);
         return MessageConstants.UPDATE_PROFILE_SUCCESS;
@@ -59,14 +57,12 @@ public class DoctorServiceImpl implements DoctorService {
 
     @Override
     public String updateDoctorInformation(DoctorInformationRequest doctorInformationRequest) {
-        User currentUser = authService.getCurrentUser();
-        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_DOCTOR"))) {
-            throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
-        }
+        User currentUser = checkAccess();
         List<SpecializationDTO> specializations = specializationRepository.findAll()
                 .stream().map(SpecializationMapper.SPECIALIZATION_MAPPER::mapToSpecializationDTO).toList();
+        String specializationName = doctorInformationRequest.getSpecialization().getSpecializationName();
         if (!checkSpecializationExist(specializations, doctorInformationRequest.getSpecialization())) {
-            throw new ResourceNotFoundException("Specialization",doctorInformationRequest.getSpecialization().getSpecializationName());
+            throw new ResourceNotFoundException("Specialization", specializationName);
         }
         Set<Experience> experiences = doctorInformationRequest.getWorkExperiences()
                 .stream().map(experienceDTO -> {
@@ -75,7 +71,8 @@ public class DoctorServiceImpl implements DoctorService {
                     experience.setCreatedBy(currentUser.getUsername());
                     return experience;
                 }).collect(Collectors.toSet());
-        currentUser.setSpecialization(specializationRepository.getSpecializationBySpecializationName(doctorInformationRequest.getSpecialization().getSpecializationName()));
+        Specialization specialization  = specializationRepository.getSpecializationBySpecializationName(specializationName);
+        currentUser.setSpecialization(specialization);
         currentUser.setExperiences(experiences);
         currentUser.setCareerDescription(doctorInformationRequest.getCareerDescription());
         currentUser.setStatus(EUserStatus.PENDING);
@@ -96,10 +93,7 @@ public class DoctorServiceImpl implements DoctorService {
 
     @Override
     public String registerWorkSchedules(RegisterWorkScheduleRequest registerWorkSchedule) {
-        User currentUser = authService.getCurrentUser();
-        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_DOCTOR")) && currentUser.getStatus().equals(EUserStatus.PENDING)) {
-            throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
-        }
+        User currentUser = checkAccess();
         DayOfWeek dayOfWeek = registerWorkSchedule.getDayOfWeek().toInstant().atZone(ZoneId.systemDefault()).toLocalDate().getDayOfWeek();
         if (Arrays.stream(DayOfWeek.values()).noneMatch(dayOfWeek::equals)) {
             throw new BusinessException(MessageConstants.INVALID_DAY_OF_WEEK);
@@ -136,22 +130,23 @@ public class DoctorServiceImpl implements DoctorService {
 
     @Override
     public String confirmedBooking(Long bookingId) {
-        User currentUser = authService.getCurrentUser();
-        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_DOCTOR")) && currentUser.getStatus().equals(EUserStatus.PENDING)) {
-            throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
-        }
+        checkAccess();
         bookingRepository.confirmedBooking(bookingId);
-        return "Successful confirm booking.";
+        return MessageConstants.CONFIRM_BOOKING_SUCCESS;
     }
 
     @Override
     public String cancelledBooking(Long bookingId) {
-        User currentUser = authService.getCurrentUser();
-        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_DOCTOR")) && currentUser.getStatus().equals(EUserStatus.PENDING)) {
-            throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
-        }
+        checkAccess();
         bookingRepository.cancelledBooking(bookingId);
-        return "Successful cancel booking.";
+        return MessageConstants.CANCELED_BOOKING_SUCCESS;
+    }
+
+    @Override
+    public String completedBooking(Long bookingId) {
+        checkAccess();
+        bookingRepository.completedBooking(bookingId);
+        return MessageConstants.COMPLETED_BOOKING_SUCCESS;
     }
 
     @Override
@@ -173,6 +168,17 @@ public class DoctorServiceImpl implements DoctorService {
                 .currentPage(bookingPage.getNumber())
                 .bookings(bookings)
                 .build();
+    }
+
+    public User checkAccess() {
+        User currentUser = authService.getCurrentUser();
+        if (Objects.isNull(currentUser)) {
+            throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
+        }
+        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_DOCTOR"))) {
+            throw new ForbiddenException(MessageConstants.FORBIDDEN_ACCESS);
+        }
+        return currentUser;
     }
 
     public boolean checkSpecializationExist(List<SpecializationDTO> specializations, SpecializationDTO specializationDTO) {

@@ -1,6 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.exception;
 
-import khanhnq.project.clinicbookingmanagementsystem.dto.ErrorResponseDto;
+import khanhnq.project.clinicbookingmanagementsystem.dto.ErrorResponseDTO;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -19,8 +19,8 @@ import java.util.Map;
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(ResourceAlreadyExistException.class)
-    public ResponseEntity<ErrorResponseDto> handlerResourceAlreadyExistException(ResourceAlreadyExistException exception, WebRequest webRequest) {
-        ErrorResponseDto errorResponseDto = ErrorResponseDto.builder()
+    public ResponseEntity<ErrorResponseDTO> handlerResourceAlreadyExistException(ResourceAlreadyExistException exception, WebRequest webRequest) {
+        ErrorResponseDTO errorResponseDto = ErrorResponseDTO.builder()
                 .apiPath(webRequest.getDescription(false))
                 .errorCode(HttpStatus.BAD_REQUEST)
                 .errorMessage(exception.getMessage())
@@ -30,8 +30,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ErrorResponseDto> handlerResourceAlreadyExistException(ResourceNotFoundException exception, WebRequest webRequest) {
-        ErrorResponseDto errorResponseDto = ErrorResponseDto.builder()
+    public ResponseEntity<ErrorResponseDTO> handlerResourceAlreadyExistException(ResourceNotFoundException exception, WebRequest webRequest) {
+        ErrorResponseDTO errorResponseDto = ErrorResponseDTO.builder()
                 .apiPath(webRequest.getDescription(false))
                 .errorCode(HttpStatus.NOT_FOUND)
                 .errorMessage(exception.getMessage())
@@ -41,8 +41,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<ErrorResponseDto> handlerBusinessException(BusinessException exception, WebRequest webRequest) {
-        ErrorResponseDto errorResponseDto = ErrorResponseDto.builder()
+    public ResponseEntity<ErrorResponseDTO> handlerBusinessException(BusinessException exception, WebRequest webRequest) {
+        ErrorResponseDTO errorResponseDto = ErrorResponseDTO.builder()
                 .apiPath(webRequest.getDescription(false))
                 .errorCode(HttpStatus.BAD_REQUEST)
                 .errorMessage(exception.getMessage())
@@ -52,8 +52,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler(FileUploadFailedException.class)
-    public ResponseEntity<ErrorResponseDto> handlerFileUploadFailedException(FileUploadFailedException exception, WebRequest webRequest) {
-        ErrorResponseDto errorResponseDto = ErrorResponseDto.builder()
+    public ResponseEntity<ErrorResponseDTO> handlerFileUploadFailedException(FileUploadFailedException exception, WebRequest webRequest) {
+        ErrorResponseDTO errorResponseDto = ErrorResponseDTO.builder()
                 .apiPath(webRequest.getDescription(false))
                 .errorCode(HttpStatus.EXPECTATION_FAILED)
                 .errorMessage(exception.getMessage())
@@ -63,8 +63,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler(UnauthorizedException.class)
-    public ResponseEntity<ErrorResponseDto> handlerUnauthorizedException(UnauthorizedException exception, WebRequest webRequest) {
-        ErrorResponseDto errorResponseDto = ErrorResponseDto.builder()
+    public ResponseEntity<ErrorResponseDTO> handlerUnauthorizedException(UnauthorizedException exception, WebRequest webRequest) {
+        ErrorResponseDTO errorResponseDto = ErrorResponseDTO.builder()
                 .apiPath(webRequest.getDescription(false))
                 .errorCode(HttpStatus.UNAUTHORIZED)
                 .errorMessage(exception.getMessage())
@@ -73,9 +73,20 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return new ResponseEntity<>(errorResponseDto, HttpStatus.UNAUTHORIZED);
     }
 
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ErrorResponseDTO> handlerForbiddenException(ForbiddenException exception, WebRequest webRequest) {
+        ErrorResponseDTO errorResponseDto = ErrorResponseDTO.builder()
+                .apiPath(webRequest.getDescription(false))
+                .errorCode(HttpStatus.FORBIDDEN)
+                .errorMessage(exception.getMessage())
+                .errorTime(LocalDateTime.now())
+                .build();
+        return new ResponseEntity<>(errorResponseDto, HttpStatus.FORBIDDEN);
+    }
+
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponseDto> handleGlobalException(Exception exception, WebRequest webRequest) {
-        ErrorResponseDto errorResponseDto = ErrorResponseDto.builder()
+    public ResponseEntity<ErrorResponseDTO> handleGlobalException(Exception exception, WebRequest webRequest) {
+        ErrorResponseDTO errorResponseDto = ErrorResponseDTO.builder()
                 .apiPath(webRequest.getDescription(false))
                 .errorCode(HttpStatus.INTERNAL_SERVER_ERROR)
                 .errorMessage(exception.getMessage())

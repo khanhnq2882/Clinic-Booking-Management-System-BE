@@ -80,7 +80,7 @@ public class User extends BaseEntity{
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private Set<Experience> experiences = new HashSet<>();
 
-    @Size(max = 10)
+    @Size(max = 255)
     private String careerDescription;
 
     @ManyToOne

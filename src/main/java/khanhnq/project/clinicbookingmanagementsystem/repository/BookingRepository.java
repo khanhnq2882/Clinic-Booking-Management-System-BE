@@ -27,6 +27,11 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     @Query(value = "UPDATE booking SET status = 'CANCELLED' WHERE booking_id = :bookingId", nativeQuery = true)
     void cancelledBooking (@Param("bookingId") Long bookingId);
 
+    @Modifying
+    @Transactional
+    @Query(value = "UPDATE booking SET status = 'COMPLETED' WHERE booking_id = :bookingId", nativeQuery = true)
+    void completedBooking (@Param("bookingId") Long bookingId);
+
     @Query(value = "SELECT b FROM Booking AS b " +
             "INNER JOIN b.workSchedule AS ws " +
             "INNER JOIN ws.daysOfWeek AS d " +

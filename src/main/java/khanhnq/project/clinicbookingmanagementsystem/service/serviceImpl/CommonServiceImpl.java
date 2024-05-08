@@ -8,6 +8,7 @@ import khanhnq.project.clinicbookingmanagementsystem.mapper.UserMapper;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
 import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
 import khanhnq.project.clinicbookingmanagementsystem.response.AddressResponse;
+import khanhnq.project.clinicbookingmanagementsystem.response.FileResponse;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import lombok.AllArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
@@ -17,15 +18,15 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.util.*;
+import java.util.stream.Stream;
 
 @Component
 @AllArgsConstructor
 public class CommonServiceImpl {
 
     private final UserRepository userRepository;
-    private final WorkScheduleRepository workScheduleRepository;
-    private final SpecializationRepository specializationRepository;
     private final CityRepository cityRepository;
     private final DistrictRepository districtRepository;
     private final WardRepository wardRepository;
@@ -130,34 +131,18 @@ public class CommonServiceImpl {
         return cell;
     }
 
-    public Map<Long, List<WorkSchedule>> groupWorkScheduleByDoctor() {
-        Map<Long, List<WorkSchedule>> map = new HashMap<>();
-        for (User user : userRepository.getDoctors()) {
-            if (!map.containsKey(user.getUserId())) {
-                List<WorkSchedule> workSchedules = workScheduleRepository.getWorkSchedulesByUserId(user.getUserId());
-                map.put(user.getUserId(), workSchedules);
-            }
-        }
-        return map;
-    }
-
-    public Map<Long, List<User>> groupDoctorsBySpecialization() {
-        Map<Long, List<User>> map = new HashMap<>();
-        for (Specialization specialization : specializationRepository.findAll()) {
-            if (!map.containsKey(specialization.getSpecializationId())) {
-                List<User> users = userRepository.getDoctorsBySpecializationId(specialization.getSpecializationId());
-                map.put(specialization.getSpecializationId(), users);
-            }
-        }
-        return map;
-    }
-
     public String bookingCode() {
-        Long maxServiceCode = Collections.max(bookingRepository.findAll()
-                .stream()
-                .map(booking -> Long.parseLong(booking.getBookingCode().substring(2)))
-                .toList());
-        return (bookingRepository.findAll().size() == 0) ? "BC1" : ("BC" + (++maxServiceCode));
+        StringBuilder bookingCode = new StringBuilder();
+        if (bookingRepository.findAll().size() == 0) {
+            bookingCode.append("BC1");
+        } else {
+            Long maxServiceCode = Collections.max(bookingRepository.findAll()
+                    .stream()
+                    .map(booking -> Long.parseLong(booking.getBookingCode().substring(2)))
+                    .toList());
+            bookingCode.append("BC").append(++maxServiceCode);
+        }
+        return bookingCode.toString();
     }
 
     public String getPhoneNumberFromExcel (Cell cell, int indexRow, String colName) {
@@ -198,10 +183,7 @@ public class CommonServiceImpl {
                                     newAddress.setWard(ward);
                                     return newAddress;
                                 })
-                        )
-                )
-                .findFirst()
-                .orElse(null);
+                        )).findFirst().orElse(null);
         List<String> specificAddressElements = strings.stream()
                 .filter(s -> !s.trim().equalsIgnoreCase(cityName) && !s.trim().equalsIgnoreCase(districtName) && !s.trim().equalsIgnoreCase(wardName)).toList();
         StringBuilder specificAddress = new StringBuilder();
@@ -243,24 +225,12 @@ public class CommonServiceImpl {
         }
     }
 
-//    public List<FileResponse> getAllFiles(Long userId) {
-//        return fileService.loadFilesByUserId(userId).map(file -> {
-//            String fileUrl = ServletUriComponentsBuilder.fromCurrentContextPath().path("/admin/files/").path(file.getFileId().toString()).toUriString();
-//            return new FileResponse(file.getFilePath().split("/")[1], file.getFilePath().split("/")[2], fileUrl);
-//        }).collect(Collectors.toList());
-//    }
-//
-//    public Set<WorkSchedule> filterWorkSchedules(Set<WorkSchedule> workSchedulesRequest, Long specializationId) {
-//        Set<WorkSchedule> resultWorkSchedule = workSchedulesRequest;
-//        for (User doctor : groupDoctorsBySpecialization().get(specializationId)) {
-//            resultWorkSchedule = resultWorkSchedule.stream()
-//                    .filter(request -> groupWorkScheduleByDoctor().get(doctor.getUserId()).stream()
-//                            .noneMatch(workSchedule -> workSchedule.getStartTime().equals(request.getStartTime())
-//                                    && workSchedule.getEndTime().equals(request.getEndTime())))
-//                    .collect(Collectors.toSet());
-//        }
-//        return resultWorkSchedule;
-//    }
+    public List<FileResponse> getAllFiles(Long userId) {
+        return loadFilesByUserId(userId).map(file -> {
+            String fileUrl = ServletUriComponentsBuilder.fromCurrentContextPath().path("/admin/files/").path(file.getFileId().toString()).toUriString();
+            return new FileResponse(file.getFileType(), file.getFileName(), fileUrl);
+        }).toList();
+    }
 
     public AddressResponse getAddress(Booking booking) {
         Address address = addressRepository.findById(booking.getAddress().getAddressId()).orElse(null);
@@ -274,28 +244,30 @@ public class CommonServiceImpl {
                 .build();
     }
 
-    public String uploadFile(MultipartFile multipartFile, String typeImage) {
+    public String uploadFile(MultipartFile multipartFile, String fileType) {
         try {
             User currentUser = authService.getCurrentUser();
             File file = new File();
-            if (fileRepository.getFilesById(currentUser.getUserId()).stream().noneMatch(f -> f.getFilePath().split("/")[1].equals(typeImage))) {
-                file.setFilePath(currentUser.getUsername()+"/"+typeImage+"/"+ StringUtils.cleanPath(Objects.requireNonNull(multipartFile.getOriginalFilename())));
+            if (fileRepository.getFilesById(currentUser.getUserId()).stream().noneMatch(f -> f.getFileType().equals(fileType))) {
+                file.setFileName(StringUtils.cleanPath(Objects.requireNonNull(multipartFile.getOriginalFilename())));
+                file.setFileType(fileType);
                 file.setData(multipartFile.getBytes());
                 file.setUser(currentUser);
-                file.setUpdatedBy(currentUser.getUsername());
+                file.setCreatedBy(currentUser.getUsername());
                 currentUser.getFiles().add(file);
             } else {
-                file = fileRepository.getFileByType(typeImage, currentUser.getUserId());
-                file.setFilePath(currentUser.getUsername()+"/"+typeImage+"/"+StringUtils.cleanPath(Objects.requireNonNull(multipartFile.getOriginalFilename())));
+                file = fileRepository.getFileByType(currentUser.getUserId(), fileType);
+                file.setFileName(StringUtils.cleanPath(Objects.requireNonNull(multipartFile.getOriginalFilename())));
+                file.setFileType(fileType);
                 file.setData(multipartFile.getBytes());
                 file.setUser(currentUser);
                 file.setUpdatedBy(currentUser.getUsername());
             }
             fileRepository.save(file);
             userRepository.save(currentUser);
-            return "Uploaded " +typeImage+ " file successfully: " + multipartFile.getOriginalFilename();
+            return "Uploaded " +fileType+ " file successfully: " + multipartFile.getOriginalFilename();
         } catch (Exception e) {
-            throw new FileUploadFailedException("Could not upload "+ typeImage+ " file: " + multipartFile.getOriginalFilename() + ". Error: " + e.getMessage());
+            throw new FileUploadFailedException("Could not upload "+ fileType+ " file: " + multipartFile.getOriginalFilename() + ". Error: " + e.getMessage());
         }
     }
 
@@ -312,5 +284,13 @@ public class CommonServiceImpl {
                 .build();
         address.setCreatedBy(currentUser.getUsername());
         currentUser.setAddress(address);
+    }
+
+    public Stream<File> loadFilesByUserId(Long userId) {
+        return fileRepository.getFilesById(userId).stream();
+    }
+
+    public File getFileById(Long fileId) {
+        return fileRepository.findById(fileId).get();
     }
 }

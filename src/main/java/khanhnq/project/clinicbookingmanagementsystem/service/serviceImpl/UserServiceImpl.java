@@ -6,6 +6,7 @@ import khanhnq.project.clinicbookingmanagementsystem.dto.WorkScheduleDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EBookingStatus;
 import khanhnq.project.clinicbookingmanagementsystem.exception.BusinessException;
+import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceNotFoundException;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.BookingMapper;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
 import khanhnq.project.clinicbookingmanagementsystem.request.BookingAppointmentRequest;
@@ -73,25 +74,29 @@ public class UserServiceImpl implements UserService {
         DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
         User currentUser = authService.getCurrentUser();
         String appointmentDate = dateFormat.format(bookingAppointmentRequest.getAppointmentDate());
-        WorkSchedule workSchedule = workScheduleRepository.findById(bookingAppointmentRequest.getWorkScheduleId()).orElse(null);
-        for (Booking booking : bookingRepository.findAll()) {
-            if (bookingAppointmentRequest.getWorkScheduleId().equals(booking.getWorkSchedule().getWorkScheduleId())
-            && appointmentDate.equals(booking.getAppointmentDate().toString())) {
-                throw new BusinessException("You cannot schedule an appointment at time "
-                        + Objects.requireNonNull(workSchedule).getStartTime() +" - "+ workSchedule.getEndTime() +" on day "+appointmentDate);
+        Long workScheduleId = bookingAppointmentRequest.getWorkScheduleId();
+        WorkSchedule workSchedule = workScheduleRepository.findById(workScheduleId).orElse(null);
+        if (Objects.isNull(workSchedule))
+            throw new ResourceNotFoundException("Work Schedule ID", workScheduleId.toString());
+        bookingRepository.findAll().forEach(booking -> {
+            if (workScheduleId.equals(booking.getWorkSchedule().getWorkScheduleId()) && appointmentDate.equals(booking.getAppointmentDate().toString())) {
+                throw new BusinessException("You cannot booking an appointment at time " + workSchedule.getStartTime() +"-"+ workSchedule.getEndTime()
+                        +" on day "+appointmentDate+" because someone has already booked.");
             }
-        }
+        });
         Booking bookingAppointment = BookingMapper.BOOKING_MAPPER.mapToBooking(bookingAppointmentRequest);
-        bookingAppointment.setAddress(Address.builder()
-                .specificAddress(bookingAppointmentRequest.getSpecificAddress())
-                .ward(wardRepository.findById(bookingAppointmentRequest.getWardId()).orElse(null))
-                .build());
+        Ward ward = wardRepository.findById(bookingAppointmentRequest.getWardId()).orElse(null);
+        if (Objects.isNull(ward))
+            throw new ResourceNotFoundException("Ward ID", bookingAppointmentRequest.getWardId().toString());
+        Address address = Address.builder().specificAddress(bookingAppointmentRequest.getSpecificAddress()).ward(ward).build();
+        bookingAppointment.setAddress(address);
         bookingAppointment.setBookingCode(commonServiceImpl.bookingCode());
         bookingAppointment.setWorkSchedule(workSchedule);
         bookingAppointment.setStatus(EBookingStatus.PENDING);
         bookingAppointment.setUser(currentUser);
+        bookingAppointment.setCreatedBy(currentUser.getUsername());
         bookingRepository.save(bookingAppointment);
-        return "Booking appointment successfully.";
+        return MessageConstants.BOOKING_SUCCESS;
     }
 
 }

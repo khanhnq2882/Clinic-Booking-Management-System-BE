@@ -1,9 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.service;
 
-import khanhnq.project.clinicbookingmanagementsystem.dto.BookingDTO;
-import khanhnq.project.clinicbookingmanagementsystem.dto.ServiceCategoryDTO;
-import khanhnq.project.clinicbookingmanagementsystem.dto.ServicesDTO;
-import khanhnq.project.clinicbookingmanagementsystem.dto.UserDTO;
+import khanhnq.project.clinicbookingmanagementsystem.dto.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.ServiceCategory;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Services;
 import khanhnq.project.clinicbookingmanagementsystem.request.ServiceCategoryRequest;
@@ -16,7 +13,7 @@ import java.util.List;
 public interface AdminService {
     UserResponse getAllUsers(int page, int size, String[] sorts);
     DoctorResponse getAllDoctors(int page, int size, String[] sorts);
-    List<SpecializationResponse> getAllSpecializations();
+    List<SpecializationDTO> getAllSpecializations();
     List<ServiceCategoryDTO> getServiceCategories(Long specializationId);
     ServiceCategoryResponse getAllServiceCategories(int page, int size, String[] sorts);
     String addServiceCategory(ServiceCategoryRequest serviceCategoryRequest);

@@ -3,7 +3,7 @@ package khanhnq.project.clinicbookingmanagementsystem.security;
 import khanhnq.project.clinicbookingmanagementsystem.security.jwt.AuthEntryPointJwt;
 import khanhnq.project.clinicbookingmanagementsystem.security.jwt.AuthTokenFilter;
 import khanhnq.project.clinicbookingmanagementsystem.security.services.UserDetailsServiceImpl;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -20,15 +20,12 @@ import org.springframework.web.client.RestTemplate;
 
 @Configuration
 @EnableMethodSecurity
+@AllArgsConstructor
 public class WebSecurityConfig {
-    private AuthEntryPointJwt authEntryPointJwt;
-    private UserDetailsServiceImpl userDetailsService;
 
-    @Autowired
-    public WebSecurityConfig(AuthEntryPointJwt authEntryPointJwt, UserDetailsServiceImpl userDetailsService) {
-        this.authEntryPointJwt = authEntryPointJwt;
-        this.userDetailsService = userDetailsService;
-    }
+    private AuthEntryPointJwt authEntryPointJwt;
+
+    private UserDetailsServiceImpl userDetailsService;
 
     @Bean
     public AuthTokenFilter authenticationJwtTokenFilter() {
@@ -66,9 +63,9 @@ public class WebSecurityConfig {
                 .authorizeHttpRequests(auth ->
                         auth.requestMatchers("/auth/**").permitAll()
                                 .requestMatchers("/address/**").permitAll()
-                                .requestMatchers("/user/**").permitAll()
-                                .requestMatchers("/doctor/**").permitAll()
-                                .requestMatchers("/admin/**").permitAll()
+                                .requestMatchers("/user/**").hasAuthority("ROLE_USER")
+                                .requestMatchers("/doctor/**").hasAuthority("ROLE_DOCTOR")
+                                .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
                                 .anyRequest().authenticated()
                 );
         http.authenticationProvider(authenticationProvider());

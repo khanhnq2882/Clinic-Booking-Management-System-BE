@@ -2,6 +2,7 @@ package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
 import khanhnq.project.clinicbookingmanagementsystem.constant.MessageConstants;
 import khanhnq.project.clinicbookingmanagementsystem.exception.BusinessException;
+import khanhnq.project.clinicbookingmanagementsystem.exception.ForbiddenException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.UnauthorizedException;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.*;
 import khanhnq.project.clinicbookingmanagementsystem.dto.*;
@@ -45,10 +46,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public UserResponse getAllUsers(int page, int size, String[] sorts) {
-        User currentUser = authService.getCurrentUser();
-        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_ADMIN"))) {
-            throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
-        }
+        checkAccess();
         Page<User> userPage = userRepository.getAllUsers(commonServiceImpl.pagingSort(page, size, sorts));
         List<UserDTO> users = userPage.getContent().stream()
                 .map(user -> {
@@ -66,10 +64,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public DoctorResponse getAllDoctors(int page, int size, String[] sorts) {
-        User currentUser = authService.getCurrentUser();
-        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_ADMIN"))) {
-            throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
-        }
+        checkAccess();
         Page<User> doctorPage = userRepository.getAllDoctors(commonServiceImpl.pagingSort(page, size, sorts));
         List<DoctorDTO> doctors = doctorPage.getContent().stream()
                 .map(user -> {
@@ -78,6 +73,7 @@ public class AdminServiceImpl implements AdminService {
                         doctorDTO.setSpecializationName(user.specializationName());
                     }
                     doctorDTO.setDoctorAddress(commonServiceImpl.getAddress(user));
+                    doctorDTO.setFiles(commonServiceImpl.getAllFiles(user.getUserId()));
                     return doctorDTO;
                 }).toList();
         return DoctorResponse.builder()
@@ -90,10 +86,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public String addServiceCategory(ServiceCategoryRequest serviceCategoryRequest) {
-        User currentUser = authService.getCurrentUser();
-        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_ADMIN"))) {
-            throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
-        }
+        checkAccess();
         Specialization specialization = specializationRepository.findById(serviceCategoryRequest.getSpecializationId()).orElse(null);
         ServiceCategory serviceCategory = ServiceCategoryMapper.SERVICE_CATEGORY_MAPPER.mapToServiceCategory(serviceCategoryRequest);
         serviceCategory.setSpecialization(specialization);
@@ -103,10 +96,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public String addService(ServiceRequest serviceRequest) {
-        User currentUser = authService.getCurrentUser();
-        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_ADMIN"))) {
-            throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
-        }
+        checkAccess();
         ServiceCategory serviceCategory = serviceCategoryRepository.findById(serviceRequest.getServiceCategoryId()).orElse(null);
         Services services = ServicesMapper.SERVICES_MAPPER.mapToServices(serviceRequest);
         services.setStatus(EServiceStatus.ACTIVE);
@@ -132,10 +122,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public String updateService(ServiceRequest serviceRequest, Long serviceId) {
-        User currentUser = authService.getCurrentUser();
-        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_ADMIN"))) {
-            throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
-        }
+        checkAccess();
         Services service = servicesRepository.findById(serviceId).orElse(null);
         ServiceCategory serviceCategory = serviceCategoryRepository.findById(serviceRequest.getServiceCategoryId()).orElse(null);
         commonServiceImpl.serviceCode(service, Objects.requireNonNull(serviceCategory));
@@ -149,8 +136,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public List<UserDTO> getUsers() {
-        return userRepository.getUsers()
-                .stream()
+        return userRepository.getUsers().stream()
                 .map(user -> {
                     UserDTO userDTO = UserMapper.USER_MAPPER.mapToUserDTO(user);
                     userDTO.setUserAddress(commonServiceImpl.getAddress(user));
@@ -159,13 +145,10 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public List<SpecializationResponse> getAllSpecializations() {
+    public List<SpecializationDTO> getAllSpecializations() {
         return specializationRepository.findAll()
                 .stream()
-                .map(specialization -> SpecializationResponse.builder()
-                        .specializationId(specialization.getSpecializationId())
-                        .specializationName(specialization.getSpecializationName())
-                        .build())
+                .map(SpecializationMapper.SPECIALIZATION_MAPPER::mapToSpecializationDTO)
                 .toList();
     }
 
@@ -234,10 +217,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public String updateServiceCategory(ServiceCategoryRequest serviceCategoryRequest, Long serviceCategoryId) {
-        User currentUser = authService.getCurrentUser();
-        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_ADMIN"))) {
-            throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
-        }
+        checkAccess();
         ServiceCategory serviceCategory = serviceCategoryRepository.findById(serviceCategoryId).orElse(null);
         Objects.requireNonNull(serviceCategory).setSpecialization(specializationRepository.findById(serviceCategoryRequest.getSpecializationId()).orElse(null));
         serviceCategory.setServiceCategoryName(serviceCategoryRequest.getServiceCategoryName());
@@ -422,10 +402,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public List<BookingDTO> getAllBookings() {
-        User currentUser = authService.getCurrentUser();
-        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_ADMIN"))) {
-            throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
-        }
+        checkAccess();
         List<Booking> bookings = bookingRepository.findAll()
                 .stream()
                 .filter(booking -> Objects.isNull(booking.getUser()))
@@ -438,6 +415,16 @@ public class AdminServiceImpl implements AdminService {
                     bookingDTO.setEndTime(booking.getWorkSchedule().getEndTime().toString());
                     return bookingDTO;
                 }).toList();
+    }
+
+    public void checkAccess() {
+        User currentUser = authService.getCurrentUser();
+        if (Objects.isNull(currentUser)) {
+            throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
+        }
+        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_ADMIN"))) {
+            throw new ForbiddenException(MessageConstants.FORBIDDEN_ACCESS);
+        }
     }
 
     public Map<Integer, String> serviceCategoryHeaderCellIndex (Row row) {

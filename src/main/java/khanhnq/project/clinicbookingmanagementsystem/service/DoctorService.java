@@ -15,5 +15,6 @@ public interface DoctorService {
     String registerWorkSchedules(RegisterWorkScheduleRequest registerWorkScheduleRequest);
     String confirmedBooking (Long bookingId);
     String cancelledBooking (Long bookingId);
+    String completedBooking (Long bookingId);
     BookingResponse getAllBookings(int page, int size, String[] sorts);
 }

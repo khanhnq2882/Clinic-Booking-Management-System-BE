@@ -1,7 +1,9 @@
 package khanhnq.project.clinicbookingmanagementsystem.dto;
 
 import khanhnq.project.clinicbookingmanagementsystem.response.AddressResponse;
+import khanhnq.project.clinicbookingmanagementsystem.response.FileResponse;
 import lombok.*;
+import java.util.List;
 import java.util.Set;
 
 @Getter
@@ -18,6 +20,7 @@ public class DoctorDTO {
     private String phoneNumber;
     private AddressResponse doctorAddress;
     private String specializationName;
-    private Set<WorkScheduleDTO> workSchedules;
+    private Set<ExperienceDTO> experiences;
     private String status;
+    private List<FileResponse> files;
 }

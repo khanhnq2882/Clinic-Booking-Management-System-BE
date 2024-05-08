@@ -16,7 +16,10 @@ public class File extends BaseEntity{
     private Long fileId;
 
     @Column(nullable = false)
-    private String filePath;
+    private String fileName;
+
+    @Column(nullable = false)
+    private String fileType;
 
     @Lob
     @Column(columnDefinition = "LONGBLOB")

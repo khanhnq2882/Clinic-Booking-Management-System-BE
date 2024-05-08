@@ -18,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 @AllArgsConstructor
 @RequestMapping(path = "/doctor", produces = {MediaType.APPLICATION_JSON_VALUE})
 public class DoctorController {
+
     private final DoctorService doctorService;
 
     @PostMapping("/update-profile")
@@ -65,6 +66,11 @@ public class DoctorController {
     @PostMapping("/cancelled-booking/{bookingId}")
     public ResponseEntity<String> cancelledBooking(@PathVariable("bookingId") Long bookingId) {
         return MessageResponse.getResponseMessage(doctorService.cancelledBooking(bookingId), HttpStatus.OK);
+    }
+
+    @PostMapping("/completed-booking/{bookingId}")
+    public ResponseEntity<String> completedBooking(@PathVariable("bookingId") Long bookingId) {
+        return MessageResponse.getResponseMessage(doctorService.completedBooking(bookingId), HttpStatus.OK);
     }
 
 }

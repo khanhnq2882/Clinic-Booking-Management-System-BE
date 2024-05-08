@@ -9,9 +9,14 @@ public class MessageConstants {
     public static final String INCORRECT_CURRENT_PASSWORD = "Incorrect current password.";
     public static final String UPDATE_PROFILE_SUCCESS = "Updated profile information successfully.";
     public static final String UNAUTHORIZED_ACCESS = "Unauthorized access.";
+    public static final String FORBIDDEN_ACCESS = "Forbidden access.";
     public static final String INVALID_DAY_OF_WEEK = "Day of week invalid.";
     public static final String FAILED_IMPORT_DATA_EXCEL = "Failed to import data from file excel.";
     public static final String FAILED_EXPORT_DATA_EXCEL = "Failed to export data to file excel.";
     public static final String UPDATE_DOCTOR_INFORMATION_SUCCESS = "Successfully updated doctor information. Please wait for a response from the administrator.";
     public static final String INVALID_WORK_SCHEDULES = "The number of work schedules must be equal to the number of shifts per day.";
+    public static final String BOOKING_SUCCESS = "Successfully booked an appointment.";
+    public static final String CONFIRM_BOOKING_SUCCESS = "Successful confirm booking.";
+    public static final String CANCELED_BOOKING_SUCCESS = "Successful canceled booking.";
+    public static final String COMPLETED_BOOKING_SUCCESS = "Successful completed booking.";
 }
