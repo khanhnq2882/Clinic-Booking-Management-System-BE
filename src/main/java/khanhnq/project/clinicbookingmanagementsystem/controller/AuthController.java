@@ -30,6 +30,7 @@ public class AuthController {
         return MessageResponse.getResponseMessage(authService.register(registerRequest), HttpStatus.CREATED);
     }
 
+    // Bắt được case username không tồn tại nhưng chưa ném ra đúng message, đang dùng message lỗi mặc định của Spring Security
     @PostMapping("/login")
     public ResponseEntity<JwtResponse> login(@RequestBody LoginRequest loginRequest) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(authService.login(loginRequest));

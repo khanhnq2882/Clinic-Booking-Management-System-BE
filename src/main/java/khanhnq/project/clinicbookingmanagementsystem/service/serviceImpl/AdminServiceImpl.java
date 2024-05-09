@@ -1,9 +1,8 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
 import khanhnq.project.clinicbookingmanagementsystem.constant.MessageConstants;
-import khanhnq.project.clinicbookingmanagementsystem.exception.BusinessException;
-import khanhnq.project.clinicbookingmanagementsystem.exception.ForbiddenException;
-import khanhnq.project.clinicbookingmanagementsystem.exception.UnauthorizedException;
+import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EBookingStatus;
+import khanhnq.project.clinicbookingmanagementsystem.exception.*;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.*;
 import khanhnq.project.clinicbookingmanagementsystem.dto.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
@@ -262,7 +261,7 @@ public class AdminServiceImpl implements AdminService {
             List<ServiceCategory> serviceCategories = new ArrayList<>();
             Sheet sheet = new XSSFWorkbook(inputStream).getSheet("service category");
             if (sheet == null) {
-                throw new BusinessException("Sheet named 'service category' don't exist.");
+                throw new ResourceNotFoundException("Sheet","service category");
             }
             List<Row> rows = Lists.newArrayList(sheet.rowIterator());
             for (int indexRow = 1; indexRow < rows.size(); indexRow++) {
@@ -276,7 +275,7 @@ public class AdminServiceImpl implements AdminService {
                             String serviceCategoryName = commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue();
                             List<String> serviceCategoriesName = serviceCategoryRepository.findAll().stream().map(ServiceCategory::getServiceCategoryName).toList();
                             if (serviceCategoriesName.stream().anyMatch(s -> s.equalsIgnoreCase(serviceCategoryName))) {
-                                throw new BusinessException("Import data failed. Service category named '" + serviceCategoryName + "' is already existed.");
+                                throw new ResourceAlreadyExistException("Service category",serviceCategoryName);
                             }
                             serviceCategory.setServiceCategoryName(serviceCategoryName);
                         }
@@ -306,7 +305,7 @@ public class AdminServiceImpl implements AdminService {
             List<Services> services = new ArrayList<>();
             Sheet sheet = new XSSFWorkbook(inputStream).getSheet("services");
             if (sheet == null) {
-                throw new BusinessException("Sheet named 'services' doesn't exist.");
+                throw new ResourceNotFoundException("Sheet","services");
             }
             List<Row> rows = Lists.newArrayList(sheet.rowIterator());
             for (int indexRow = 1; indexRow < rows.size(); indexRow++) {
@@ -319,11 +318,10 @@ public class AdminServiceImpl implements AdminService {
                         case "Service Name" -> {
                             String serviceName = commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue();
                             List<String> servicesName = servicesRepository.findAll().stream().map(Services::getServiceName).toList();
-                            for (String name : servicesName) {
-                                if (serviceName.equals(name)) {
-                                    throw new BusinessException("Import data failed. Service named '" + serviceName + "' is already existed.");
-                                }
-                            }
+                            servicesName.forEach(name -> {
+                                if (serviceName.equals(name))
+                                    throw new ResourceAlreadyExistException("Service",serviceName);
+                            });
                             service.setServiceName(serviceName);
                         }
                         case "Price" ->
@@ -331,7 +329,8 @@ public class AdminServiceImpl implements AdminService {
                         case "Description" ->
                                 service.setDescription(commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue());
                         case "Service Category Name" -> {
-                            ServiceCategory serviceCategory = serviceCategoryRepository.getServiceCategoriesByServiceCategoryName(commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue());
+                            ServiceCategory serviceCategory =
+                                    serviceCategoryRepository.getServiceCategoriesByServiceCategoryName(commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue());
                             if (Objects.isNull(serviceCategory)) {
                                 throw new BusinessException("Import failed. Service category name in row " + indexRow + " is not exist.");
                             }
@@ -356,7 +355,7 @@ public class AdminServiceImpl implements AdminService {
             List<BookingExcelResponse> bookingExcelResponses = new ArrayList<>();
             Sheet sheet = new XSSFWorkbook(inputStream).getSheet("bookings");
             if (sheet == null) {
-                throw new BusinessException("Sheet named 'bookings' don't exist.");
+                throw new ResourceNotFoundException("Sheet","bookings");
             }
             List<Row> rows = Lists.newArrayList(sheet.rowIterator());
             for (int indexRow = 1; indexRow < rows.size(); indexRow++) {
@@ -403,10 +402,8 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public List<BookingDTO> getAllBookings() {
         checkAccess();
-        List<Booking> bookings = bookingRepository.findAll()
-                .stream()
-                .filter(booking -> Objects.isNull(booking.getUser()))
-                .toList();
+        List<Booking> bookings = bookingRepository.findAll().stream()
+                .filter(booking -> Objects.isNull(booking.getUser())).toList();
         return bookings.stream()
                 .map(booking -> {
                     BookingDTO bookingDTO = BookingMapper.BOOKING_MAPPER.mapToBookingDTO(booking);
@@ -545,8 +542,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     public List<Booking> convertToBookingList (List<BookingExcelResponse> bookingExcelResponses) {
-        List<Booking> bookings = bookingExcelResponses
-                .stream()
+        List<Booking> bookings = bookingExcelResponses.stream()
                 .map(bookingExcelResponse -> {
                     Booking booking = BookingMapper.BOOKING_MAPPER.mapExcelToBooking(bookingExcelResponse.getBookingExcelDTO());
                     LocalDate appointmentDate = bookingExcelResponse.getBookingExcelDTO().getAppointmentDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
@@ -554,6 +550,7 @@ public class AdminServiceImpl implements AdminService {
                             bookingExcelResponse.getBookingExcelDTO().getSpecializationName(), appointmentDate.getDayOfWeek(),
                             bookingExcelResponse.getBookingExcelDTO().getStartTime(), bookingExcelResponse.getBookingExcelDTO().getEndTime());
                     booking.setWorkSchedule(workSchedule);
+                    booking.setStatus(EBookingStatus.PENDING);
                     return booking;
                 }).toList();
         setBookingCode(bookings);

@@ -1,38 +1,45 @@
-# Clinic-Booking-Management-System
-Link phòng khám tham khảo :
-
+Link tham khảo :
 https://bookingcare.vn
-
 https://stdvietnam.vn/tin-tuc/quan-ly-phong-kham-truc-tuyen-voi-phan-mem-std-clinic.html
-
 https://dayschedule.com/docs/t/how-to-create-patient-appointment-booking-system-for-doctors/295
-
-admin thêm bác sĩ (thêm chuyên khoa cho bác sĩ) <làm sau> -> bác sĩ cập nhật thông tin (tên, sđt, địa chỉ, chuyên khoa, lịch trình làm việc cố định, ...)
-(mặc định là làm việc từ t2-t7, tránh xung đột lịch trình làm việc với các bác sĩ cùng khoa)
-
-người dùng chọn chuyên khoa -> liệt kê ra danh sách bác sĩ của chuyên khoa đó -> hiển thị ngày và danh sách lịch khám trong ngày còn trống để người dùng chọn -> người dùng nhập thông tin cần khám
--> đưa vào danh sách booking do từng bác sĩ quản lý -> chuyển trạng thái -> nếu chấp nhận thì hẹn người dùng đi khám
-
 https://hasthemes.com/free-bootstrap-templates/mexi/
 
-Từ cột chuyên khoa của file excel -> Load ra list bác sĩ thuộc chuyên khoa này -> Check cột ngày và giờ khám của file excel xem trùng với lịch làm việc của bác sĩ nào -> Kiểm tra trong bảng Bookings xem đã có lịch và giờ khám như thế chưa
-Nếu có ->
-Nếu không -> admin thêm bookings vào danh sách booking cho bác sĩ -> bác sĩ thay đổi trạng thái booking trên list mà mình quản lý, thông báo hẹn bệnh nhân
--> Không lưu lại lịch sử khám cho trường hợp không đăng nhập vào hệ thống
--> Lưu lại lịch sử khám cho trường hợp đăng nhập vào hệ thống
+**CÁC LUỒNG CHÍNH TRONG HỆ THỐNG**
+* Luồng 1:
+- Bác sĩ đăng ký tài khoản vào hệ thống -> Bác sĩ cập nhật thông tin (tên, sđt, địa chỉ, chuyên khoa, kinh nghiệm làm việc, thông tin nghề nghiệp, các chứng chỉ,...)-> Bác sĩ 
+đăng ký lịch làm việc trong tuần (mặc định là làm việc từ t2-cn, vì trong quy mô 1 phòng khám nên khi đăng ký lịch làm việc tránh xung đột với các bác sĩ cùng khoa)
+
+* Luồng 2:
+- Có 2 option khi bệnh nhân booking lịch khám
++ Option 1: Người dùng đăng ký tài khoản -> Đăng nhập -> Chọn chuyên khoa cần khám -> Danh sách bác sĩ của chuyên khoa -> Hệ thống hiển thị danh sách lịch khám có sẵn trong tuần 
+để người dùng chọn -> Người dùng nhập thông tin cần khám (tên, sđt, địa chỉ, ngày sinh, triệu chứng,...) -> Hệ thống kiểm tra xem ngày và giờ khám đã có ai đăng ký trước đó chưa -> Nếu có thì reject, 
+không thì đưa vào trạng thái pending -> Đưa vào danh sách booking của bác sĩ đã chọn -> Chuyển trạng thái (accept, reject) -> Nếu chấp nhận thì đã đặt lịch thành công -> Lưu lịch sử bệnh án trên hệ thống
++ Option 2: Người dùng không đăng nhập vào hệ thống -> Người dùng nhập thông tin cần khám (tên, sđt, địa chỉ, email, triệu chứng,...) -> Hệ thống tự động sắp xếp lịch khám cho người dùng
+  (liên hệ với người dùng qua sđt hoặc email để confirm ngày giờ khám) -> Nếu chấp nhận thì đã đặt lịch thành công -> Không lưu lịch sử bệnh án trên hệ thống
+  
+**DANH SÁCH CHỨC NĂNG**
+
+* Chức năng chung:
+- Đăng ký
+- Đăng nhập
+- Đổi mật khẩu
+- Quên mật khẩu
+
+* ROLE USER
+- Cập nhật thông tin cá nhân trên hệ thống (họ tên, sđt, ngày sinh, địa chỉ, ...)
+- Book lịch khám
+
+* ROLE DOCTOR
+- Cập nhật thông tin cá nhân trên hệ thống (họ tên, sđt, ngày sinh, địa chỉ, ...)
+- Cập nhật thông tin bác sĩ (chuyên khoa,các chứng chỉ, kinh nghiệm,...)
+- Quản lý danh sách booking
+
+* ROLE ADMIN
+- Quản lý danh sách người dùng 
+- Quản lý danh sách bác sĩ -> Done
+- Quản lý chuyên khoa
+- Quản lý danh mục dịch vụ
+- Quản lý gói dịch vụ
+- Quản lý danh sách booking (người dùng k đăng nhập)
 
 
-Cập nhật lịch làm việc của bác sĩ trong tuần (t2-t7)
--> Check giờ làm so với các bác sĩ khác (check theo từng ngày)
-
-Booking
-- Tên
-- Số điện thoại
-- Email
-- Ngày giờ khám
-- Chuyên khoa
-- Triệu chứng
-
-Có 2 options:
-- Không chọn bác sĩ: Chọn ngày giờ khám, hệ thống tự động thêm bác sĩ trống giờ làm
-- Chọn bác sĩ : Chọn bác sĩ, ngày giờ khám theo lịch trên hệ thống

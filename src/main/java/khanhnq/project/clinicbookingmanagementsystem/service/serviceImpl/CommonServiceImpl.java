@@ -185,10 +185,10 @@ public class CommonServiceImpl {
                                 })
                         )).findFirst().orElse(null);
         List<String> specificAddressElements = strings.stream()
-                .filter(s -> !s.trim().equalsIgnoreCase(cityName) && !s.trim().equalsIgnoreCase(districtName) && !s.trim().equalsIgnoreCase(wardName)).toList();
+                .filter(s -> !s.trim().equals(cityName) && !s.trim().equals(districtName) && !s.trim().equals(wardName)).toList();
         StringBuilder specificAddress = new StringBuilder();
-        for (String element : specificAddressElements) {
-            specificAddress.append(element+", ");
+        for (int i=0; i<specificAddressElements.size(); i++) {
+            specificAddress.append(specificAddressElements.get(i)).append((i != specificAddressElements.size()-1) ? ", " : "");
         }
         address.setSpecificAddress(specificAddress.toString());
         return address;

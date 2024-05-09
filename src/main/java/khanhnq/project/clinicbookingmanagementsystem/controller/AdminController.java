@@ -154,6 +154,11 @@ public class AdminController {
         }
     }
 
+    // chua co chuc nang export booking
+    // file import booking phai co cau truc cot giong file nhan dc khi export booking
+    // hien tai loi chi hien ve so dong duoc import, so dong k dc import chua chi ra loi cu the
+    // chua thuc hien tim kiem gia tri gan dung trong db (vi du: tim "Quần Hoạn Kiềm" thi phai tim duoc gia tri "Quận Hoàn Kiếm" trong csdl)
+    // file controller khong nen xu ly qua nhieu code
     @PostMapping("/import-bookings-from-excel")
     public ResponseEntity<String> importBookingsFromExcel (@RequestParam("file") MultipartFile file){
         try {
@@ -164,12 +169,13 @@ public class AdminController {
             }
             BookingImportResponse bookingImportResponse = adminService.importBookingsFromExcel(file.getInputStream());
             bookingRepository.saveAll(bookingImportResponse.getValidBookings());
-            if (bookingImportResponse.getInvalidBookings().size() == 0) {
+            List<BookingExcelResponse> invalidBookings = bookingImportResponse.getInvalidBookings();
+            if (invalidBookings.size() == 0) {
                 responseMessage = "Successfully imported all rows from excel file.";
             } else {
                 StringBuilder rowsErrorMessage = new StringBuilder();
-                for (BookingExcelResponse bookingExcelResponse : bookingImportResponse.getInvalidBookings()) {
-                    rowsErrorMessage.append(bookingExcelResponse.getRowIndex()+1).append(",");
+                for (int i=0; i<invalidBookings.size(); i++) {
+                    rowsErrorMessage.append(invalidBookings.get(i).getRowIndex()+1).append((i != invalidBookings.size()-1) ? ",":"");
                 }
                 responseMessage = "Successfully imported "+bookingImportResponse.getValidBookings().size()+" rows from excel file. " +
                         "Rows "+rowsErrorMessage+" were imported unsuccessfully.Please check your booking information again.";
