@@ -68,9 +68,8 @@ public class AdminServiceImpl implements AdminService {
         List<DoctorDTO> doctors = doctorPage.getContent().stream()
                 .map(user -> {
                     DoctorDTO doctorDTO = UserMapper.USER_MAPPER.mapToDoctorResponse(user);
-                    if (user.getSpecialization() != null) {
+                    if (user.getSpecialization() != null)
                         doctorDTO.setSpecializationName(user.specializationName());
-                    }
                     doctorDTO.setDoctorAddress(commonServiceImpl.getAddress(user));
                     doctorDTO.setFiles(commonServiceImpl.getAllFiles(user.getUserId()));
                     return doctorDTO;
@@ -90,7 +89,7 @@ public class AdminServiceImpl implements AdminService {
         ServiceCategory serviceCategory = ServiceCategoryMapper.SERVICE_CATEGORY_MAPPER.mapToServiceCategory(serviceCategoryRequest);
         serviceCategory.setSpecialization(specialization);
         serviceCategoryRepository.save(serviceCategory);
-        return "Add service category successfully.";
+        return MessageConstants.ADD_SERVICE_CATEGORY_SUCCESS;
     }
 
     @Override
@@ -102,7 +101,7 @@ public class AdminServiceImpl implements AdminService {
         services.setServiceCategory(serviceCategory);
         commonServiceImpl.serviceCode(services, Objects.requireNonNull(serviceCategory));
         servicesRepository.save(services);
-        return "Add service successfully.";
+        return MessageConstants.ADD_SERVICE_SUCCESS;
     }
 
     @Override
@@ -130,7 +129,7 @@ public class AdminServiceImpl implements AdminService {
         service.setPrice(serviceRequest.getPrice());
         service.setDescription(serviceRequest.getDescription());
         servicesRepository.save(service);
-        return "Update service successfully.";
+        return MessageConstants.UPDATE_SERVICE_SUCCESS;
     }
 
     @Override
@@ -144,17 +143,28 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    public List<BookingDTO> getBookings() {
+        List<Booking> bookings = bookingRepository.findAll().stream()
+                .filter(booking -> Objects.isNull(booking.getUser())).toList();
+        return bookings.stream()
+                .map(booking -> {
+                    BookingDTO bookingDTO = BookingMapper.BOOKING_MAPPER.mapToBookingDTO(booking);
+                    bookingDTO.setUserAddress(commonServiceImpl.getAddress(booking));
+                    bookingDTO.setStartTime(booking.getWorkSchedule().getStartTime());
+                    bookingDTO.setEndTime(booking.getWorkSchedule().getEndTime());
+                    return bookingDTO;
+                }).toList();
+    }
+
+    @Override
     public List<SpecializationDTO> getAllSpecializations() {
-        return specializationRepository.findAll()
-                .stream()
-                .map(SpecializationMapper.SPECIALIZATION_MAPPER::mapToSpecializationDTO)
-                .toList();
+        return specializationRepository.findAll().stream()
+                .map(SpecializationMapper.SPECIALIZATION_MAPPER::mapToSpecializationDTO).toList();
     }
 
     @Override
     public List<ServiceCategoryDTO> getServiceCategories(Long specializationId) {
-        return serviceCategoryRepository.getServiceCategoriesBySpecializationId(specializationId)
-                .stream()
+        return serviceCategoryRepository.getServiceCategoriesBySpecializationId(specializationId).stream()
                 .map(serviceCategory -> ServiceCategoryDTO.builder()
                         .serviceCategoryId(serviceCategory.getServiceCategoryId())
                         .serviceCategoryName(serviceCategory.getServiceCategoryName())
@@ -166,8 +176,7 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public ServiceCategoryResponse getAllServiceCategories(int page, int size, String[] sorts) {
         Page<ServiceCategory> serviceCategoryPage = serviceCategoryRepository.findAll(commonServiceImpl.pagingSort(page, size, sorts));
-        List<ServiceCategoryDTO> serviceCategories = serviceCategoryPage.getContent()
-                .stream()
+        List<ServiceCategoryDTO> serviceCategories = serviceCategoryPage.getContent().stream()
                 .map(serviceCategory -> ServiceCategoryDTO.builder()
                         .serviceCategoryId(serviceCategory.getServiceCategoryId())
                         .serviceCategoryName(serviceCategory.getServiceCategoryName())
@@ -187,8 +196,7 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public ServicesResponse getAllServices(int page, int size, String[] sorts) {
         Page<Services> servicesPage = servicesRepository.findAll(commonServiceImpl.pagingSort(page, size, sorts));
-        List<ServicesDTO> servicesResponses = servicesPage.getContent()
-                .stream()
+        List<ServicesDTO> servicesResponses = servicesPage.getContent().stream()
                 .map(services -> {
                     ServicesDTO servicesResponse = ServicesMapper.SERVICES_MAPPER.mapToServicesResponse(services);
                     servicesResponse.setServiceCategoryName(services.serviceCategoryName());
@@ -222,7 +230,7 @@ public class AdminServiceImpl implements AdminService {
         serviceCategory.setServiceCategoryName(serviceCategoryRequest.getServiceCategoryName());
         serviceCategory.setDescription(serviceCategoryRequest.getDescription());
         serviceCategoryRepository.save(serviceCategory);
-        return "Update service category successfully.";
+        return MessageConstants.UPDATE_SERVICE_CATEGORY_SUCCESS;
     }
 
     @Override
@@ -234,19 +242,51 @@ public class AdminServiceImpl implements AdminService {
                     "Gender", "Phone Number", "Address", "Status"};
             commonServiceImpl.createHeader(workbook, sheet, headers);
             int firstRow = 1;
-            for (UserDTO userDTO : users) {
+            for (UserDTO user : users) {
                 Row currentRow = sheet.createRow(firstRow++);
-                String fullName = userDTO.getFirstName() + " " + userDTO.getLastName();
-                AddressResponse userAddress = userDTO.getUserAddress();
+                String fullName = user.getFirstName() + " " + user.getLastName();
+                AddressResponse userAddress = user.getUserAddress();
                 String address = userAddress.getSpecificAddress() + ", " + userAddress.getWardName() + ", " + userAddress.getDistrictName() + ", " + userAddress.getCityName();
-                commonServiceImpl.createCell(workbook, currentRow, 0, userDTO.getUserCode());
-                commonServiceImpl.createCell(workbook, currentRow, 1, userDTO.getEmail());
-                commonServiceImpl.createCell(workbook, currentRow, 2, (Objects.isNull(userDTO.getFirstName()) && Objects.isNull(userDTO.getLastName())) ? " " : fullName);
-                commonServiceImpl.createCell(workbook, currentRow, 3, Objects.isNull(userDTO.getDateOfBirth()) ? " " : userDTO.getDateOfBirth());
-                commonServiceImpl.createCell(workbook, currentRow, 4, userDTO.getGender() == 1 ? "Male" : "Female");
-                commonServiceImpl.createCell(workbook, currentRow, 5, Objects.isNull(userDTO.getPhoneNumber()) ? " " : userDTO.getPhoneNumber());
-                commonServiceImpl.createCell(workbook, currentRow, 6, Objects.isNull(userDTO.getUserAddress().getSpecificAddress()) ? " " : address);
-                commonServiceImpl.createCell(workbook, currentRow, 7, userDTO.getStatus());
+                commonServiceImpl.createCell(workbook, currentRow, 0, user.getUserCode());
+                commonServiceImpl.createCell(workbook, currentRow, 1, user.getEmail());
+                commonServiceImpl.createCell(workbook, currentRow, 2, Objects.isNull(user.getFirstName()) && Objects.isNull(user.getLastName()) ? " " : fullName);
+                commonServiceImpl.createCell(workbook, currentRow, 3, Objects.isNull(user.getDateOfBirth()) ? " " : user.getDateOfBirth());
+                commonServiceImpl.createCell(workbook, currentRow, 4, user.getGender() == 1 ? "Male" : "Female");
+                commonServiceImpl.createCell(workbook, currentRow, 5, Objects.isNull(user.getPhoneNumber()) ? " " : user.getPhoneNumber());
+                commonServiceImpl.createCell(workbook, currentRow, 6, Objects.isNull(user.getUserAddress().getSpecificAddress()) ? " " : address);
+                commonServiceImpl.createCell(workbook, currentRow, 7, user.getStatus());
+            }
+            workbook.write(outputStream);
+            return new ByteArrayInputStream(outputStream.toByteArray());
+        } catch (IOException ex) {
+            throw new BusinessException(MessageConstants.FAILED_EXPORT_DATA_EXCEL);
+        }
+    }
+
+    @Override
+    public ByteArrayInputStream exportBookingsToExcel(List<BookingDTO> bookings) {
+        try {
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            Sheet sheet = workbook.createSheet("Bookings");
+            String[] headers = {"Full Name", "Date Of Birth", "Gender", "Phone Number", "Address",
+                    "Appointment Date", "Start Time", "End Time", "Specialization", "Describe Symptoms"};
+            commonServiceImpl.createHeader(workbook, sheet, headers);
+            int firstRow = 1;
+            for (BookingDTO booking : bookings) {
+                Row currentRow = sheet.createRow(firstRow++);
+                String fullName = booking.getFirstName() + " " + booking.getLastName();
+                AddressResponse userAddress = booking.getUserAddress();
+                String address = userAddress.getSpecificAddress() + ", " + userAddress.getWardName() + ", " + userAddress.getDistrictName() + ", " + userAddress.getCityName();
+                commonServiceImpl.createCell(workbook, currentRow, 0, (Objects.isNull(booking.getFirstName()) && Objects.isNull(booking.getLastName())) ? " " : fullName);
+                commonServiceImpl.createCell(workbook, currentRow, 1, Objects.isNull(booking.getDateOfBirth()) ? " " : booking.getDateOfBirth());
+                commonServiceImpl.createCell(workbook, currentRow, 2, booking.getGender() == 1 ? "Male" : "Female");
+                commonServiceImpl.createCell(workbook, currentRow, 3, Objects.isNull(booking.getPhoneNumber()) ? " " : booking.getPhoneNumber());
+                commonServiceImpl.createCell(workbook, currentRow, 4, Objects.isNull(booking.getUserAddress().getSpecificAddress()) ? " " : address);
+                commonServiceImpl.createCell(workbook, currentRow, 5, Objects.isNull(booking.getAppointmentDate()) ? " " : booking.getAppointmentDate());
+                commonServiceImpl.createCell(workbook, currentRow, 6, Objects.isNull(booking.getStartTime()) ? " " : booking.getStartTime());
+                commonServiceImpl.createCell(workbook, currentRow, 7, Objects.isNull(booking.getEndTime()) ? " " : booking.getEndTime());
+                commonServiceImpl.createCell(workbook, currentRow, 8, Objects.isNull(booking.getSpecialization()) ? " " : booking.getSpecialization());
+                commonServiceImpl.createCell(workbook, currentRow, 9, Objects.isNull(booking.getDescribeSymptoms()) ? " " : booking.getDescribeSymptoms());
             }
             workbook.write(outputStream);
             return new ByteArrayInputStream(outputStream.toByteArray());
@@ -350,7 +390,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public BookingImportResponse importBookingsFromExcel(InputStream inputStream) {
+    public String importBookingsFromExcel(InputStream inputStream) {
         try {
             List<BookingExcelResponse> bookingExcelResponses = new ArrayList<>();
             Sheet sheet = new XSSFWorkbook(inputStream).getSheet("bookings");
@@ -377,8 +417,13 @@ public class AdminServiceImpl implements AdminService {
                                 bookingExcelResponse.getBookingExcelDTO().setPhoneNumber(commonServiceImpl.getPhoneNumberFromExcel(cells.get(indexCell), indexRow, colName));
                         case "Address" ->
                                 bookingExcelResponse.getBookingExcelDTO().setAddress(commonServiceImpl.getAddressFromExcel(cells.get(indexCell), indexRow, colName));
-                        case "Appointment Date" ->
-                                bookingExcelResponse.getBookingExcelDTO().setAppointmentDate(checkFormatDate(cells.get(indexCell), indexRow, colName));
+                        case "Appointment Date" -> {
+                            Date appointmentDate = checkFormatDate(cells.get(indexCell), indexRow, colName);
+                            if (appointmentDate.before(Date.from(LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant()))) {
+                                throw new BusinessException("Appointment date must be start from today.");
+                            }
+                            bookingExcelResponse.getBookingExcelDTO().setAppointmentDate(appointmentDate);
+                        }
                         case "Specialization" ->
                                 checkSpecificationName(cells.get(indexCell), indexRow, colName, bookingExcelResponse);
                         case "Start Time" ->
@@ -393,25 +438,44 @@ public class AdminServiceImpl implements AdminService {
                 }
                 bookingExcelResponses.add(bookingExcelResponse);
             }
-            return filterExcelBookingList(bookingExcelResponses);
+            BookingImportResponse bookingImportResponse = filterExcelBookingList(bookingExcelResponses);
+            StringBuilder responseMessage = new StringBuilder();
+            bookingRepository.saveAll(bookingImportResponse.getValidBookings());
+            List<BookingExcelResponse> invalidBookings = bookingImportResponse.getInvalidBookings();
+            if (invalidBookings.size() == 0) {
+                responseMessage.append("Successfully imported all rows from excel file.");
+            } else {
+                StringBuilder rowsErrorMessage = new StringBuilder();
+                for (int i=0; i<invalidBookings.size(); i++) {
+                    rowsErrorMessage.append(invalidBookings.get(i).getRowIndex()+1).append((i != invalidBookings.size()-1) ? ",":"");
+                }
+                responseMessage.append("Successfully imported "+bookingImportResponse.getValidBookings().size()+" rows from excel file. " +
+                        "Rows "+rowsErrorMessage+" were imported unsuccessfully.Please check your booking information again.");
+            }
+            return responseMessage.toString();
         } catch (IOException e) {
             throw new BusinessException(MessageConstants.FAILED_IMPORT_DATA_EXCEL);
         }
     }
 
     @Override
-    public List<BookingDTO> getAllBookings() {
+    public BookingResponse getAllBookings(int page, int size, String[] sorts) {
         checkAccess();
-        List<Booking> bookings = bookingRepository.findAll().stream()
-                .filter(booking -> Objects.isNull(booking.getUser())).toList();
-        return bookings.stream()
+        Page<Booking> bookingPage = bookingRepository.getBookingsWithNullUser(commonServiceImpl.pagingSort(page, size, sorts));
+        List<BookingDTO> bookingDTOList = bookingPage.getContent().stream()
                 .map(booking -> {
                     BookingDTO bookingDTO = BookingMapper.BOOKING_MAPPER.mapToBookingDTO(booking);
                     bookingDTO.setUserAddress(commonServiceImpl.getAddress(booking));
-                    bookingDTO.setStartTime(booking.getWorkSchedule().getStartTime().toString());
-                    bookingDTO.setEndTime(booking.getWorkSchedule().getEndTime().toString());
+                    bookingDTO.setStartTime(booking.getWorkSchedule().getStartTime());
+                    bookingDTO.setEndTime(booking.getWorkSchedule().getEndTime());
                     return bookingDTO;
                 }).toList();
+        return BookingResponse.builder()
+                .totalItems(bookingPage.getTotalElements())
+                .totalPages(bookingPage.getTotalPages())
+                .currentPage(bookingPage.getNumber())
+                .bookings(bookingDTOList)
+                .build();
     }
 
     public void checkAccess() {

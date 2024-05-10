@@ -8,8 +8,6 @@ import java.util.List;
 
 @Repository
 public interface CityRepository extends JpaRepository<City, Long> {
-
-    @Query(value = "SELECT c FROM City AS c WHERE c.cityName = :cityName")
+    @Query(value = "SELECT * FROM city WHERE city_name COLLATE utf8mb4_unicode_ci LIKE %:cityName%", nativeQuery = true)
     List<City> getCitiesByCityName (String cityName);
-
 }

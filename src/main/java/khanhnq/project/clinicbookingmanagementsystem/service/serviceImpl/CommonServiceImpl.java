@@ -1,5 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
+import khanhnq.project.clinicbookingmanagementsystem.constant.MessageConstants;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.exception.BusinessException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.FileUploadFailedException;
@@ -19,6 +20,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Stream;
 
@@ -36,15 +39,6 @@ public class CommonServiceImpl {
     private final AuthService authService;
     private final FileRepository fileRepository;
 
-    public Sort.Direction getSortDirection(String direction) {
-        if (direction.equals("asc")) {
-            return Sort.Direction.ASC;
-        } else if (direction.equals("desc")) {
-            return Sort.Direction.DESC;
-        }
-        return Sort.Direction.ASC;
-    }
-
     public Pageable pagingSort(int page, int size, String[] sorts) {
         List<Sort.Order> orders = new ArrayList<>();
         if (sorts[0].contains(",")) {
@@ -56,6 +50,15 @@ public class CommonServiceImpl {
             orders.add(new Sort.Order(getSortDirection(sorts[1]), sorts[0]));
         }
         return PageRequest.of(page, size, Sort.by(orders));
+    }
+
+    public Sort.Direction getSortDirection(String direction) {
+        if (direction.equals("asc")) {
+            return Sort.Direction.ASC;
+        } else if (direction.equals("desc")) {
+            return Sort.Direction.DESC;
+        }
+        return Sort.Direction.ASC;
     }
 
     public List<Cell> getAllCells (Row row) {
@@ -91,11 +94,17 @@ public class CommonServiceImpl {
             cell.setCellValue((Long) value);
         } else if (value instanceof Boolean) {
             cell.setCellValue((Boolean) value);
-        } else {
+        } else if (value instanceof Date){
             CreationHelper helper = workbook.getCreationHelper();
             CellStyle cellStyle = workbook.createCellStyle();
             cellStyle.setDataFormat(helper.createDataFormat().getFormat("dd-MM-yyyy"));
             cell.setCellValue((Date) value);
+            cell.setCellStyle(cellStyle);
+        } else {
+            CreationHelper helper = workbook.getCreationHelper();
+            CellStyle cellStyle = workbook.createCellStyle();
+            cellStyle.setDataFormat(helper.createDataFormat().getFormat("HH:mm"));
+            cell.setCellValue(LocalDateTime.from((LocalTime) value));
             cell.setCellStyle(cellStyle);
         }
     }
@@ -208,20 +217,20 @@ public class CommonServiceImpl {
     }
 
     public void serviceCode(Services services, ServiceCategory serviceCategory) {
-        StringBuilder code = new StringBuilder(" ");
+        StringBuilder code = new StringBuilder();
         for (String s : serviceCategory.getServiceCategoryName().split(" ")) {
             code.append(s.charAt(0));
         }
         List<Services> servicesList = servicesRepository.getServicesByCode(code.toString());
         if (servicesList.size() == 0) {
-            services.setServiceCode(code + "1");
+            services.setServiceCode(code.append("1").toString());
         } else {
             String s = code.toString();
             Long maxServiceCode = Collections.max(servicesList
                     .stream()
                     .map(service -> Long.parseLong(service.getServiceCode().substring(s.length())))
                     .toList());
-            services.setServiceCode(code.toString() + (++maxServiceCode));
+            services.setServiceCode(code.append(++maxServiceCode).toString());
         }
     }
 
@@ -234,7 +243,6 @@ public class CommonServiceImpl {
 
     public AddressResponse getAddress(Booking booking) {
         Address address = addressRepository.findById(booking.getAddress().getAddressId()).orElse(null);
-        new AddressResponse();
         return AddressResponse.builder()
                 .addressId(Objects.requireNonNull(address).getAddressId())
                 .specificAddress(address.getSpecificAddress())
@@ -292,5 +300,12 @@ public class CommonServiceImpl {
 
     public File getFileById(Long fileId) {
         return fileRepository.findById(fileId).get();
+    }
+
+    public void checkExcelFormat(MultipartFile file) {
+        String excelType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        if (!excelType.equals(file.getContentType())) {
+            throw new BusinessException(MessageConstants.INVALID_EXCEL_FORMAT);
+        }
     }
 }

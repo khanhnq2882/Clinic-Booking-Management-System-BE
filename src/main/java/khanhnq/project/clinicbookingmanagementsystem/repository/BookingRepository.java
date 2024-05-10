@@ -39,4 +39,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             "WHERE u.userId = :userId")
     Page<Booking> getAllBookings(@Param("userId") Long userId, Pageable pageable);
 
+    @Query(value = "SELECT b FROM Booking AS b WHERE b.user.userId IS NULL")
+    Page<Booking> getBookingsWithNullUser (Pageable pageable);
+
 }

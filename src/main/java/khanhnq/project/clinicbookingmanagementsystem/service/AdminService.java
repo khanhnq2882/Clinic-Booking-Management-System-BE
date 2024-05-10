@@ -24,9 +24,11 @@ public interface AdminService {
     ServicesDTO getServiceById (Long serviceId);
     String updateService(ServiceRequest serviceRequest, Long serviceId);
     List<UserDTO> getUsers();
+    List<BookingDTO> getBookings();
     ByteArrayInputStream exportUsersToExcel (List<UserDTO> users);
+    ByteArrayInputStream exportBookingsToExcel (List<BookingDTO> bookings);
     List<ServiceCategory> importServiceCategoriesFromExcel (InputStream inputStream);
     List<Services> importServicesFromExcel (InputStream inputStream);
-    BookingImportResponse importBookingsFromExcel (InputStream inputStream);
-    List<BookingDTO> getAllBookings();
+    String importBookingsFromExcel (InputStream inputStream);
+    BookingResponse getAllBookings(int page, int size, String[] sorts);
 }

@@ -1,13 +1,11 @@
 package khanhnq.project.clinicbookingmanagementsystem.controller;
 
-import khanhnq.project.clinicbookingmanagementsystem.dto.BookingDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.ServiceCategoryDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.ServicesDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.SpecializationDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.File;
 import khanhnq.project.clinicbookingmanagementsystem.entity.ServiceCategory;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Services;
-import khanhnq.project.clinicbookingmanagementsystem.repository.BookingRepository;
 import khanhnq.project.clinicbookingmanagementsystem.repository.ServiceCategoryRepository;
 import khanhnq.project.clinicbookingmanagementsystem.repository.ServicesRepository;
 import khanhnq.project.clinicbookingmanagementsystem.request.ServiceCategoryRequest;
@@ -30,19 +28,17 @@ import java.util.List;
 @RestController
 @AllArgsConstructor
 @RequestMapping(path = "/admin", produces = {MediaType.APPLICATION_JSON_VALUE})
-
 public class AdminController {
     private final AdminService adminService;
     private final CommonServiceImpl commonService;
     private final ServiceCategoryRepository serviceCategoryRepository;
     private final ServicesRepository serviceRepository;
-    private final BookingRepository bookingRepository;
 
     @GetMapping("/get-all-users")
     public ResponseEntity<UserResponse> getAllUsers(@RequestParam(defaultValue = "0") int page,
                                                     @RequestParam(defaultValue = "3") int size,
-                                                    @RequestParam(defaultValue = "userId,asc") String[] sort) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllUsers(page, size, sort));
+                                                    @RequestParam(defaultValue = "userId,asc") String[] sorts) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllUsers(page, size, sorts));
     }
 
     @GetMapping("/files/{fileId}")
@@ -56,8 +52,8 @@ public class AdminController {
     @GetMapping("/get-all-doctors")
     public ResponseEntity<DoctorResponse> getAllDoctors(@RequestParam(defaultValue = "0") int page,
                                                         @RequestParam(defaultValue = "3") int size,
-                                                        @RequestParam(defaultValue = "userId,asc") String[] sort) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllDoctors(page, size, sort));
+                                                        @RequestParam(defaultValue = "userId,asc") String[] sorts) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllDoctors(page, size, sorts));
     }
 
     @GetMapping("/get-all-specializations")
@@ -73,8 +69,8 @@ public class AdminController {
     @GetMapping("/get-all-service-categories")
     public ResponseEntity<ServiceCategoryResponse> getAllServiceCategories(@RequestParam(defaultValue = "0") int page,
                                                                            @RequestParam(defaultValue = "3") int size,
-                                                                           @RequestParam(defaultValue = "serviceCategoryId,asc") String[] sort) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllServiceCategories(page, size, sort));
+                                                                           @RequestParam(defaultValue = "serviceCategoryId,asc") String[] sorts) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllServiceCategories(page, size, sorts));
     }
 
     @PostMapping("/add-service-category")
@@ -127,10 +123,7 @@ public class AdminController {
     @PostMapping("/import-service-categories-from-excel")
     public ResponseEntity<String> importServiceCategoriesFromExcel (@RequestParam("file") MultipartFile file){
         try {
-            String excelType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-            if (!excelType.equals(file.getContentType())) {
-                return MessageResponse.getResponseMessage("Invalid file excel.", HttpStatus.BAD_REQUEST);
-            }
+            commonService.checkExcelFormat(file);
             List<ServiceCategory> serviceCategories = adminService.importServiceCategoriesFromExcel(file.getInputStream());
             serviceCategoryRepository.saveAll(serviceCategories);
             return MessageResponse.getResponseMessage("Import data successfully.", HttpStatus.OK);
@@ -142,10 +135,7 @@ public class AdminController {
     @PostMapping("/import-services-from-excel")
     public ResponseEntity<String> importServicesFromExcel (@RequestParam("file") MultipartFile file){
         try {
-            String excelType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-            if (!excelType.equals(file.getContentType())) {
-                return MessageResponse.getResponseMessage("Invalid file excel.", HttpStatus.BAD_REQUEST);
-            }
+            commonService.checkExcelFormat(file);
             List<Services> services = adminService.importServicesFromExcel(file.getInputStream());
             serviceRepository.saveAll(services);
             return MessageResponse.getResponseMessage("Import data successfully.", HttpStatus.OK);
@@ -154,41 +144,32 @@ public class AdminController {
         }
     }
 
-    // chua co chuc nang export booking
-    // file import booking phai co cau truc cot giong file nhan dc khi export booking
+    @GetMapping("/export-bookings-to-excel")
+    public ResponseEntity<InputStreamResource> exportBookingsToExcel () {
+        String fileName = "bookings.xlsx";
+        InputStreamResource file = new InputStreamResource(adminService.exportBookingsToExcel(adminService.getBookings()));
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName)
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(file);
+    }
+
     // hien tai loi chi hien ve so dong duoc import, so dong k dc import chua chi ra loi cu the
-    // chua thuc hien tim kiem gia tri gan dung trong db (vi du: tim "Quần Hoạn Kiềm" thi phai tim duoc gia tri "Quận Hoàn Kiếm" trong csdl)
-    // file controller khong nen xu ly qua nhieu code
     @PostMapping("/import-bookings-from-excel")
     public ResponseEntity<String> importBookingsFromExcel (@RequestParam("file") MultipartFile file){
         try {
-            String responseMessage;
-            String excelType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-            if (!excelType.equals(file.getContentType())) {
-                return MessageResponse.getResponseMessage("Invalid file excel.", HttpStatus.BAD_REQUEST);
-            }
-            BookingImportResponse bookingImportResponse = adminService.importBookingsFromExcel(file.getInputStream());
-            bookingRepository.saveAll(bookingImportResponse.getValidBookings());
-            List<BookingExcelResponse> invalidBookings = bookingImportResponse.getInvalidBookings();
-            if (invalidBookings.size() == 0) {
-                responseMessage = "Successfully imported all rows from excel file.";
-            } else {
-                StringBuilder rowsErrorMessage = new StringBuilder();
-                for (int i=0; i<invalidBookings.size(); i++) {
-                    rowsErrorMessage.append(invalidBookings.get(i).getRowIndex()+1).append((i != invalidBookings.size()-1) ? ",":"");
-                }
-                responseMessage = "Successfully imported "+bookingImportResponse.getValidBookings().size()+" rows from excel file. " +
-                        "Rows "+rowsErrorMessage+" were imported unsuccessfully.Please check your booking information again.";
-            }
-            return MessageResponse.getResponseMessage(responseMessage, HttpStatus.OK);
+            commonService.checkExcelFormat(file);
+            return MessageResponse.getResponseMessage(adminService.importBookingsFromExcel(file.getInputStream()), HttpStatus.OK);
         } catch (IOException e) {
             return MessageResponse.getResponseMessage("Failed to store data from file excel.", HttpStatus.BAD_REQUEST);
         }
     }
 
     @GetMapping("/get-bookings")
-    public ResponseEntity<List<BookingDTO>> getBookings() {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllBookings());
+    public ResponseEntity<BookingResponse> getBookings(@RequestParam(defaultValue = "0") int page,
+                                                        @RequestParam(defaultValue = "3") int size,
+                                                        @RequestParam(defaultValue = "bookingId,asc") String[] sorts) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllBookings(page, size, sorts));
     }
 
 }

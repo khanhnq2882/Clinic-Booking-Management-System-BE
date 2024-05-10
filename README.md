@@ -28,6 +28,7 @@ không thì đưa vào trạng thái pending -> Đưa vào danh sách booking c�
 * ROLE USER
 - Cập nhật thông tin cá nhân trên hệ thống (họ tên, sđt, ngày sinh, địa chỉ, ...)
 - Book lịch khám
+- Quản lý danh sách bookings
 
 * ROLE DOCTOR
 - Cập nhật thông tin cá nhân trên hệ thống (họ tên, sđt, ngày sinh, địa chỉ, ...)

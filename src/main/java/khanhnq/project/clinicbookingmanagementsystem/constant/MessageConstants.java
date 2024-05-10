@@ -19,4 +19,9 @@ public class MessageConstants {
     public static final String CONFIRM_BOOKING_SUCCESS = "Successful confirm booking.";
     public static final String CANCELED_BOOKING_SUCCESS = "Successful canceled booking.";
     public static final String COMPLETED_BOOKING_SUCCESS = "Successful completed booking.";
+    public static final String INVALID_EXCEL_FORMAT = "Invalid excel file format.";
+    public static final String ADD_SERVICE_SUCCESS = "Add service successfully.";
+    public static final String UPDATE_SERVICE_SUCCESS = "Update service successfully.";
+    public static final String ADD_SERVICE_CATEGORY_SUCCESS = "Add service category successfully.";
+    public static final String UPDATE_SERVICE_CATEGORY_SUCCESS = "Update service category successfully.";
 }

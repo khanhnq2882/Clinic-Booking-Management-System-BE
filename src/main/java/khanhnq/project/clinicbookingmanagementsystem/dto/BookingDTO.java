@@ -4,7 +4,7 @@ import khanhnq.project.clinicbookingmanagementsystem.response.AddressResponse;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
+import java.time.LocalTime;
 import java.util.Date;
 
 @Data
@@ -20,8 +20,9 @@ public class BookingDTO {
     private String phoneNumber;
     private AddressResponse userAddress;
     private Date appointmentDate;
-    private String startTime;
-    private String endTime;
+    private LocalTime startTime;
+    private LocalTime endTime;
+    private String specialization;
     private String describeSymptoms;
     private String status;
 }

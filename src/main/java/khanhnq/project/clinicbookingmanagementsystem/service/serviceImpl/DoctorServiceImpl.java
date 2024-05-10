@@ -27,7 +27,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import java.time.DayOfWeek;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -158,8 +157,8 @@ public class DoctorServiceImpl implements DoctorService {
                 .map(booking -> {
                     BookingDTO bookingDTO = BookingMapper.BOOKING_MAPPER.mapToBookingDTO(booking);
                     bookingDTO.setUserAddress(commonServiceImpl.getAddress(booking));
-                    bookingDTO.setStartTime(DateTimeFormatter.ofPattern("HH:mm").format(booking.getWorkSchedule().getStartTime()));
-                    bookingDTO.setEndTime(DateTimeFormatter.ofPattern("HH:mm").format(booking.getWorkSchedule().getEndTime()));
+                    bookingDTO.setStartTime(booking.getWorkSchedule().getStartTime());
+                    bookingDTO.setEndTime(booking.getWorkSchedule().getEndTime());
                     return bookingDTO;
                 }).toList();
         return BookingResponse.builder()
