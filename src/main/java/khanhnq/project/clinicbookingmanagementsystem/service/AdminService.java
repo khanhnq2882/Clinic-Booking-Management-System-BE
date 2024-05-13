@@ -1,5 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.service;
 
+import jakarta.mail.MessagingException;
 import khanhnq.project.clinicbookingmanagementsystem.dto.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.ServiceCategory;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Services;
@@ -11,6 +12,7 @@ import java.io.InputStream;
 import java.util.List;
 
 public interface AdminService {
+    String resetPassword (String email) throws MessagingException;
     UserResponse getAllUsers(int page, int size, String[] sorts);
     DoctorResponse getAllDoctors(int page, int size, String[] sorts);
     List<SpecializationDTO> getAllSpecializations();

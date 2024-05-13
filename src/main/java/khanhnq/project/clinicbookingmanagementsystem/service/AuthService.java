@@ -1,5 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.service;
 
+import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletRequest;
 import khanhnq.project.clinicbookingmanagementsystem.entity.User;
 import khanhnq.project.clinicbookingmanagementsystem.request.ChangePasswordRequest;
@@ -14,6 +15,7 @@ public interface AuthService {
     String logout(HttpServletRequest request);
     User getCurrentUser();
     String changePassword(ChangePasswordRequest changePasswordRequest);
+    String forgotPassword(String email) throws MessagingException;
     UserInfoResponse getUserByUsername (String username);
     UserInfoResponse getUserInfo();
 }

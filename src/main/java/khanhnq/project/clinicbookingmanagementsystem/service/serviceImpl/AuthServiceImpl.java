@@ -1,5 +1,8 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.MimeMessage;
 import jakarta.servlet.http.HttpServletRequest;
 import khanhnq.project.clinicbookingmanagementsystem.constant.MessageConstants;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ERole;
@@ -7,6 +10,7 @@ import khanhnq.project.clinicbookingmanagementsystem.entity.Role;
 import khanhnq.project.clinicbookingmanagementsystem.entity.User;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EUserStatus;
 import khanhnq.project.clinicbookingmanagementsystem.exception.BusinessException;
+import khanhnq.project.clinicbookingmanagementsystem.exception.ForbiddenException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceAlreadyExistException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceNotFoundException;
 import khanhnq.project.clinicbookingmanagementsystem.repository.RoleRepository;
@@ -20,6 +24,7 @@ import khanhnq.project.clinicbookingmanagementsystem.security.jwt.JwtUtils;
 import khanhnq.project.clinicbookingmanagementsystem.security.services.UserDetailsImpl;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import lombok.AllArgsConstructor;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -38,6 +43,7 @@ public class AuthServiceImpl implements AuthService {
     private PasswordEncoder passwordEncoder;
     private AuthenticationManager authenticationManager;
     private JwtUtils jwtUtils;
+    private final JavaMailSender mailSender;
 
     @Override
     public String register(RegisterRequest registerRequest) {
@@ -99,8 +105,13 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public JwtResponse login(LoginRequest loginRequest) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
+        Authentication authentication;
+        try {
+            authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
+        } catch (Exception ex) {
+            throw new ForbiddenException(MessageConstants.LOGIN_FAILED);
+        }
         SecurityContextHolder.getContext().setAuthentication(authentication);
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
         return new JwtResponse(jwtUtils.generateTokenFromUsername(userDetails.getUsername()));
@@ -108,11 +119,10 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public String logout(HttpServletRequest request) {
-        if (request.getHeader("Authorization") != null && request.getHeader("Authorization").startsWith("Bearer ")) {
-            SecurityContextHolder.clearContext();
-        } else {
+        if (request.getHeader("Authorization") == null || !request.getHeader("Authorization").startsWith("Bearer ")) {
             return MessageConstants.LOGOUT_FAILED;
         }
+        SecurityContextHolder.clearContext();
         return MessageConstants.LOGOUT_SUCCESS;
     }
 
@@ -144,6 +154,11 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    public String forgotPassword(String email) throws MessagingException{
+        return resetPasswordEmail(email);
+    }
+
+    @Override
     public UserInfoResponse getUserByUsername(String username) {
         return getUser(userRepository.findUserByUsername(username));
     }
@@ -162,6 +177,27 @@ public class AuthServiceImpl implements AuthService {
                 .email(user.getEmail())
                 .roles(roles)
                 .build();
+    }
+
+    public String resetPasswordEmail(String email) throws MessagingException {
+        User user = userRepository.findUserByEmail(email);
+        if (Objects.nonNull(user)) {
+            MimeMessage message = mailSender.createMimeMessage();
+            message.setFrom(new InternetAddress(email));
+            message.setRecipients(MimeMessage.RecipientType.TO, "quockhanhnguyen2882@gmail.com");
+            message.setSubject("Request reset password from email "+email);
+            String htmlContent =
+                    "<body>" +
+                    "<p>Dear Admin Teams,</p>" +
+                    "<p>Request reset password from email <b>'" +email+ "'</b>. Please check account information and reset password.</p>" +
+                    "<p>Thanks and Best Regards</p>" +
+                    "</body>";
+            message.setContent(htmlContent, "text/html; charset=utf-8");
+            mailSender.send(message);
+            return MessageConstants.REQUEST_RESET_PASSWORD_SUCCESS;
+        } else {
+            throw new ResourceNotFoundException("Email", email);
+        }
     }
 
 }

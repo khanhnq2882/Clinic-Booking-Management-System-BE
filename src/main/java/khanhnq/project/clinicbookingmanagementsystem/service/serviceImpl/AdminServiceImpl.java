@@ -1,5 +1,8 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.MimeMessage;
 import khanhnq.project.clinicbookingmanagementsystem.constant.MessageConstants;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EBookingStatus;
 import khanhnq.project.clinicbookingmanagementsystem.exception.*;
@@ -22,17 +25,23 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.security.SecureRandom;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
 @AllArgsConstructor
 public class AdminServiceImpl implements AdminService {
+
     private final UserRepository userRepository;
     private final AuthService authService;
     private final SpecializationRepository specializationRepository;
@@ -42,6 +51,14 @@ public class AdminServiceImpl implements AdminService {
     private final WorkScheduleRepository workScheduleRepository;
     private final CommonServiceImpl commonServiceImpl;
     private final Workbook workbook = new XSSFWorkbook();
+    private final JavaMailSender mailSender;
+    private PasswordEncoder passwordEncoder;
+
+    @Override
+    public String resetPassword(String email) throws MessagingException {
+        checkAccess();
+        return resetPasswordEmail(email);
+    }
 
     @Override
     public UserResponse getAllUsers(int page, int size, String[] sorts) {
@@ -99,7 +116,7 @@ public class AdminServiceImpl implements AdminService {
         Services services = ServicesMapper.SERVICES_MAPPER.mapToServices(serviceRequest);
         services.setStatus(EServiceStatus.ACTIVE);
         services.setServiceCategory(serviceCategory);
-        commonServiceImpl.serviceCode(services, Objects.requireNonNull(serviceCategory));
+        serviceCode(services, Objects.requireNonNull(serviceCategory));
         servicesRepository.save(services);
         return MessageConstants.ADD_SERVICE_SUCCESS;
     }
@@ -123,7 +140,7 @@ public class AdminServiceImpl implements AdminService {
         checkAccess();
         Services service = servicesRepository.findById(serviceId).orElse(null);
         ServiceCategory serviceCategory = serviceCategoryRepository.findById(serviceRequest.getServiceCategoryId()).orElse(null);
-        commonServiceImpl.serviceCode(service, Objects.requireNonNull(serviceCategory));
+        serviceCode(service, Objects.requireNonNull(serviceCategory));
         Objects.requireNonNull(service).setServiceCategory(serviceCategory);
         service.setServiceName(serviceRequest.getServiceName());
         service.setPrice(serviceRequest.getPrice());
@@ -374,7 +391,7 @@ public class AdminServiceImpl implements AdminService {
                             if (Objects.isNull(serviceCategory)) {
                                 throw new BusinessException("Import failed. Service category name in row " + indexRow + " is not exist.");
                             }
-                            commonServiceImpl.serviceCode(service, serviceCategory);
+                            serviceCode(service, serviceCategory);
                             service.setServiceCategory(serviceCategory);
                         }
                         default -> {
@@ -476,6 +493,38 @@ public class AdminServiceImpl implements AdminService {
                 .currentPage(bookingPage.getNumber())
                 .bookings(bookingDTOList)
                 .build();
+    }
+
+    public String resetPasswordEmail(String email) throws MessagingException {
+        User user = userRepository.findUserByEmail(email);
+        if (Objects.nonNull(user)) {
+            MimeMessage message = mailSender.createMimeMessage();
+            message.setFrom(new InternetAddress("quockhanhnguyen2882@gmail.com"));
+            message.setRecipients(MimeMessage.RecipientType.TO, email);
+            message.setSubject("Your password has been changed");
+            user.setPassword(randomPassword());
+            String htmlContent =
+                    "<body>" +
+                    "<p>Your password has been changed. New password is <b>"+user.getPassword()+"</b>.</p>" +
+                    "<p>Regards, <br/><em>Admin Teams</em></p>" +
+                    "</body>";
+            message.setContent(htmlContent, "text/html; charset=utf-8");
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
+            mailSender.send(message);
+            userRepository.save(user);
+            return MessageConstants.RESET_PASSWORD_SUCCESS;
+        } else {
+            throw new ResourceNotFoundException("Email", email);
+        }
+    }
+
+    public String randomPassword() {
+        final String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        SecureRandom random = new SecureRandom();
+        return IntStream.range(0, 8)
+                .map(i -> random.nextInt(chars.length()))
+                .mapToObj(randomIndex -> String.valueOf(chars.charAt(randomIndex)))
+                .collect(Collectors.joining());
     }
 
     public void checkAccess() {
@@ -636,6 +685,24 @@ public class AdminServiceImpl implements AdminService {
             for (Booking booking : bookings) {
                 booking.setBookingCode("BC" + (++maxServiceCode));
             }
+        }
+    }
+
+    public void serviceCode(Services services, ServiceCategory serviceCategory) {
+        StringBuilder code = new StringBuilder();
+        for (String s : serviceCategory.getServiceCategoryName().split(" ")) {
+            code.append(s.charAt(0));
+        }
+        List<Services> servicesList = servicesRepository.getServicesByCode(code.toString());
+        if (servicesList.size() == 0) {
+            services.setServiceCode(code.append("1").toString());
+        } else {
+            String s = code.toString();
+            Long maxServiceCode = Collections.max(servicesList
+                    .stream()
+                    .map(service -> Long.parseLong(service.getServiceCode().substring(s.length())))
+                    .toList());
+            services.setServiceCode(code.append(++maxServiceCode).toString());
         }
     }
 

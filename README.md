@@ -20,27 +20,31 @@ không thì đưa vào trạng thái pending -> Đưa vào danh sách booking c�
 **DANH SÁCH CHỨC NĂNG**
 
 * Chức năng chung:
-- Đăng ký
-- Đăng nhập
-- Đổi mật khẩu
-- Quên mật khẩu
+- Đăng ký -> OK
+- Đăng nhập -> OK
+- Đổi mật khẩu -> OK
+- Quên mật khẩu -> OK
 
 * ROLE USER
 - Cập nhật thông tin cá nhân trên hệ thống (họ tên, sđt, ngày sinh, địa chỉ, ...)
 - Book lịch khám
-- Quản lý danh sách bookings
+- Quản lý danh sách bookings 
+- Mua các gói dịch vụ
 
 * ROLE DOCTOR
 - Cập nhật thông tin cá nhân trên hệ thống (họ tên, sđt, ngày sinh, địa chỉ, ...)
 - Cập nhật thông tin bác sĩ (chuyên khoa,các chứng chỉ, kinh nghiệm,...)
 - Quản lý danh sách booking
+- Tạo hóa đơn bao gồm các gói dịch vụ người bệnh sử dụng trong khi khám, 
 
 * ROLE ADMIN
 - Quản lý danh sách người dùng 
-- Quản lý danh sách bác sĩ -> Done
+- Quản lý danh sách bác sĩ 
 - Quản lý chuyên khoa
 - Quản lý danh mục dịch vụ
 - Quản lý gói dịch vụ
 - Quản lý danh sách booking (người dùng k đăng nhập)
+- Quản lý doanh thu
+- Quản lý thuốc, vật tư y tế
 
 

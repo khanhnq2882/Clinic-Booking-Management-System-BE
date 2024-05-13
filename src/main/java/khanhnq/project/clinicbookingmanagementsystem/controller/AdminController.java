@@ -1,5 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.controller;
 
+import jakarta.mail.MessagingException;
 import khanhnq.project.clinicbookingmanagementsystem.dto.ServiceCategoryDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.ServicesDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.SpecializationDTO;
@@ -24,15 +25,21 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.List;
 
-@CrossOrigin(origins = "http://localhost:4200", maxAge = 3600, allowCredentials = "true")
+@CrossOrigin(origins = "http://localhost:4200", maxAge = 3600, allowCredentials = "false")
 @RestController
 @AllArgsConstructor
 @RequestMapping(path = "/admin", produces = {MediaType.APPLICATION_JSON_VALUE})
 public class AdminController {
+
     private final AdminService adminService;
     private final CommonServiceImpl commonService;
     private final ServiceCategoryRepository serviceCategoryRepository;
     private final ServicesRepository serviceRepository;
+
+    @PostMapping("/reset-password/{email}")
+    public ResponseEntity<String> resetPassword(@PathVariable("email") String email) throws MessagingException {
+        return MessageResponse.getResponseMessage(adminService.resetPassword(email), HttpStatus.OK);
+    }
 
     @GetMapping("/get-all-users")
     public ResponseEntity<UserResponse> getAllUsers(@RequestParam(defaultValue = "0") int page,

@@ -1,5 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.controller;
 
+import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import khanhnq.project.clinicbookingmanagementsystem.request.ChangePasswordRequest;
@@ -30,7 +31,6 @@ public class AuthController {
         return MessageResponse.getResponseMessage(authService.register(registerRequest), HttpStatus.CREATED);
     }
 
-    // Bắt được case username không tồn tại nhưng chưa ném ra đúng message, đang dùng message lỗi mặc định của Spring Security
     @PostMapping("/login")
     public ResponseEntity<JwtResponse> login(@RequestBody LoginRequest loginRequest) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(authService.login(loginRequest));
@@ -39,6 +39,11 @@ public class AuthController {
     @PostMapping("/change-password")
     public ResponseEntity<String> changePassword(@Valid @RequestBody ChangePasswordRequest changePasswordRequest) {
         return MessageResponse.getResponseMessage(authService.changePassword(changePasswordRequest), HttpStatus.OK);
+    }
+
+    @PostMapping("/forgot-password/{email}")
+    public ResponseEntity<String> forgotPassword(@PathVariable("email") String email) throws MessagingException {
+        return MessageResponse.getResponseMessage(authService.forgotPassword(email), HttpStatus.OK);
     }
 
     @GetMapping("/get-user/{username}")

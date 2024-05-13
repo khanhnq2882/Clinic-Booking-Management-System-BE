@@ -34,7 +34,6 @@ public class CommonServiceImpl {
     private final DistrictRepository districtRepository;
     private final WardRepository wardRepository;
     private final AddressRepository addressRepository;
-    private final ServicesRepository servicesRepository;
     private final BookingRepository bookingRepository;
     private final AuthService authService;
     private final FileRepository fileRepository;
@@ -216,23 +215,6 @@ public class CommonServiceImpl {
         return addressResponse;
     }
 
-    public void serviceCode(Services services, ServiceCategory serviceCategory) {
-        StringBuilder code = new StringBuilder();
-        for (String s : serviceCategory.getServiceCategoryName().split(" ")) {
-            code.append(s.charAt(0));
-        }
-        List<Services> servicesList = servicesRepository.getServicesByCode(code.toString());
-        if (servicesList.size() == 0) {
-            services.setServiceCode(code.append("1").toString());
-        } else {
-            String s = code.toString();
-            Long maxServiceCode = Collections.max(servicesList
-                    .stream()
-                    .map(service -> Long.parseLong(service.getServiceCode().substring(s.length())))
-                    .toList());
-            services.setServiceCode(code.append(++maxServiceCode).toString());
-        }
-    }
 
     public List<FileResponse> getAllFiles(Long userId) {
         return loadFilesByUserId(userId).map(file -> {
