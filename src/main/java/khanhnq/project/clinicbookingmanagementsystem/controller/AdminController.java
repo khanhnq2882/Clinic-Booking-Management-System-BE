@@ -25,7 +25,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.List;
 
-@CrossOrigin(origins = "http://localhost:4200", maxAge = 3600, allowCredentials = "false")
 @RestController
 @AllArgsConstructor
 @RequestMapping(path = "/admin", produces = {MediaType.APPLICATION_JSON_VALUE})
