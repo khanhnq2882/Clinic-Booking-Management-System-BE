@@ -5,6 +5,7 @@ import khanhnq.project.clinicbookingmanagementsystem.dto.DoctorDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.WorkScheduleDTO;
 import khanhnq.project.clinicbookingmanagementsystem.request.BookingAppointmentRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
+import khanhnq.project.clinicbookingmanagementsystem.response.BookingResponse;
 import khanhnq.project.clinicbookingmanagementsystem.response.MessageResponse;
 import khanhnq.project.clinicbookingmanagementsystem.service.UserService;
 import lombok.AllArgsConstructor;
@@ -44,6 +45,13 @@ public class UserController {
     @PostMapping("/booking-appointment")
     public ResponseEntity<String> bookingAppointment(@RequestBody BookingAppointmentRequest bookingAppointmentRequest) {
         return MessageResponse.getResponseMessage(userService.bookingAppointment(bookingAppointmentRequest), HttpStatus.OK);
+    }
+
+    @GetMapping("/get-bookings")
+    public ResponseEntity<BookingResponse> getBookings(@RequestParam(defaultValue = "0") int page,
+                                                       @RequestParam(defaultValue = "3") int size,
+                                                       @RequestParam(defaultValue = "bookingId,asc") String[] sorts) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(userService.getAllBookings(page, size, sorts));
     }
 
 }

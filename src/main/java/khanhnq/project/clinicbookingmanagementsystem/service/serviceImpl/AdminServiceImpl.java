@@ -180,7 +180,18 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public List<ServiceCategoryDTO> getServiceCategories(Long specializationId) {
+    public List<ServiceCategoryDTO> getServiceCategories() {
+        return serviceCategoryRepository.findAll().stream()
+                .map(serviceCategory -> ServiceCategoryDTO.builder()
+                        .specializationName(serviceCategory.getServiceCategoryName())
+                        .description(serviceCategory.getDescription())
+                        .specializationName(serviceCategory.getSpecialization().getSpecializationName())
+                        .build())
+                .toList();
+    }
+
+    @Override
+    public List<ServiceCategoryDTO> getServiceCategoriesBySpecialization(Long specializationId) {
         return serviceCategoryRepository.getServiceCategoriesBySpecializationId(specializationId).stream()
                 .map(serviceCategory -> ServiceCategoryDTO.builder()
                         .serviceCategoryId(serviceCategory.getServiceCategoryId())
@@ -278,6 +289,32 @@ public class AdminServiceImpl implements AdminService {
         } catch (IOException ex) {
             throw new BusinessException(MessageConstants.FAILED_EXPORT_DATA_EXCEL);
         }
+    }
+
+    @Override
+    public ByteArrayInputStream exportServiceCategoriesToExcel(List<ServiceCategoryDTO> serviceCategories) {
+        try {
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            Sheet sheet = workbook.createSheet("Service Categories"+1);
+            String[] headers = {"Service Category Name", "Description", "Specialization"};
+            commonServiceImpl.createHeader(workbook, sheet, headers);
+            int firstRow = 1;
+            for (ServiceCategoryDTO serviceCategory : serviceCategories) {
+                Row currentRow = sheet.createRow(firstRow++);
+                commonServiceImpl.createCell(workbook, currentRow, 0, serviceCategory.getServiceCategoryName());
+                commonServiceImpl.createCell(workbook, currentRow, 1, serviceCategory.getDescription());
+                commonServiceImpl.createCell(workbook, currentRow, 2, serviceCategory.getSpecializationName());
+            }
+            workbook.write(outputStream);
+            return new ByteArrayInputStream(outputStream.toByteArray());
+        } catch (IOException ex) {
+            throw new BusinessException(MessageConstants.FAILED_EXPORT_DATA_EXCEL);
+        }
+    }
+
+    @Override
+    public ByteArrayInputStream exportServicesToExcel(List<ServicesDTO> services) {
+        return null;
     }
 
     @Override
@@ -479,20 +516,7 @@ public class AdminServiceImpl implements AdminService {
     public BookingResponse getAllBookings(int page, int size, String[] sorts) {
         checkAccess();
         Page<Booking> bookingPage = bookingRepository.getBookingsWithNullUser(commonServiceImpl.pagingSort(page, size, sorts));
-        List<BookingDTO> bookingDTOList = bookingPage.getContent().stream()
-                .map(booking -> {
-                    BookingDTO bookingDTO = BookingMapper.BOOKING_MAPPER.mapToBookingDTO(booking);
-                    bookingDTO.setUserAddress(commonServiceImpl.getAddress(booking));
-                    bookingDTO.setStartTime(booking.getWorkSchedule().getStartTime());
-                    bookingDTO.setEndTime(booking.getWorkSchedule().getEndTime());
-                    return bookingDTO;
-                }).toList();
-        return BookingResponse.builder()
-                .totalItems(bookingPage.getTotalElements())
-                .totalPages(bookingPage.getTotalPages())
-                .currentPage(bookingPage.getNumber())
-                .bookings(bookingDTOList)
-                .build();
+        return commonServiceImpl.getAllBookings(bookingPage);
     }
 
     public String resetPasswordEmail(String email) throws MessagingException {
@@ -501,7 +525,7 @@ public class AdminServiceImpl implements AdminService {
             MimeMessage message = mailSender.createMimeMessage();
             message.setFrom(new InternetAddress("quockhanhnguyen2882@gmail.com"));
             message.setRecipients(MimeMessage.RecipientType.TO, email);
-            message.setSubject("Your password has been changed");
+            message.setSubject("Your password has been changed.");
             user.setPassword(randomPassword());
             String htmlContent =
                     "<body>" +

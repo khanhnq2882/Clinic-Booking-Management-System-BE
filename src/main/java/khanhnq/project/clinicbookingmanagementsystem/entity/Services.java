@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EServiceStatus;
 import lombok.*;
+
 @Entity
 @Getter
 @Setter
@@ -38,6 +39,9 @@ public class Services extends BaseEntity{
     @ManyToOne
     @JoinColumn(name = "service_category_id")
     private ServiceCategory serviceCategory;
+
+//    @OneToOne(mappedBy = "service")
+//    private LabResult labResult;
 
     public String serviceCategoryName(){
         return serviceCategory.getServiceCategoryName();

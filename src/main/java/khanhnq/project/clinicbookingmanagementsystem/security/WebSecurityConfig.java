@@ -81,9 +81,12 @@ public class WebSecurityConfig {
                 .authorizeHttpRequests(auth ->
                         auth.requestMatchers("/auth/**").permitAll()
                                 .requestMatchers("/address/**").permitAll()
-                                .requestMatchers("/user/**").hasAuthority("ROLE_USER")
-                                .requestMatchers("/doctor/**").hasAuthority("ROLE_DOCTOR")
-                                .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
+                                .requestMatchers("/user/**").permitAll()
+                                .requestMatchers("/doctor/**").permitAll()
+                                .requestMatchers("/admin/**").permitAll()
+//                                .requestMatchers("/user/**").hasAuthority("ROLE_USER")
+//                                .requestMatchers("/doctor/**").hasAuthority("ROLE_DOCTOR")
+//                                .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
                                 .anyRequest().authenticated()
                 );
         http.authenticationProvider(authenticationProvider());

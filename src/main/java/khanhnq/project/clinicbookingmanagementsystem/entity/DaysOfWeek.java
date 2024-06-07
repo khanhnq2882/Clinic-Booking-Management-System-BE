@@ -3,6 +3,7 @@ package khanhnq.project.clinicbookingmanagementsystem.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.DayOfWeek;
+import java.util.Date;
 import java.util.List;
 
 @Entity
@@ -21,7 +22,10 @@ public class DaysOfWeek extends BaseEntity{
     @Column(length = 20)
     private DayOfWeek dayOfWeek;
 
-    @Column
+    @Column(nullable = false)
+    private Date workingDay;
+
+    @Column(nullable = false)
     private int numberOfShiftsPerDay;
 
     @OneToMany(mappedBy = "daysOfWeek", cascade = CascadeType.ALL)

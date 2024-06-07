@@ -1,7 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
 import khanhnq.project.clinicbookingmanagementsystem.constant.MessageConstants;
-import khanhnq.project.clinicbookingmanagementsystem.dto.BookingDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.SpecializationDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.WorkScheduleDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EUserStatus;
@@ -9,7 +8,6 @@ import khanhnq.project.clinicbookingmanagementsystem.exception.BusinessException
 import khanhnq.project.clinicbookingmanagementsystem.exception.ForbiddenException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceNotFoundException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.UnauthorizedException;
-import khanhnq.project.clinicbookingmanagementsystem.mapper.BookingMapper;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.ExperienceMapper;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.SpecializationMapper;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.WorkScheduleMapper;
@@ -25,7 +23,9 @@ import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import java.text.SimpleDateFormat;
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -93,7 +93,16 @@ public class DoctorServiceImpl implements DoctorService {
     @Override
     public String registerWorkSchedules(RegisterWorkScheduleRequest registerWorkSchedule) {
         User currentUser = checkAccess();
-        DayOfWeek dayOfWeek = registerWorkSchedule.getDayOfWeek().toInstant().atZone(ZoneId.systemDefault()).toLocalDate().getDayOfWeek();
+        if (Objects.isNull(currentUser.getSpecialization())) {
+            throw new BusinessException(MessageConstants.SPECIALIZATION_NOT_FOUND);
+        }
+        Date workingDay = registerWorkSchedule.getWorkingDay();
+        LocalDate ld1 = workingDay.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        LocalDate ld2 = new Date().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        if (ld1.isBefore(ld2)) {
+            throw new BusinessException(MessageConstants.INVALID_WORKING_DAY);
+        }
+        DayOfWeek dayOfWeek = workingDay.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().getDayOfWeek();
         if (Arrays.stream(DayOfWeek.values()).noneMatch(dayOfWeek::equals)) {
             throw new BusinessException(MessageConstants.INVALID_DAY_OF_WEEK);
         }
@@ -108,7 +117,10 @@ public class DoctorServiceImpl implements DoctorService {
         List<User> doctors = userRepository.getDoctorsBySpecializationId(currentUser.getSpecialization().getSpecializationId())
                 .stream().filter(user -> !user.equals(currentUser)).toList();
         List<WorkScheduleDTO> invalidWorkSchedules = getInvalidWorkSchedules(doctors, registerWorkSchedule);
-        DaysOfWeek newDayOfWeek = DaysOfWeek.builder().dayOfWeek(dayOfWeek).user(currentUser).build();
+        DaysOfWeek newDayOfWeek = new DaysOfWeek();
+        newDayOfWeek.setDayOfWeek(dayOfWeek);
+        newDayOfWeek.setWorkingDay(workingDay);
+        newDayOfWeek.setUser(currentUser);
         List<WorkSchedule> validWorkSchedules = newWorkSchedules.stream()
                 .filter(workScheduleDTO -> !invalidWorkSchedules.contains(workScheduleDTO))
                 .map(workScheduleDTO -> {
@@ -120,11 +132,10 @@ public class DoctorServiceImpl implements DoctorService {
         newDayOfWeek.setNumberOfShiftsPerDay(validWorkSchedules.size());
         newDayOfWeek.setWorkSchedules(validWorkSchedules);
         newDayOfWeek.setCreatedBy(currentUser.getUsername());
-        List<DaysOfWeek> daysOfWeeks = currentUser.getDaysOfWeeks();
-        daysOfWeeks.add(newDayOfWeek);
-        currentUser.setDaysOfWeeks(daysOfWeeks);
+        currentUser.getDaysOfWeeks().add(newDayOfWeek);
+        currentUser.setDaysOfWeeks(currentUser.getDaysOfWeeks());
         userRepository.save(currentUser);
-        return workSchedulesMessage(invalidWorkSchedules, dayOfWeek);
+        return workSchedulesMessage(invalidWorkSchedules, workingDay);
     }
 
     @Override
@@ -152,21 +163,7 @@ public class DoctorServiceImpl implements DoctorService {
     public BookingResponse getAllBookings(int page, int size, String[] sorts) {
         User currentUser = authService.getCurrentUser();
         Page<Booking> bookingPage = bookingRepository.getAllBookings(currentUser.getUserId() , commonServiceImpl.pagingSort(page, size, sorts));
-        List<BookingDTO> bookings = bookingPage.getContent()
-                .stream()
-                .map(booking -> {
-                    BookingDTO bookingDTO = BookingMapper.BOOKING_MAPPER.mapToBookingDTO(booking);
-                    bookingDTO.setUserAddress(commonServiceImpl.getAddress(booking));
-                    bookingDTO.setStartTime(booking.getWorkSchedule().getStartTime());
-                    bookingDTO.setEndTime(booking.getWorkSchedule().getEndTime());
-                    return bookingDTO;
-                }).toList();
-        return BookingResponse.builder()
-                .totalItems(bookingPage.getTotalElements())
-                .totalPages(bookingPage.getTotalPages())
-                .currentPage(bookingPage.getNumber())
-                .bookings(bookings)
-                .build();
+        return commonServiceImpl.getAllBookings(bookingPage);
     }
 
     public User checkAccess() {
@@ -195,7 +192,7 @@ public class DoctorServiceImpl implements DoctorService {
         List<WorkScheduleDTO> invalidWorkSchedules = new ArrayList<>();
         doctors.forEach(doctor -> {
             DaysOfWeek daysOfWeek = dayOfWeekRepository.getDayOfWeekByDay(doctor.getUserId(),
-                    registerWorkSchedule.getDayOfWeek().toInstant().atZone(ZoneId.systemDefault()).toLocalDate().getDayOfWeek());
+                    registerWorkSchedule.getWorkingDay().toInstant().atZone(ZoneId.systemDefault()).toLocalDate().getDayOfWeek());
             List<WorkScheduleDTO> existWorkSchedules = workScheduleRepository.getWorkSchedulesByDayOfWeek(daysOfWeek)
                     .stream().map(WorkScheduleMapper.WORK_SCHEDULE_MAPPER::mapToWorkScheduleDTO).toList();
             List<WorkScheduleDTO> workSchedules = registerWorkSchedule.getWorkSchedules().stream()
@@ -206,10 +203,11 @@ public class DoctorServiceImpl implements DoctorService {
         return invalidWorkSchedules;
     }
 
-    public String workSchedulesMessage(List<WorkScheduleDTO> invalidWorkSchedules, DayOfWeek dayOfWeek) {
+    public String workSchedulesMessage(List<WorkScheduleDTO> invalidWorkSchedules, Date day) {
         String workSchedulesMessage;
+        String workingDay = new SimpleDateFormat("dd-MM-yyyy").format(day);
         if (invalidWorkSchedules.size() == 0) {
-            workSchedulesMessage = "Successfully registered work schedule for " + dayOfWeek + ".";
+            workSchedulesMessage = "Successfully registered work schedules for " + workingDay + ".";
         } else {
             StringBuilder invalidMessage = new StringBuilder();
             int size = invalidWorkSchedules.size();
@@ -217,7 +215,7 @@ public class DoctorServiceImpl implements DoctorService {
                 invalidMessage.append(invalidWorkSchedules.get(i).getStartTime()).append("-")
                         .append(invalidWorkSchedules.get(i).getEndTime()).append((i != size-1) ? ", " : "");
             }
-            workSchedulesMessage = "Successfully registered for work schedules for "+ dayOfWeek
+            workSchedulesMessage = "Successfully registered for work schedules for "+ workingDay
                     +". Except for work schedules "+invalidMessage+" because someone has already registered.";
         }
         return workSchedulesMessage;

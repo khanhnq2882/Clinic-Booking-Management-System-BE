@@ -16,6 +16,7 @@ public class MessageConstants {
     public static final String INVALID_DAY_OF_WEEK = "Day of week invalid.";
     public static final String FAILED_IMPORT_DATA_EXCEL = "Failed to import data from file excel.";
     public static final String FAILED_EXPORT_DATA_EXCEL = "Failed to export data to file excel.";
+    public static final String SPECIALIZATION_NOT_FOUND = "You are not currently in any specific specialty. Please contact admin.";
     public static final String UPDATE_DOCTOR_INFORMATION_SUCCESS = "Successfully updated doctor information. Please wait for a response from the administrator.";
     public static final String INVALID_WORK_SCHEDULES = "The number of work schedules must be equal to the number of shifts per day.";
     public static final String BOOKING_SUCCESS = "Successfully booked an appointment.";
@@ -27,4 +28,6 @@ public class MessageConstants {
     public static final String UPDATE_SERVICE_SUCCESS = "Update service successfully.";
     public static final String ADD_SERVICE_CATEGORY_SUCCESS = "Add service category successfully.";
     public static final String UPDATE_SERVICE_CATEGORY_SUCCESS = "Update service category successfully.";
+    public static final String INVALID_WORKING_DAY = "The working day must start from today.";
+    public static final String INVALID_APPOINTMENT_DATE = "The appointment date must start from today.";
 }

@@ -11,13 +11,17 @@ import khanhnq.project.clinicbookingmanagementsystem.mapper.BookingMapper;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
 import khanhnq.project.clinicbookingmanagementsystem.request.BookingAppointmentRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
+import khanhnq.project.clinicbookingmanagementsystem.response.BookingResponse;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import khanhnq.project.clinicbookingmanagementsystem.service.UserService;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -73,11 +77,14 @@ public class UserServiceImpl implements UserService {
     public String bookingAppointment(BookingAppointmentRequest bookingAppointmentRequest) {
         DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
         User currentUser = authService.getCurrentUser();
+        LocalDate ld1 = bookingAppointmentRequest.getAppointmentDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        LocalDate ld2 = new Date().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        if (ld1.isBefore(ld2)) {
+            throw new BusinessException(MessageConstants.INVALID_APPOINTMENT_DATE);
+        }
         String appointmentDate = dateFormat.format(bookingAppointmentRequest.getAppointmentDate());
         Long workScheduleId = bookingAppointmentRequest.getWorkScheduleId();
-        WorkSchedule workSchedule = workScheduleRepository.findById(workScheduleId).orElse(null);
-        if (Objects.isNull(workSchedule))
-            throw new ResourceNotFoundException("Work Schedule ID", workScheduleId.toString());
+        WorkSchedule workSchedule = workScheduleRepository.findById(workScheduleId).orElseThrow(() -> new ResourceNotFoundException("Work schedule ID", workScheduleId.toString()));
         bookingRepository.findAll().forEach(booking -> {
             if (workScheduleId.equals(booking.getWorkSchedule().getWorkScheduleId()) && appointmentDate.equals(booking.getAppointmentDate().toString())) {
                 throw new BusinessException("You cannot booking an appointment at time " + workSchedule.getStartTime() +"-"+ workSchedule.getEndTime()
@@ -97,6 +104,13 @@ public class UserServiceImpl implements UserService {
         bookingAppointment.setCreatedBy(currentUser.getUsername());
         bookingRepository.save(bookingAppointment);
         return MessageConstants.BOOKING_SUCCESS;
+    }
+
+    @Override
+    public BookingResponse getAllBookings(int page, int size, String[] sorts) {
+        User currentUser = authService.getCurrentUser();
+        Page<Booking> bookingPage = bookingRepository.getBookingsWithUserId(currentUser.getUserId(), commonServiceImpl.pagingSort(page, size, sorts));
+        return commonServiceImpl.getAllBookings(bookingPage);
     }
 
 }

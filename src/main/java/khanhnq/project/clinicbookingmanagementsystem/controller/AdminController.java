@@ -69,7 +69,7 @@ public class AdminController {
 
     @GetMapping("/get-all-service-categories/{specializationId}")
     public ResponseEntity<List<ServiceCategoryDTO>> getAllServiceCategories(@PathVariable("specializationId") Long specializationId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getServiceCategories(specializationId));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getServiceCategoriesBySpecialization(specializationId));
     }
 
     @GetMapping("/get-all-service-categories")
@@ -117,9 +117,19 @@ public class AdminController {
     }
 
     @GetMapping("/export-users-to-excel")
-    public ResponseEntity<InputStreamResource> exportUsersToExcel () {
-        String fileName = "list_users.xlsx";
+    public ResponseEntity<InputStreamResource> exportUsersToExcel() {
+        String fileName = "Users.xlsx";
         InputStreamResource file = new InputStreamResource(adminService.exportUsersToExcel(adminService.getUsers()));
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName)
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(file);
+    }
+
+    @GetMapping("/export-service-categories-to-excel")
+    public ResponseEntity<InputStreamResource> exportServiceCategoriesToExcel() {
+        String fileName = "Service Categories.xlsx";
+        InputStreamResource file = new InputStreamResource(adminService.exportServiceCategoriesToExcel(adminService.getServiceCategories()));
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName)
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
@@ -160,7 +170,6 @@ public class AdminController {
                 .body(file);
     }
 
-    // hien tai loi chi hien ve so dong duoc import, so dong k dc import chua chi ra loi cu the
     @PostMapping("/import-bookings-from-excel")
     public ResponseEntity<String> importBookingsFromExcel (@RequestParam("file") MultipartFile file){
         try {

@@ -11,7 +11,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RegisterWorkScheduleRequest {
-    private Date dayOfWeek;
+    private Date workingDay;
     private int numberOfShiftsPerDay;
     private List<WorkScheduleDTO> workSchedules;
 }

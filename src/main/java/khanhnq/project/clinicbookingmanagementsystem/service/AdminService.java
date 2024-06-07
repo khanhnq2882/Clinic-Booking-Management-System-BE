@@ -16,7 +16,8 @@ public interface AdminService {
     UserResponse getAllUsers(int page, int size, String[] sorts);
     DoctorResponse getAllDoctors(int page, int size, String[] sorts);
     List<SpecializationDTO> getAllSpecializations();
-    List<ServiceCategoryDTO> getServiceCategories(Long specializationId);
+    List<ServiceCategoryDTO> getServiceCategories();
+    List<ServiceCategoryDTO> getServiceCategoriesBySpecialization(Long specializationId);
     ServiceCategoryResponse getAllServiceCategories(int page, int size, String[] sorts);
     String addServiceCategory(ServiceCategoryRequest serviceCategoryRequest);
     ServiceCategoryDTO getServiceCategoryById (Long serviceCategoryId);
@@ -28,6 +29,8 @@ public interface AdminService {
     List<UserDTO> getUsers();
     List<BookingDTO> getBookings();
     ByteArrayInputStream exportUsersToExcel (List<UserDTO> users);
+    ByteArrayInputStream exportServiceCategoriesToExcel(List<ServiceCategoryDTO> serviceCategories);
+    ByteArrayInputStream exportServicesToExcel(List<ServicesDTO> services);
     ByteArrayInputStream exportBookingsToExcel (List<BookingDTO> bookings);
     List<ServiceCategory> importServiceCategoriesFromExcel (InputStream inputStream);
     List<Services> importServicesFromExcel (InputStream inputStream);
