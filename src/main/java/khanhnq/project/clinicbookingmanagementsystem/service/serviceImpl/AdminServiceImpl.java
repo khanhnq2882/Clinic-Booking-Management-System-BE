@@ -183,7 +183,7 @@ public class AdminServiceImpl implements AdminService {
     public List<ServiceCategoryDTO> getServiceCategories() {
         return serviceCategoryRepository.findAll().stream()
                 .map(serviceCategory -> ServiceCategoryDTO.builder()
-                        .specializationName(serviceCategory.getServiceCategoryName())
+                        .serviceCategoryName(serviceCategory.getServiceCategoryName())
                         .description(serviceCategory.getDescription())
                         .specializationName(serviceCategory.getSpecialization().getSpecializationName())
                         .build())
@@ -295,7 +295,7 @@ public class AdminServiceImpl implements AdminService {
     public ByteArrayInputStream exportServiceCategoriesToExcel(List<ServiceCategoryDTO> serviceCategories) {
         try {
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            Sheet sheet = workbook.createSheet("Service Categories"+1);
+            Sheet sheet = workbook.createSheet("Service Categories");
             String[] headers = {"Service Category Name", "Description", "Specialization"};
             commonServiceImpl.createHeader(workbook, sheet, headers);
             int firstRow = 1;
@@ -353,9 +353,9 @@ public class AdminServiceImpl implements AdminService {
     public List<ServiceCategory> importServiceCategoriesFromExcel(InputStream inputStream) {
         try {
             List<ServiceCategory> serviceCategories = new ArrayList<>();
-            Sheet sheet = new XSSFWorkbook(inputStream).getSheet("service category");
+            Sheet sheet = new XSSFWorkbook(inputStream).getSheet("Service Categories");
             if (sheet == null) {
-                throw new ResourceNotFoundException("Sheet","service category");
+                throw new ResourceNotFoundException("Sheet","Service Categories");
             }
             List<Row> rows = Lists.newArrayList(sheet.rowIterator());
             for (int indexRow = 1; indexRow < rows.size(); indexRow++) {
@@ -375,7 +375,7 @@ public class AdminServiceImpl implements AdminService {
                         }
                         case "Description" ->
                                 serviceCategory.setDescription(commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue());
-                        case "Specialization Name" -> {
+                        case "Specialization" -> {
                             String specializationName = commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue();
                             Specialization specialization = specializationRepository.getSpecializationBySpecializationName(specializationName);
                             if (Objects.isNull(specialization)) {
@@ -568,7 +568,7 @@ public class AdminServiceImpl implements AdminService {
             switch (cellsHeader.get(i).getStringCellValue()) {
                 case "Service Category Name" -> headerCellIndex.put(i, "Service Category Name");
                 case "Description" -> headerCellIndex.put(i, "Description");
-                case "Specialization Name" -> headerCellIndex.put(i, "Specialization Name");
+                case "Specialization" -> headerCellIndex.put(i, "Specialization");
                 default -> {
                 }
             }

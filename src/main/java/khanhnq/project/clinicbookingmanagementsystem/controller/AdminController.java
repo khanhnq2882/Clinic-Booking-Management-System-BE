@@ -23,6 +23,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 
 @RestController
@@ -128,7 +130,8 @@ public class AdminController {
 
     @GetMapping("/export-service-categories-to-excel")
     public ResponseEntity<InputStreamResource> exportServiceCategoriesToExcel() {
-        String fileName = "Service Categories.xlsx";
+        String currentDateTime = new SimpleDateFormat("yyyy-MM-dd_HH:mm:ss").format(new Date());
+        String fileName = "service_categories_"+ currentDateTime + ".xlsx";
         InputStreamResource file = new InputStreamResource(adminService.exportServiceCategoriesToExcel(adminService.getServiceCategories()));
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName)

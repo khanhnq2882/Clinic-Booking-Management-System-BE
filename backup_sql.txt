@@ -19,5 +19,11 @@ INSERT INTO `cbmsdb`.`specialization` (`specialization_name`) VALUES ('Cardiolog
 INSERT INTO `cbmsdb`.`specialization` (`specialization_name`) VALUES ('Tropical Medicine');
 INSERT INTO `cbmsdb`.`specialization` (`specialization_name`) VALUES ('Dentistry');
 
+/* -- insert role */
+INSERT INTO `cbmsdb`.`roles` (`role_name`) VALUES ('ROLE_USER');
+INSERT INTO `cbmsdb`.`roles` (`role_name`) VALUES ('ROLE_ADMIN');
+INSERT INTO `cbmsdb`.`roles` (`role_name`) VALUES ('ROLE_DOCTOR');
+
+
 
 
