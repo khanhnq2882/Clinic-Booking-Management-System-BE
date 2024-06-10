@@ -151,6 +151,17 @@ public class AdminController {
         }
     }
 
+    @GetMapping("/export-services-to-excel")
+    public ResponseEntity<InputStreamResource> exportServicesToExcel() {
+        String currentDateTime = new SimpleDateFormat("yyyy-MM-dd_HH:mm:ss").format(new Date());
+        String fileName = "services_"+ currentDateTime + ".xlsx";
+        InputStreamResource file = new InputStreamResource(adminService.exportServicesToExcel(adminService.getServices()));
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName)
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(file);
+    }
+
     @PostMapping("/import-services-from-excel")
     public ResponseEntity<String> importServicesFromExcel (@RequestParam("file") MultipartFile file){
         try {

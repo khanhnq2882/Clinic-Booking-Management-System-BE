@@ -19,9 +19,6 @@ public class Services extends BaseEntity{
     private Long serviceId;
 
     @Column(nullable = false)
-    private String serviceCode;
-
-    @Column(nullable = false)
     private String serviceName;
 
     @Column(nullable = false)

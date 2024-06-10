@@ -14,5 +14,5 @@ public interface ServiceCategoryRepository extends JpaRepository<ServiceCategory
             "ON sc.specialization.specializationId = s.specializationId " +
             "WHERE sc.specialization.specializationId = :specializationId")
     List<ServiceCategory> getServiceCategoriesBySpecializationId(@Param("specializationId") Long specializationId);
-    ServiceCategory getServiceCategoriesByServiceCategoryName (String serviceCategoryName);
+    ServiceCategory getServiceCategoryByServiceCategoryName(String serviceCategoryName);
 }

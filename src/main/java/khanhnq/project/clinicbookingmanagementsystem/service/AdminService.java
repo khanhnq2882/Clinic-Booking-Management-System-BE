@@ -17,6 +17,7 @@ public interface AdminService {
     DoctorResponse getAllDoctors(int page, int size, String[] sorts);
     List<SpecializationDTO> getAllSpecializations();
     List<ServiceCategoryDTO> getServiceCategories();
+    List<ServicesDTO> getServices();
     List<ServiceCategoryDTO> getServiceCategoriesBySpecialization(Long specializationId);
     ServiceCategoryResponse getAllServiceCategories(int page, int size, String[] sorts);
     String addServiceCategory(ServiceCategoryRequest serviceCategoryRequest);

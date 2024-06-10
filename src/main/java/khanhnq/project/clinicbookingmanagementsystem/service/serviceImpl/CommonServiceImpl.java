@@ -66,8 +66,7 @@ public class CommonServiceImpl {
 
     public List<Cell> getAllCells (Row row) {
         List<Cell> cells = new ArrayList<>();
-        int countCells = row.getLastCellNum();
-        for (int x = 0; x < countCells; x++) {
+        for (int x = 0; x < row.getLastCellNum(); x++) {
             Cell cell = row.getCell(x, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
             cells.add(cell);
         }
@@ -93,6 +92,8 @@ public class CommonServiceImpl {
             cell.setCellValue((String) value);
         } else if (value instanceof Integer) {
             cell.setCellValue((Integer) value);
+        } else if (value instanceof Double) {
+            cell.setCellValue((Double) value);
         } else if (value instanceof Long) {
             cell.setCellValue((Long) value);
         } else if (value instanceof Boolean) {
@@ -148,11 +149,11 @@ public class CommonServiceImpl {
         if (bookingRepository.findAll().size() == 0) {
             bookingCode.append("BC1");
         } else {
-            Long maxServiceCode = Collections.max(bookingRepository.findAll()
+            Long maxBookingCode = Collections.max(bookingRepository.findAll()
                     .stream()
                     .map(booking -> Long.parseLong(booking.getBookingCode().substring(2)))
                     .toList());
-            bookingCode.append("BC").append(++maxServiceCode);
+            bookingCode.append("BC").append(++maxBookingCode);
         }
         return bookingCode.toString();
     }

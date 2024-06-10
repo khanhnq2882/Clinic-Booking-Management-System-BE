@@ -116,7 +116,6 @@ public class AdminServiceImpl implements AdminService {
         Services services = ServicesMapper.SERVICES_MAPPER.mapToServices(serviceRequest);
         services.setStatus(EServiceStatus.ACTIVE);
         services.setServiceCategory(serviceCategory);
-        serviceCode(services, Objects.requireNonNull(serviceCategory));
         servicesRepository.save(services);
         return MessageConstants.ADD_SERVICE_SUCCESS;
     }
@@ -126,7 +125,6 @@ public class AdminServiceImpl implements AdminService {
         Services services = servicesRepository.findById(serviceId).orElse(null);
         return ServicesDTO.builder()
                 .serviceId(Objects.requireNonNull(services).getServiceId())
-                .serviceCode(services.getServiceCode())
                 .serviceName(services.getServiceName())
                 .price(services.getPrice())
                 .description(services.getDescription())
@@ -140,7 +138,6 @@ public class AdminServiceImpl implements AdminService {
         checkAccess();
         Services service = servicesRepository.findById(serviceId).orElse(null);
         ServiceCategory serviceCategory = serviceCategoryRepository.findById(serviceRequest.getServiceCategoryId()).orElse(null);
-        serviceCode(service, Objects.requireNonNull(serviceCategory));
         Objects.requireNonNull(service).setServiceCategory(serviceCategory);
         service.setServiceName(serviceRequest.getServiceName());
         service.setPrice(serviceRequest.getPrice());
@@ -188,6 +185,16 @@ public class AdminServiceImpl implements AdminService {
                         .specializationName(serviceCategory.getSpecialization().getSpecializationName())
                         .build())
                 .toList();
+    }
+
+    @Override
+    public List<ServicesDTO> getServices() {
+        return servicesRepository.findAll().stream()
+                .map(services -> {
+                    ServicesDTO servicesResponse = ServicesMapper.SERVICES_MAPPER.mapToServicesResponse(services);
+                    servicesResponse.setServiceCategoryName(services.serviceCategoryName());
+                    return servicesResponse;
+                }).toList();
     }
 
     @Override
@@ -264,6 +271,7 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public ByteArrayInputStream exportUsersToExcel(List<UserDTO> users) {
         try {
+            checkAccess();
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             Sheet sheet = workbook.createSheet("Users");
             String[] headers = {"User Code", "Email", "Full Name", "Date Of Birth",
@@ -294,6 +302,7 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public ByteArrayInputStream exportServiceCategoriesToExcel(List<ServiceCategoryDTO> serviceCategories) {
         try {
+            checkAccess();
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             Sheet sheet = workbook.createSheet("Service Categories");
             String[] headers = {"Service Category Name", "Description", "Specialization"};
@@ -314,12 +323,32 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public ByteArrayInputStream exportServicesToExcel(List<ServicesDTO> services) {
-        return null;
+        try {
+//            checkAccess();
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            Sheet sheet = workbook.createSheet("Services");
+            String[] headers = {"Service Name", "Price", "Description", "Service Category", "Status"};
+            commonServiceImpl.createHeader(workbook, sheet, headers);
+            int firstRow = 1;
+            for (ServicesDTO service : services) {
+                Row currentRow = sheet.createRow(firstRow++);
+                commonServiceImpl.createCell(workbook, currentRow, 0, Objects.isNull(service.getServiceName()) ? " " : service.getServiceName());
+                commonServiceImpl.createCell(workbook, currentRow, 1, service.getPrice());
+                commonServiceImpl.createCell(workbook, currentRow, 2, Objects.isNull(service.getDescription()) ? " " : service.getDescription());
+                commonServiceImpl.createCell(workbook, currentRow, 3, Objects.isNull(service.getServiceCategoryName()) ? " " : service.getServiceCategoryName());
+                commonServiceImpl.createCell(workbook, currentRow, 4, Objects.isNull(service.getStatus()) ? " " : service.getStatus());
+            }
+            workbook.write(outputStream);
+            return new ByteArrayInputStream(outputStream.toByteArray());
+        } catch (IOException ex) {
+            throw new BusinessException(MessageConstants.FAILED_EXPORT_DATA_EXCEL);
+        }
     }
 
     @Override
     public ByteArrayInputStream exportBookingsToExcel(List<BookingDTO> bookings) {
         try {
+            checkAccess();
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             Sheet sheet = workbook.createSheet("Bookings");
             String[] headers = {"Full Name", "Date Of Birth", "Gender", "Phone Number", "Address",
@@ -352,6 +381,7 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public List<ServiceCategory> importServiceCategoriesFromExcel(InputStream inputStream) {
         try {
+            checkAccess();
             List<ServiceCategory> serviceCategories = new ArrayList<>();
             Sheet sheet = new XSSFWorkbook(inputStream).getSheet("Service Categories");
             if (sheet == null) {
@@ -396,10 +426,11 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public List<Services> importServicesFromExcel(InputStream inputStream) {
         try {
+            checkAccess();
             List<Services> services = new ArrayList<>();
-            Sheet sheet = new XSSFWorkbook(inputStream).getSheet("services");
+            Sheet sheet = new XSSFWorkbook(inputStream).getSheet("Services");
             if (sheet == null) {
-                throw new ResourceNotFoundException("Sheet","services");
+                throw new ResourceNotFoundException("Sheet","Services");
             }
             List<Row> rows = Lists.newArrayList(sheet.rowIterator());
             for (int indexRow = 1; indexRow < rows.size(); indexRow++) {
@@ -422,14 +453,20 @@ public class AdminServiceImpl implements AdminService {
                                 service.setPrice(commonServiceImpl.checkNumericType(cells.get(indexCell), indexRow, colName).getNumericCellValue());
                         case "Description" ->
                                 service.setDescription(commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue());
-                        case "Service Category Name" -> {
+                        case "Service Category" -> {
                             ServiceCategory serviceCategory =
-                                    serviceCategoryRepository.getServiceCategoriesByServiceCategoryName(commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue());
+                                    serviceCategoryRepository.getServiceCategoryByServiceCategoryName(commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue());
                             if (Objects.isNull(serviceCategory)) {
                                 throw new BusinessException("Import failed. Service category name in row " + indexRow + " is not exist.");
                             }
-                            serviceCode(service, serviceCategory);
                             service.setServiceCategory(serviceCategory);
+                        }
+                        case "Status" -> {
+                            String serviceStatus = commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue();
+                            if (Arrays.stream(EServiceStatus.values()).noneMatch(eServiceStatus -> eServiceStatus.name().equalsIgnoreCase(serviceStatus))) {
+                                throw new BusinessException(MessageConstants.INVALID_SERVICE_STATUS);
+                            }
+                            service.setStatus(EServiceStatus.valueOf(serviceStatus.toUpperCase()));
                         }
                         default -> {
                         }
@@ -446,6 +483,7 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public String importBookingsFromExcel(InputStream inputStream) {
         try {
+            checkAccess();
             List<BookingExcelResponse> bookingExcelResponses = new ArrayList<>();
             Sheet sheet = new XSSFWorkbook(inputStream).getSheet("bookings");
             if (sheet == null) {
@@ -584,7 +622,8 @@ public class AdminServiceImpl implements AdminService {
                 case "Service Name" -> headerCellIndex.put(i, "Service Name");
                 case "Price" -> headerCellIndex.put(i, "Price");
                 case "Description" -> headerCellIndex.put(i, "Description");
-                case "Service Category Name" -> headerCellIndex.put(i, "Service Category Name");
+                case "Service Category" -> headerCellIndex.put(i, "Service Category");
+                case "Status" -> headerCellIndex.put(i, "Status");
                 default -> {
                 }
             }
@@ -695,38 +734,20 @@ public class AdminServiceImpl implements AdminService {
     }
 
     public void setBookingCode (List<Booking> bookings) {
-        Long maxServiceCode;
+        Long maxBookingCode;
         if (bookingRepository.findAll().size() == 0) {
-            maxServiceCode = 1L;
+            maxBookingCode = 1L;
             for (Booking booking : bookings) {
-                booking.setBookingCode("BC" + (maxServiceCode++));
+                booking.setBookingCode("BC" + (maxBookingCode++));
             }
         } else {
-            maxServiceCode = Collections.max(bookingRepository.findAll()
+            maxBookingCode = Collections.max(bookingRepository.findAll()
                     .stream()
                     .map(booking -> Long.parseLong(booking.getBookingCode().substring(2)))
                     .toList());
             for (Booking booking : bookings) {
-                booking.setBookingCode("BC" + (++maxServiceCode));
+                booking.setBookingCode("BC" + (++maxBookingCode));
             }
-        }
-    }
-
-    public void serviceCode(Services services, ServiceCategory serviceCategory) {
-        StringBuilder code = new StringBuilder();
-        for (String s : serviceCategory.getServiceCategoryName().split(" ")) {
-            code.append(s.charAt(0));
-        }
-        List<Services> servicesList = servicesRepository.getServicesByCode(code.toString());
-        if (servicesList.size() == 0) {
-            services.setServiceCode(code.append("1").toString());
-        } else {
-            String s = code.toString();
-            Long maxServiceCode = Collections.max(servicesList
-                    .stream()
-                    .map(service -> Long.parseLong(service.getServiceCode().substring(s.length())))
-                    .toList());
-            services.setServiceCode(code.append(++maxServiceCode).toString());
         }
     }
 

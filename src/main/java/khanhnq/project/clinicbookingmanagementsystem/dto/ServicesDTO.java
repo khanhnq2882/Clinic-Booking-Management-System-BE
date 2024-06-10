@@ -9,7 +9,6 @@ import lombok.*;
 @Builder
 public class ServicesDTO {
     private Long serviceId;
-    private String serviceCode;
     private String serviceName;
     private Double price;
     private String description;
