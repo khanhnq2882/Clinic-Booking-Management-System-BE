@@ -23,6 +23,20 @@ public class MedicalRecord extends BaseEntity{
 
     private LocalDateTime dischargeDate;
 
+    private String bloodType;
+
+    private String medicalHistory;
+
+    private String medications;
+
+    private String allergies;
+
+    private String diagnosis;
+
+    private String treatment;
+
+    private String note;
+
     @JsonBackReference
     @ManyToOne
     @JoinColumn(name = "user_id")

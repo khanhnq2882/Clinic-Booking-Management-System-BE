@@ -22,7 +22,7 @@ public class LabResult extends BaseEntity{
 
     private LocalDateTime resultDeliveryDate;
 
-    private String diagnosis;
+    private String note;
 
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
