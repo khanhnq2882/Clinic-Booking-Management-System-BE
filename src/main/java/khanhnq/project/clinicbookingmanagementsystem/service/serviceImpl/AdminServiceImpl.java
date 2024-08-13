@@ -11,7 +11,6 @@ import khanhnq.project.clinicbookingmanagementsystem.dto.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EServiceStatus;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
-import khanhnq.project.clinicbookingmanagementsystem.request.ServiceCategoryRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.ServiceRequest;
 import khanhnq.project.clinicbookingmanagementsystem.response.*;
 import khanhnq.project.clinicbookingmanagementsystem.service.AdminService;
@@ -45,7 +44,6 @@ public class AdminServiceImpl implements AdminService {
     private final UserRepository userRepository;
     private final AuthService authService;
     private final SpecializationRepository specializationRepository;
-    private final ServiceCategoryRepository serviceCategoryRepository;
     private final ServicesRepository servicesRepository;
     private final BookingRepository bookingRepository;
     private final WorkScheduleRepository workScheduleRepository;
@@ -100,23 +98,13 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public String addServiceCategory(ServiceCategoryRequest serviceCategoryRequest) {
-        checkAccess();
-        Specialization specialization = specializationRepository.findById(serviceCategoryRequest.getSpecializationId()).orElse(null);
-        ServiceCategory serviceCategory = ServiceCategoryMapper.SERVICE_CATEGORY_MAPPER.mapToServiceCategory(serviceCategoryRequest);
-        serviceCategory.setSpecialization(specialization);
-        serviceCategoryRepository.save(serviceCategory);
-        return MessageConstants.ADD_SERVICE_CATEGORY_SUCCESS;
-    }
-
-    @Override
     public String addService(ServiceRequest serviceRequest) {
-        checkAccess();
-        ServiceCategory serviceCategory = serviceCategoryRepository.findById(serviceRequest.getServiceCategoryId()).orElse(null);
-        Services services = ServicesMapper.SERVICES_MAPPER.mapToServices(serviceRequest);
-        services.setStatus(EServiceStatus.ACTIVE);
-        services.setServiceCategory(serviceCategory);
-        servicesRepository.save(services);
+//        checkAccess();
+//        ServiceCategory serviceCategory = serviceCategoryRepository.findById(serviceRequest.getServiceCategoryId()).orElse(null);
+//        Services services = ServicesMapper.SERVICES_MAPPER.mapToServices(serviceRequest);
+//        services.setStatus(EServiceStatus.ACTIVE);
+//        services.setServiceCategory(serviceCategory);
+//        servicesRepository.save(services);
         return MessageConstants.ADD_SERVICE_SUCCESS;
     }
 
@@ -124,25 +112,25 @@ public class AdminServiceImpl implements AdminService {
     public ServicesDTO getServiceById(Long serviceId) {
         Services services = servicesRepository.findById(serviceId).orElse(null);
         return ServicesDTO.builder()
-                .serviceId(Objects.requireNonNull(services).getServiceId())
-                .serviceName(services.getServiceName())
-                .price(services.getPrice())
-                .description(services.getDescription())
-                .status(services.getStatus().name())
-                .serviceCategoryName(services.serviceCategoryName())
+//                .serviceId(Objects.requireNonNull(services).getServiceId())
+//                .serviceName(services.getServiceName())
+//                .price(services.getPrice())
+//                .description(services.getDescription())
+//                .status(services.getStatus().name())
+//                .serviceCategoryName(services.serviceCategoryName())
                 .build();
     }
 
     @Override
     public String updateService(ServiceRequest serviceRequest, Long serviceId) {
-        checkAccess();
-        Services service = servicesRepository.findById(serviceId).orElse(null);
-        ServiceCategory serviceCategory = serviceCategoryRepository.findById(serviceRequest.getServiceCategoryId()).orElse(null);
-        Objects.requireNonNull(service).setServiceCategory(serviceCategory);
-        service.setServiceName(serviceRequest.getServiceName());
-        service.setPrice(serviceRequest.getPrice());
-        service.setDescription(serviceRequest.getDescription());
-        servicesRepository.save(service);
+//        checkAccess();
+//        Services service = servicesRepository.findById(serviceId).orElse(null);
+//        ServiceCategory serviceCategory = serviceCategoryRepository.findById(serviceRequest.getServiceCategoryId()).orElse(null);
+//        Objects.requireNonNull(service).setServiceCategory(serviceCategory);
+//        service.setServiceName(serviceRequest.getServiceName());
+//        service.setPrice(serviceRequest.getPrice());
+//        service.setDescription(serviceRequest.getDescription());
+//        servicesRepository.save(service);
         return MessageConstants.UPDATE_SERVICE_SUCCESS;
     }
 
@@ -177,56 +165,15 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public List<ServiceCategoryDTO> getServiceCategories() {
-        return serviceCategoryRepository.findAll().stream()
-                .map(serviceCategory -> ServiceCategoryDTO.builder()
-                        .serviceCategoryName(serviceCategory.getServiceCategoryName())
-                        .description(serviceCategory.getDescription())
-                        .specializationName(serviceCategory.getSpecialization().getSpecializationName())
-                        .build())
-                .toList();
-    }
-
-    @Override
     public List<ServicesDTO> getServices() {
         return servicesRepository.findAll().stream()
                 .map(services -> {
                     ServicesDTO servicesResponse = ServicesMapper.SERVICES_MAPPER.mapToServicesResponse(services);
-                    servicesResponse.setServiceCategoryName(services.serviceCategoryName());
+//                    servicesResponse.setServiceCategoryName(services.serviceCategoryName());
                     return servicesResponse;
                 }).toList();
     }
 
-    @Override
-    public List<ServiceCategoryDTO> getServiceCategoriesBySpecialization(Long specializationId) {
-        return serviceCategoryRepository.getServiceCategoriesBySpecializationId(specializationId).stream()
-                .map(serviceCategory -> ServiceCategoryDTO.builder()
-                        .serviceCategoryId(serviceCategory.getServiceCategoryId())
-                        .serviceCategoryName(serviceCategory.getServiceCategoryName())
-                        .specializationId(specializationId)
-                        .build())
-                .toList();
-    }
-
-    @Override
-    public ServiceCategoryResponse getAllServiceCategories(int page, int size, String[] sorts) {
-        Page<ServiceCategory> serviceCategoryPage = serviceCategoryRepository.findAll(commonServiceImpl.pagingSort(page, size, sorts));
-        List<ServiceCategoryDTO> serviceCategories = serviceCategoryPage.getContent().stream()
-                .map(serviceCategory -> ServiceCategoryDTO.builder()
-                        .serviceCategoryId(serviceCategory.getServiceCategoryId())
-                        .serviceCategoryName(serviceCategory.getServiceCategoryName())
-                        .description(serviceCategory.getDescription())
-                        .specializationId(serviceCategory.getSpecialization().getSpecializationId())
-                        .specializationName(serviceCategory.getSpecialization().getSpecializationName())
-                        .build())
-                .toList();
-        return ServiceCategoryResponse.builder()
-                .totalItems(serviceCategoryPage.getTotalElements())
-                .totalPages(serviceCategoryPage.getTotalPages())
-                .currentPage(serviceCategoryPage.getNumber())
-                .serviceCategories(serviceCategories)
-                .build();
-    }
 
     @Override
     public ServicesResponse getAllServices(int page, int size, String[] sorts) {
@@ -234,7 +181,7 @@ public class AdminServiceImpl implements AdminService {
         List<ServicesDTO> servicesResponses = servicesPage.getContent().stream()
                 .map(services -> {
                     ServicesDTO servicesResponse = ServicesMapper.SERVICES_MAPPER.mapToServicesResponse(services);
-                    servicesResponse.setServiceCategoryName(services.serviceCategoryName());
+//                    servicesResponse.setServiceCategoryName(services.serviceCategoryName());
                     return servicesResponse;
                 }).toList();
         return ServicesResponse.builder()
@@ -243,29 +190,6 @@ public class AdminServiceImpl implements AdminService {
                 .currentPage(servicesPage.getNumber())
                 .services(servicesResponses)
                 .build();
-    }
-
-    @Override
-    public ServiceCategoryDTO getServiceCategoryById(Long serviceCategoryId) {
-        ServiceCategory serviceCategory = serviceCategoryRepository.findById(serviceCategoryId).orElse(null);
-        return ServiceCategoryDTO.builder()
-                .serviceCategoryId(Objects.requireNonNull(serviceCategory).getServiceCategoryId())
-                .serviceCategoryName(serviceCategory.getServiceCategoryName())
-                .description(serviceCategory.getDescription())
-                .specializationId(serviceCategory.getSpecialization().getSpecializationId())
-                .specializationName(serviceCategory.getSpecialization().getSpecializationName())
-                .build();
-    }
-
-    @Override
-    public String updateServiceCategory(ServiceCategoryRequest serviceCategoryRequest, Long serviceCategoryId) {
-        checkAccess();
-        ServiceCategory serviceCategory = serviceCategoryRepository.findById(serviceCategoryId).orElse(null);
-        Objects.requireNonNull(serviceCategory).setSpecialization(specializationRepository.findById(serviceCategoryRequest.getSpecializationId()).orElse(null));
-        serviceCategory.setServiceCategoryName(serviceCategoryRequest.getServiceCategoryName());
-        serviceCategory.setDescription(serviceCategoryRequest.getDescription());
-        serviceCategoryRepository.save(serviceCategory);
-        return MessageConstants.UPDATE_SERVICE_CATEGORY_SUCCESS;
     }
 
     @Override
@@ -300,31 +224,9 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public ByteArrayInputStream exportServiceCategoriesToExcel(List<ServiceCategoryDTO> serviceCategories) {
-        try {
-            checkAccess();
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            Sheet sheet = workbook.createSheet("Service Categories");
-            String[] headers = {"Service Category Name", "Description", "Specialization"};
-            commonServiceImpl.createHeader(workbook, sheet, headers);
-            int firstRow = 1;
-            for (ServiceCategoryDTO serviceCategory : serviceCategories) {
-                Row currentRow = sheet.createRow(firstRow++);
-                commonServiceImpl.createCell(workbook, currentRow, 0, serviceCategory.getServiceCategoryName());
-                commonServiceImpl.createCell(workbook, currentRow, 1, serviceCategory.getDescription());
-                commonServiceImpl.createCell(workbook, currentRow, 2, serviceCategory.getSpecializationName());
-            }
-            workbook.write(outputStream);
-            return new ByteArrayInputStream(outputStream.toByteArray());
-        } catch (IOException ex) {
-            throw new BusinessException(MessageConstants.FAILED_EXPORT_DATA_EXCEL);
-        }
-    }
-
-    @Override
     public ByteArrayInputStream exportServicesToExcel(List<ServicesDTO> services) {
         try {
-//            checkAccess();
+            checkAccess();
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             Sheet sheet = workbook.createSheet("Services");
             String[] headers = {"Service Name", "Price", "Description", "Service Category", "Status"};
@@ -379,51 +281,6 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public List<ServiceCategory> importServiceCategoriesFromExcel(InputStream inputStream) {
-        try {
-            checkAccess();
-            List<ServiceCategory> serviceCategories = new ArrayList<>();
-            Sheet sheet = new XSSFWorkbook(inputStream).getSheet("Service Categories");
-            if (sheet == null) {
-                throw new ResourceNotFoundException("Sheet","Service Categories");
-            }
-            List<Row> rows = Lists.newArrayList(sheet.rowIterator());
-            for (int indexRow = 1; indexRow < rows.size(); indexRow++) {
-                ServiceCategory serviceCategory = new ServiceCategory();
-                List<Cell> cells = commonServiceImpl.getAllCells(rows.get(indexRow));
-                for (int indexCell = 0; indexCell < cells.size(); indexCell++) {
-                    String colName = serviceCategoryHeaderCellIndex(rows.get(0)).get(indexCell);
-                    commonServiceImpl.checkBlankType(cells.get(indexCell), indexRow, colName);
-                    switch (colName) {
-                        case "Service Category Name" -> {
-                            String serviceCategoryName = commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue();
-                            List<String> serviceCategoriesName = serviceCategoryRepository.findAll().stream().map(ServiceCategory::getServiceCategoryName).toList();
-                            if (serviceCategoriesName.stream().anyMatch(s -> s.equalsIgnoreCase(serviceCategoryName))) {
-                                throw new ResourceAlreadyExistException("Service category",serviceCategoryName);
-                            }
-                            serviceCategory.setServiceCategoryName(serviceCategoryName);
-                        }
-                        case "Description" ->
-                                serviceCategory.setDescription(commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue());
-                        case "Specialization" -> {
-                            String specializationName = commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue();
-                            Specialization specialization = specializationRepository.getSpecializationBySpecializationName(specializationName);
-                            if (Objects.isNull(specialization)) {
-                                throw new BusinessException("Import failed. Specialization named '"+specializationName+"' in row " + indexRow + " is not exist.");
-                            }
-                            serviceCategory.setSpecialization(specialization);
-                        }
-                    }
-                }
-                serviceCategories.add(serviceCategory);
-            }
-            return serviceCategories;
-        } catch (IOException e) {
-            throw new BusinessException(MessageConstants.FAILED_IMPORT_DATA_EXCEL);
-        }
-    }
-
-    @Override
     public List<Services> importServicesFromExcel(InputStream inputStream) {
         try {
             checkAccess();
@@ -450,16 +307,16 @@ public class AdminServiceImpl implements AdminService {
                             service.setServiceName(serviceName);
                         }
                         case "Price" ->
-                                service.setPrice(commonServiceImpl.checkNumericType(cells.get(indexCell), indexRow, colName).getNumericCellValue());
+                                service.setServicePrice(commonServiceImpl.checkNumericType(cells.get(indexCell), indexRow, colName).getNumericCellValue());
                         case "Description" ->
                                 service.setDescription(commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue());
                         case "Service Category" -> {
-                            ServiceCategory serviceCategory =
-                                    serviceCategoryRepository.getServiceCategoryByServiceCategoryName(commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue());
-                            if (Objects.isNull(serviceCategory)) {
-                                throw new BusinessException("Import failed. Service category name in row " + indexRow + " is not exist.");
-                            }
-                            service.setServiceCategory(serviceCategory);
+//                            ServiceCategory serviceCategory =
+//                                    serviceCategoryRepository.getServiceCategoryByServiceCategoryName(commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue());
+//                            if (Objects.isNull(serviceCategory)) {
+//                                throw new BusinessException("Import failed. Service category name in row " + indexRow + " is not exist.");
+//                            }
+//                            service.setServiceCategory(serviceCategory);
                         }
                         case "Status" -> {
                             String serviceStatus = commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue();

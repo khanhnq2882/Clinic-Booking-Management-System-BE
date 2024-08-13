@@ -21,9 +21,8 @@ public class Specialization extends BaseEntity{
     private String specializationName;
 
     @OneToMany(mappedBy = "specialization", cascade = CascadeType.ALL)
-    private Set<ServiceCategory> serviceCategories;
+    private Set<Services> services;
 
     @OneToMany(mappedBy = "specialization", cascade = CascadeType.PERSIST)
     private Set<User> users = new HashSet<>();
-
 }

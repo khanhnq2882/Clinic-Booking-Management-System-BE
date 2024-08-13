@@ -97,8 +97,11 @@ public class User extends BaseEntity{
     @JoinColumn(name = "clinic_id")
     private Clinic clinic;
 
-//    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-//    private List<MedicalRecord> medicalRecords;
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private List<MedicalRecord> medicalRecords;
+
+    @OneToMany(mappedBy = "doctorPrescribed", cascade = CascadeType.ALL)
+    private List<LabResult> labResults;
 
     public String specializationName() {
         return specialization.getSpecializationName();

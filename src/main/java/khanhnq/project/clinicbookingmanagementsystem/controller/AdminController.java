@@ -1,15 +1,11 @@
 package khanhnq.project.clinicbookingmanagementsystem.controller;
 
 import jakarta.mail.MessagingException;
-import khanhnq.project.clinicbookingmanagementsystem.dto.ServiceCategoryDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.ServicesDTO;
 import khanhnq.project.clinicbookingmanagementsystem.dto.SpecializationDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.File;
-import khanhnq.project.clinicbookingmanagementsystem.entity.ServiceCategory;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Services;
-import khanhnq.project.clinicbookingmanagementsystem.repository.ServiceCategoryRepository;
 import khanhnq.project.clinicbookingmanagementsystem.repository.ServicesRepository;
-import khanhnq.project.clinicbookingmanagementsystem.request.ServiceCategoryRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.ServiceRequest;
 import khanhnq.project.clinicbookingmanagementsystem.response.*;
 import khanhnq.project.clinicbookingmanagementsystem.service.AdminService;
@@ -34,7 +30,6 @@ public class AdminController {
 
     private final AdminService adminService;
     private final CommonServiceImpl commonService;
-    private final ServiceCategoryRepository serviceCategoryRepository;
     private final ServicesRepository serviceRepository;
 
     @PostMapping("/reset-password/{email}")
@@ -69,33 +64,6 @@ public class AdminController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllSpecializations());
     }
 
-    @GetMapping("/get-all-service-categories/{specializationId}")
-    public ResponseEntity<List<ServiceCategoryDTO>> getAllServiceCategories(@PathVariable("specializationId") Long specializationId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getServiceCategoriesBySpecialization(specializationId));
-    }
-
-    @GetMapping("/get-all-service-categories")
-    public ResponseEntity<ServiceCategoryResponse> getAllServiceCategories(@RequestParam(defaultValue = "0") int page,
-                                                                           @RequestParam(defaultValue = "3") int size,
-                                                                           @RequestParam(defaultValue = "serviceCategoryId,asc") String[] sorts) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllServiceCategories(page, size, sorts));
-    }
-
-    @PostMapping("/add-service-category")
-    public ResponseEntity<String> addServiceCategory(@RequestBody ServiceCategoryRequest serviceCategoryRequest) {
-        return MessageResponse.getResponseMessage(adminService.addServiceCategory(serviceCategoryRequest), HttpStatus.OK);
-    }
-
-    @GetMapping("/get-service-category/{serviceCategoryId}")
-    public ResponseEntity<ServiceCategoryDTO> getServiceCategory(@PathVariable("serviceCategoryId") Long serviceCategoryId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getServiceCategoryById(serviceCategoryId));
-    }
-
-    @PostMapping("/update-service-category/{serviceCategoryId}")
-    public ResponseEntity<String> updateServiceCategory(@PathVariable("serviceCategoryId") Long serviceCategoryId ,@RequestBody ServiceCategoryRequest serviceCategoryRequest) {
-        return MessageResponse.getResponseMessage(adminService.updateServiceCategory(serviceCategoryRequest, serviceCategoryId), HttpStatus.OK);
-    }
-
     @GetMapping("/get-all-services")
     public ResponseEntity<ServicesResponse> getAllServices(@RequestParam(defaultValue = "0") int page,
                                                            @RequestParam(defaultValue = "3") int size,
@@ -126,29 +94,6 @@ public class AdminController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName)
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .body(file);
-    }
-
-    @GetMapping("/export-service-categories-to-excel")
-    public ResponseEntity<InputStreamResource> exportServiceCategoriesToExcel() {
-        String currentDateTime = new SimpleDateFormat("yyyy-MM-dd_HH:mm:ss").format(new Date());
-        String fileName = "service_categories_"+ currentDateTime + ".xlsx";
-        InputStreamResource file = new InputStreamResource(adminService.exportServiceCategoriesToExcel(adminService.getServiceCategories()));
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName)
-                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
-                .body(file);
-    }
-
-    @PostMapping("/import-service-categories-from-excel")
-    public ResponseEntity<String> importServiceCategoriesFromExcel (@RequestParam("file") MultipartFile file){
-        try {
-            commonService.checkExcelFormat(file);
-            List<ServiceCategory> serviceCategories = adminService.importServiceCategoriesFromExcel(file.getInputStream());
-            serviceCategoryRepository.saveAll(serviceCategories);
-            return MessageResponse.getResponseMessage("Import data successfully.", HttpStatus.OK);
-        } catch (IOException e) {
-            return MessageResponse.getResponseMessage("Failed to store data from file excel.", HttpStatus.BAD_REQUEST);
-        }
     }
 
     @GetMapping("/export-services-to-excel")

@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EServiceStatus;
 import lombok.*;
+import java.util.List;
 
 @Entity
 @Getter
@@ -22,7 +23,7 @@ public class Services extends BaseEntity{
     private String serviceName;
 
     @Column(nullable = false)
-    private Double price;
+    private Double servicePrice;
 
     @NotBlank
     @Size(max = 255)
@@ -34,14 +35,11 @@ public class Services extends BaseEntity{
     private EServiceStatus status;
 
     @ManyToOne
-    @JoinColumn(name = "service_category_id")
-    private ServiceCategory serviceCategory;
+    @JoinColumn(name = "specialization_id")
+    private Specialization specialization;
 
-//    @OneToOne(mappedBy = "service")
-//    private LabResult labResult;
+    @OneToMany(mappedBy = "service", cascade = CascadeType.ALL)
+    private List<TestPackage> testPackages;
 
-    public String serviceCategoryName(){
-        return serviceCategory.getServiceCategoryName();
-    }
 
 }
