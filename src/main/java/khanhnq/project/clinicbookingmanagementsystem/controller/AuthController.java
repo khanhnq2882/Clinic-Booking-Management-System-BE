@@ -3,6 +3,7 @@ package khanhnq.project.clinicbookingmanagementsystem.controller;
 import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import khanhnq.project.clinicbookingmanagementsystem.request.AccountSystemRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.ChangePasswordRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.LoginRequest;
 import khanhnq.project.clinicbookingmanagementsystem.request.RegisterRequest;
@@ -28,6 +29,11 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<String> register(@Valid @RequestBody RegisterRequest registerRequest) {
         return MessageResponse.getResponseMessage(authService.register(registerRequest), HttpStatus.CREATED);
+    }
+
+    @PostMapping("/new-system-account")
+    public ResponseEntity<String> newSystemAccount(@Valid @RequestBody AccountSystemRequest accountSystemRequest) throws MessagingException {
+        return MessageResponse.getResponseMessage(authService.newSystemAccount(accountSystemRequest), HttpStatus.CREATED);
     }
 
     @PostMapping("/login")

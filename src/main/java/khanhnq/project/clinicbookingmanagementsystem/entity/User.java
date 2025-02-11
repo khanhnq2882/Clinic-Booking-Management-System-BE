@@ -78,34 +78,13 @@ public class User extends BaseEntity{
     private Set<File> files = new HashSet<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-    private Set<Experience> experiences = new HashSet<>();
-
-    @Size(max = 255)
-    private String careerDescription;
-
-    @ManyToOne
-    @JoinColumn(name = "specialization_id")
-    private Specialization specialization;
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-    private List<DaysOfWeek> daysOfWeeks = new ArrayList<>();
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private Set<Booking> bookings = new HashSet<>();
-
-    @ManyToOne
-    @JoinColumn(name = "clinic_id")
-    private Clinic clinic;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private List<MedicalRecord> medicalRecords;
 
     @OneToMany(mappedBy = "doctorPrescribed", cascade = CascadeType.ALL)
     private List<LabResult> labResults;
-
-    public String specializationName() {
-        return specialization.getSpecializationName();
-    }
 
     @Override
     public boolean equals(Object o) {

@@ -13,7 +13,7 @@ import java.util.List;
 @AllArgsConstructor
 @Table(name = "day_of_week")
 @Builder
-public class DaysOfWeek extends BaseEntity{
+public class DaysOfWeek extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long dayOfWeekId;
@@ -32,6 +32,6 @@ public class DaysOfWeek extends BaseEntity{
     private List<WorkSchedule> workSchedules;
 
     @ManyToOne
-    @JoinColumn(name = "user_id")
-    private User user;
+    @JoinColumn(name = "doctor_id")
+    private Doctor doctor;
 }

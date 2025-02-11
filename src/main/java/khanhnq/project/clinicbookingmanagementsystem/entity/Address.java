@@ -12,7 +12,7 @@ import lombok.*;
 @AllArgsConstructor
 @Table(name = "address")
 @Builder
-public class Address extends BaseEntity{
+public class Address extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long addressId;
@@ -28,9 +28,4 @@ public class Address extends BaseEntity{
 
     @OneToOne(mappedBy = "address")
     private User user;
-
-    @JsonBackReference
-    @ManyToOne
-    @JoinColumn(name = "clinic_id")
-    private Clinic clinic;
 }

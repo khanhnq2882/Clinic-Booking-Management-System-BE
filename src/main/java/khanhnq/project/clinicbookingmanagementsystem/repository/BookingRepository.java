@@ -14,8 +14,8 @@ import java.util.List;
 @Repository
 public interface BookingRepository extends JpaRepository<Booking, Long> {
 
-    @Query(value = "SELECT b FROM Booking AS b INNER JOIN b.workSchedule AS ws INNER JOIN ws.daysOfWeek AS d INNER JOIN d.user AS u WHERE u.userId = :userId")
-    List<Booking> getBookingsByDoctor (@Param("userId") Long userId);
+    @Query(value = "SELECT b FROM Booking AS b INNER JOIN b.workSchedule AS ws INNER JOIN ws.daysOfWeek AS d INNER JOIN d.doctor AS dt WHERE dt.doctorId = :doctorId")
+    List<Booking> getBookingsByDoctor (@Param("doctorId") Long doctorId);
 
     @Modifying
     @Transactional
@@ -35,9 +35,9 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     @Query(value = "SELECT b FROM Booking AS b " +
             "INNER JOIN b.workSchedule AS ws " +
             "INNER JOIN ws.daysOfWeek AS d " +
-            "INNER JOIN d.user AS u " +
-            "WHERE u.userId = :userId")
-    Page<Booking> getAllBookings(@Param("userId") Long userId, Pageable pageable);
+            "INNER JOIN d.doctor AS dt " +
+            "WHERE dt.doctorId = :doctorId")
+    Page<Booking> getAllBookings(@Param("doctorId") Long doctorId, Pageable pageable);
 
     @Query(value = "SELECT b FROM Booking AS b WHERE b.user.userId IS NULL")
     Page<Booking> getBookingsWithNullUser (Pageable pageable);

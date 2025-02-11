@@ -6,6 +6,7 @@ public class MessageConstants {
     public static final String LOGOUT_SUCCESS = "Logout successfully.";
     public static final String LOGOUT_FAILED = "Logout failed.";
     public static final String REQUEST_RESET_PASSWORD_SUCCESS = "Request reset password successfully. Please wait for a response from the administrator.";
+    public static final String SEND_ACCOUNT_CREDENTIALS_SUCCESS = "New account information sent successfully..";
     public static final String RESET_PASSWORD_SUCCESS = "Reset password successfully.";
     public static final String CHANGE_PASSWORD_SUCCESS = "Password changed successfully.";
     public static final String NOT_MATCH_PASSWORD = "New password and confirm password is not match.";

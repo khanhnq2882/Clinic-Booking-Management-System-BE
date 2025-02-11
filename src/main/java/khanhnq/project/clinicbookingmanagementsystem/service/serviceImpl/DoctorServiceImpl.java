@@ -66,14 +66,14 @@ public class DoctorServiceImpl implements DoctorService {
         Set<Experience> experiences = doctorInformationRequest.getWorkExperiences()
                 .stream().map(experienceDTO -> {
                     Experience experience = ExperienceMapper.EXPERIENCE_MAPPER.mapToExperience(experienceDTO);
-                    experience.setUser(currentUser);
+//                    experience.setUser(currentUser);
                     experience.setCreatedBy(currentUser.getUsername());
                     return experience;
                 }).collect(Collectors.toSet());
         Specialization specialization  = specializationRepository.getSpecializationBySpecializationName(specializationName);
-        currentUser.setSpecialization(specialization);
-        currentUser.setExperiences(experiences);
-        currentUser.setCareerDescription(doctorInformationRequest.getCareerDescription());
+//        currentUser.setSpecialization(specialization);
+//        currentUser.setExperiences(experiences);
+//        currentUser.setCareerDescription(doctorInformationRequest.getCareerDescription());
         currentUser.setStatus(EUserStatus.PENDING);
         currentUser.setUpdatedBy(currentUser.getUsername());
         userRepository.save(currentUser);
@@ -93,9 +93,9 @@ public class DoctorServiceImpl implements DoctorService {
     @Override
     public String registerWorkSchedules(RegisterWorkScheduleRequest registerWorkSchedule) {
         User currentUser = checkAccess();
-        if (Objects.isNull(currentUser.getSpecialization())) {
-            throw new BusinessException(MessageConstants.SPECIALIZATION_NOT_FOUND);
-        }
+//        if (Objects.isNull(currentUser.getSpecialization())) {
+//            throw new BusinessException(MessageConstants.SPECIALIZATION_NOT_FOUND);
+//        }
         Date workingDay = registerWorkSchedule.getWorkingDay();
         LocalDate ld1 = workingDay.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
         LocalDate ld2 = new Date().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
@@ -114,28 +114,29 @@ public class DoctorServiceImpl implements DoctorService {
         if (Objects.nonNull(oldDaysOfWeek)) {
             dayOfWeekRepository.delete(oldDaysOfWeek);
         }
-        List<User> doctors = userRepository.getDoctorsBySpecializationId(currentUser.getSpecialization().getSpecializationId())
-                .stream().filter(user -> !user.equals(currentUser)).toList();
-        List<WorkScheduleDTO> invalidWorkSchedules = getInvalidWorkSchedules(doctors, registerWorkSchedule);
-        DaysOfWeek newDayOfWeek = new DaysOfWeek();
-        newDayOfWeek.setDayOfWeek(dayOfWeek);
-        newDayOfWeek.setWorkingDay(workingDay);
-        newDayOfWeek.setUser(currentUser);
-        List<WorkSchedule> validWorkSchedules = newWorkSchedules.stream()
-                .filter(workScheduleDTO -> !invalidWorkSchedules.contains(workScheduleDTO))
-                .map(workScheduleDTO -> {
-                    WorkSchedule workSchedule = WorkScheduleMapper.WORK_SCHEDULE_MAPPER.mapToWorkSchedule(workScheduleDTO);
-                    workSchedule.setDaysOfWeek(newDayOfWeek);
-                    workSchedule.setCreatedBy(currentUser.getUsername());
-                    return workSchedule;
-                }).toList();
-        newDayOfWeek.setNumberOfShiftsPerDay(validWorkSchedules.size());
-        newDayOfWeek.setWorkSchedules(validWorkSchedules);
-        newDayOfWeek.setCreatedBy(currentUser.getUsername());
-        currentUser.getDaysOfWeeks().add(newDayOfWeek);
-        currentUser.setDaysOfWeeks(currentUser.getDaysOfWeeks());
-        userRepository.save(currentUser);
-        return workSchedulesMessage(invalidWorkSchedules, workingDay);
+//        List<User> doctors = userRepository.getDoctorsBySpecializationId(currentUser.getSpecialization().getSpecializationId())
+//                .stream().filter(user -> !user.equals(currentUser)).toList();
+//        List<WorkScheduleDTO> invalidWorkSchedules = getInvalidWorkSchedules(doctors, registerWorkSchedule);
+//        DaysOfWeek newDayOfWeek = new DaysOfWeek();
+//        newDayOfWeek.setDayOfWeek(dayOfWeek);
+//        newDayOfWeek.setWorkingDay(workingDay);
+//        newDayOfWeek.setUser(currentUser);
+//        List<WorkSchedule> validWorkSchedules = newWorkSchedules.stream()
+//                .filter(workScheduleDTO -> !invalidWorkSchedules.contains(workScheduleDTO))
+//                .map(workScheduleDTO -> {
+//                    WorkSchedule workSchedule = WorkScheduleMapper.WORK_SCHEDULE_MAPPER.mapToWorkSchedule(workScheduleDTO);
+//                    workSchedule.setDaysOfWeek(newDayOfWeek);
+//                    workSchedule.setCreatedBy(currentUser.getUsername());
+//                    return workSchedule;
+//                }).toList();
+//        newDayOfWeek.setNumberOfShiftsPerDay(validWorkSchedules.size());
+//        newDayOfWeek.setWorkSchedules(validWorkSchedules);
+//        newDayOfWeek.setCreatedBy(currentUser.getUsername());
+//        currentUser.getDaysOfWeeks().add(newDayOfWeek);
+//        currentUser.setDaysOfWeeks(currentUser.getDaysOfWeeks());
+//        userRepository.save(currentUser);
+//        return workSchedulesMessage(invalidWorkSchedules, workingDay);
+        return "";
     }
 
     @Override

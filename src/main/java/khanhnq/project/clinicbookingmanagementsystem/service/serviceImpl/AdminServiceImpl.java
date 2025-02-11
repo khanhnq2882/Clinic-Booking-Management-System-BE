@@ -83,8 +83,8 @@ public class AdminServiceImpl implements AdminService {
         List<DoctorDTO> doctors = doctorPage.getContent().stream()
                 .map(user -> {
                     DoctorDTO doctorDTO = UserMapper.USER_MAPPER.mapToDoctorResponse(user);
-                    if (user.getSpecialization() != null)
-                        doctorDTO.setSpecializationName(user.specializationName());
+//                    if (user.getSpecialization() != null)
+//                        doctorDTO.setSpecializationName(user.specializationName());
                     doctorDTO.setDoctorAddress(commonServiceImpl.getAddress(user));
                     doctorDTO.setFiles(commonServiceImpl.getAllFiles(user.getUserId()));
                     return doctorDTO;

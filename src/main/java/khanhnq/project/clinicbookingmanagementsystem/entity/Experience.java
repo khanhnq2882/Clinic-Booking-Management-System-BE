@@ -10,7 +10,7 @@ import lombok.*;
 @AllArgsConstructor
 @Table(name = "experience")
 @Builder
-public class Experience extends BaseEntity{
+public class Experience extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long experienceId;
@@ -31,6 +31,6 @@ public class Experience extends BaseEntity{
     private int yearOfEndWork;
 
     @ManyToOne
-    @JoinColumn(name = "user_id")
-    private User user;
+    @JoinColumn(name = "doctor_id")
+    private Doctor doctor;
 }

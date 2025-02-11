@@ -14,15 +14,15 @@ import java.util.List;
 public interface WorkScheduleRepository extends JpaRepository<WorkSchedule, Long> {
     @Query(value = "SELECT ws FROM WorkSchedule AS ws " +
             "INNER JOIN ws.daysOfWeek AS d " +
-            "WHERE d.user.userId = :userId")
-    List<WorkSchedule> getWorkSchedulesByUserId(@Param("userId") Long userId);
+            "WHERE d.doctor.doctorId = :doctorId")
+    List<WorkSchedule> getWorkSchedulesByDoctorId(@Param("doctorId") Long doctorId);
 
     @Query(value = "SELECT ws FROM WorkSchedule AS ws WHERE ws.daysOfWeek = :dayOfWeek")
     List<WorkSchedule> getWorkSchedulesByDayOfWeek (@Param("dayOfWeek") DaysOfWeek dayOfWeek);
 
     @Query(value = "SELECT ws FROM WorkSchedule AS ws " +
             "INNER JOIN ws.daysOfWeek AS d " +
-            "INNER JOIN d.user AS u " +
+            "INNER JOIN d.doctor AS u " +
             "INNER JOIN u.specialization AS s " +
             "WHERE s.specializationName = :specializationName " +
             "AND d.dayOfWeek = :dayOfWeek " +

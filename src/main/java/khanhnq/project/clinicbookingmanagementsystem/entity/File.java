@@ -19,6 +19,9 @@ public class File extends BaseEntity{
     private String fileName;
 
     @Column(nullable = false)
+    private String fileUrl;
+
+    @Column(nullable = false)
     private String fileType;
 
     @Lob
@@ -28,9 +31,4 @@ public class File extends BaseEntity{
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
-
-    @ManyToOne
-    @JoinColumn(name = "clinic_id")
-    private Clinic clinic;
-
 }

@@ -24,5 +24,5 @@ public class Specialization extends BaseEntity{
     private Set<Services> services;
 
     @OneToMany(mappedBy = "specialization", cascade = CascadeType.PERSIST)
-    private Set<User> users = new HashSet<>();
+    private Set<Doctor> doctors = new HashSet<>();
 }

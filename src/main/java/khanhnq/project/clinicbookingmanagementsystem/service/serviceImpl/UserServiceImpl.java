@@ -63,7 +63,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<WorkScheduleDTO> getWorkSchedulesByDoctor(Long userId) {
-        return workScheduleRepository.getWorkSchedulesByUserId(userId)
+        return workScheduleRepository.getWorkSchedulesByDoctorId(userId)
                 .stream()
                 .map(workSchedule -> WorkScheduleDTO.builder()
                         .startTime(workSchedule.getStartTime())
