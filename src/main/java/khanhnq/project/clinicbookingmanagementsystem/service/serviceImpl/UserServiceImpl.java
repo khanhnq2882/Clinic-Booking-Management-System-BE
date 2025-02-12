@@ -36,17 +36,17 @@ public class UserServiceImpl implements UserService {
     private final CommonServiceImpl commonServiceImpl;
 
     @Override
-    public String updateProfile(UserProfileRequest profileRequest) {
+    public String updateProfile(UserProfileRequest profileRequest, MultipartFile file) {
         User currentUser = authService.getCurrentUser();
-        commonServiceImpl.updateProfile(profileRequest, currentUser);
+        commonServiceImpl.updateProfile(profileRequest, currentUser, file);
         userRepository.save(currentUser);
         return MessageConstants.UPDATE_PROFILE_SUCCESS;
     }
 
-    @Override
-    public String uploadAvatar(MultipartFile multipartFile) {
-        return commonServiceImpl.uploadFile(multipartFile, "avatar");
-    }
+//    @Override
+//    public String uploadAvatar(MultipartFile multipartFile) {
+//        return commonServiceImpl.uploadFile(multipartFile, "avatar");
+//    }
 
     @Override
     public List<DoctorDTO> getDoctorsBySpecialization(Long specializationId) {

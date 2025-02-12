@@ -9,8 +9,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 public interface UserService {
-    String updateProfile(UserProfileRequest userProfileRequest);
-    String uploadAvatar(MultipartFile file);
+    String updateProfile(UserProfileRequest userProfileRequest, MultipartFile multipartFile);
+//    String uploadAvatar(MultipartFile file);
     List<DoctorDTO> getDoctorsBySpecialization(Long specializationId);
     List<WorkScheduleDTO> getWorkSchedulesByDoctor(Long userId);
     String bookingAppointment(BookingAppointmentRequest bookingAppointmentRequest);

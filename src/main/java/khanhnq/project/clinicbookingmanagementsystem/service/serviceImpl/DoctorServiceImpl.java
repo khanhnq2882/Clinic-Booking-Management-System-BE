@@ -44,14 +44,15 @@ public class DoctorServiceImpl implements DoctorService {
     @Override
     public String updateProfile(UserProfileRequest userProfileRequest) {
         User currentUser = checkAccess();
-        commonServiceImpl.updateProfile(userProfileRequest, currentUser);
+//        commonServiceImpl.updateProfile(userProfileRequest, currentUser);
         userRepository.save(currentUser);
         return MessageConstants.UPDATE_PROFILE_SUCCESS;
     }
 
     @Override
     public String uploadAvatar(MultipartFile multipartFile) {
-        return commonServiceImpl.uploadFile(multipartFile, "avatar");
+//        return commonServiceImpl.uploadFile(multipartFile, "avatar");
+        return "";
     }
 
     @Override
@@ -82,12 +83,14 @@ public class DoctorServiceImpl implements DoctorService {
 
     @Override
     public String uploadMedicalDegree(MultipartFile file) {
-        return commonServiceImpl.uploadFile(file, "medical-degree");
+//        return commonServiceImpl.uploadFile(file, "medical-degree");
+        return "";
     }
 
     @Override
     public String uploadSpecialtyDegree(MultipartFile file) {
-        return commonServiceImpl.uploadFile(file, "specialty-degree");
+//        return commonServiceImpl.uploadFile(file, "specialty-degree");
+        return "";
     }
 
     @Override

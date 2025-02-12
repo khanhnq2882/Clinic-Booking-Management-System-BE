@@ -19,9 +19,6 @@ public class File extends BaseEntity{
     private String fileName;
 
     @Column(nullable = false)
-    private String fileUrl;
-
-    @Column(nullable = false)
     private String fileType;
 
     @Lob

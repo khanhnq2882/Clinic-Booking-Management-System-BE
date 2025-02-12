@@ -112,6 +112,7 @@ public class AuthServiceImpl implements AuthService {
                         throw new ResourceNotFoundException("Role", role);
                     }
                     user.setUserCode(createUserCode(userRepository.getDoctors(), "DT"));
+                    doctor.setCreatedBy(currentUser.getEmail());
                 }
                 case "ROLE_USER" -> {
                     if (Objects.isNull(roleRepository.findRoleByRoleName(ERole.ROLE_USER))) {
@@ -125,12 +126,12 @@ public class AuthServiceImpl implements AuthService {
         Set<Role> roles = accountSystemRequest.getRoles().stream()
                 .map(role -> roleRepository.findRoleByRoleName(ERole.valueOf(role)).get()).collect(Collectors.toSet());
         user.setRoles(roles);
-        doctor.setUser(user);
-        doctor.setCreatedBy(currentUser.getEmail());
+        user.setCreatedBy(currentUser.getEmail());
         userRepository.save(user);
+        doctor.setUser(user);
         doctorRepository.save(doctor);
         newAccountEmail(accountSystemRequest.getEmail(), accountSystemRequest.getUsername(), password);
-        return MessageConstants.REGISTER_SUCCESS;
+        return MessageConstants.ADD_NEW_SYSTEM_ACCOUNT_SUCCESS;
     }
 
     @Override

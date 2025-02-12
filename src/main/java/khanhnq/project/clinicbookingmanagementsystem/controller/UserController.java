@@ -22,15 +22,18 @@ import java.util.List;
 public class UserController {
     private final UserService userService;
 
-    @PostMapping("/update-profile")
-    public ResponseEntity<String> updateProfile(@Valid @RequestBody UserProfileRequest userProfileRequest) {
-        return MessageResponse.getResponseMessage(userService.updateProfile(userProfileRequest), HttpStatus.OK);
+    @PostMapping(value = "/update-profile", consumes = "multipart/form-data")
+    public ResponseEntity<String> updateProfile(
+            @Valid @RequestPart(value = "avatar", required = false) MultipartFile file,
+            @Valid @RequestPart(value = "userprofile") UserProfileRequest userProfileRequest
+    ) {
+        return MessageResponse.getResponseMessage(userService.updateProfile(userProfileRequest, file), HttpStatus.OK);
     }
 
-    @PostMapping("/upload-avatar")
-    public ResponseEntity<String> uploadFile(@RequestParam("avatar") MultipartFile file) {
-        return MessageResponse.getResponseMessage(userService.uploadAvatar(file), HttpStatus.OK);
-    }
+//    @PostMapping("/upload-avatar")
+//    public ResponseEntity<String> uploadFile(@RequestParam("avatar") MultipartFile file) {
+//        return MessageResponse.getResponseMessage(userService.uploadAvatar(file), HttpStatus.OK);
+//    }
 
     @GetMapping("/get-doctors-by-specialization/{specializationId}")
     public ResponseEntity<List<DoctorDTO>> getDoctorsBySpecialization (@PathVariable("specializationId") Long specializationId) {

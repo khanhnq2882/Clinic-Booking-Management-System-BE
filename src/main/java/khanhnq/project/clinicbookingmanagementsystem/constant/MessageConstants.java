@@ -2,6 +2,7 @@ package khanhnq.project.clinicbookingmanagementsystem.constant;
 
 public class MessageConstants {
     public static final String REGISTER_SUCCESS = "Successful account registration.";
+    public static final String ADD_NEW_SYSTEM_ACCOUNT_SUCCESS = "Add new system account successfully.";
     public static final String LOGIN_FAILED = "Login failed. Please check username or password again.";
     public static final String LOGOUT_SUCCESS = "Logout successfully.";
     public static final String LOGOUT_FAILED = "Logout failed.";

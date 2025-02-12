@@ -239,9 +239,8 @@ public class CommonServiceImpl {
                 .build();
     }
 
-    public String uploadFile(MultipartFile multipartFile, String fileType) {
+    public void uploadFile(MultipartFile multipartFile, String fileType, User currentUser) {
         try {
-            User currentUser = authService.getCurrentUser();
             File file = new File();
             if (fileRepository.getFilesById(currentUser.getUserId()).stream().noneMatch(f -> f.getFileType().equals(fileType))) {
                 file.setFileName(StringUtils.cleanPath(Objects.requireNonNull(multipartFile.getOriginalFilename())));
@@ -259,14 +258,12 @@ public class CommonServiceImpl {
                 file.setUpdatedBy(currentUser.getUsername());
             }
             fileRepository.save(file);
-            userRepository.save(currentUser);
-            return "Uploaded " +fileType+ " file successfully: " + multipartFile.getOriginalFilename();
         } catch (Exception e) {
             throw new FileUploadFailedException("Could not upload "+ fileType+ " file: " + multipartFile.getOriginalFilename() + ". Error: " + e.getMessage());
         }
     }
 
-    public void updateProfile (UserProfileRequest profileRequest, User currentUser) {
+    public void updateProfile (UserProfileRequest profileRequest, User currentUser, MultipartFile file) {
         userRepository.findAll().stream().filter(user -> Objects.nonNull(user.getPhoneNumber())).toList().forEach(user -> {
             if (profileRequest.getPhoneNumber().equals(user.getPhoneNumber()))
                 throw new ResourceAlreadyExistException("Phone number", profileRequest.getPhoneNumber());
@@ -279,6 +276,7 @@ public class CommonServiceImpl {
                 .build();
         address.setCreatedBy(currentUser.getUsername());
         currentUser.setAddress(address);
+        uploadFile(file, "avatar", currentUser);
     }
 
     public Stream<File> loadFilesByUserId(Long userId) {
