@@ -24,6 +24,7 @@ không thì đưa vào trạng thái pending -> Đưa vào danh sách booking c�
 - Đăng nhập -> OK
 - Đổi mật khẩu -> OK
 - Quên mật khẩu -> OK
+- Remember me 
 
 * ROLE USER
 - Cập nhật thông tin cá nhân trên hệ thống (họ tên, sđt, ngày sinh, địa chỉ, ...)
@@ -35,7 +36,7 @@ không thì đưa vào trạng thái pending -> Đưa vào danh sách booking c�
 - Cập nhật thông tin cá nhân trên hệ thống (họ tên, sđt, ngày sinh, địa chỉ, ...)
 - Cập nhật thông tin bác sĩ (chuyên khoa,các chứng chỉ, kinh nghiệm,...)
 - Quản lý danh sách booking
-- Tạo hóa đơn bao gồm các gói dịch vụ người bệnh sử dụng trong khi khám, 
+- Tạo hóa đơn bao gồm các gói dịch vụ người  bệnh sử dụng trong khi khám, 
 
 * ROLE ADMIN
 - Quản lý danh sách người dùng 

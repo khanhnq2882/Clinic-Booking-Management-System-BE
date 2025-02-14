@@ -18,22 +18,17 @@ import java.util.List;
 
 @RestController
 @AllArgsConstructor
-@RequestMapping(path = "/user", produces = {MediaType.APPLICATION_JSON_VALUE})
+@RequestMapping(path = "/user", consumes = MediaType.APPLICATION_JSON_VALUE)
 public class UserController {
     private final UserService userService;
 
-    @PostMapping(value = "/update-profile", consumes = "multipart/form-data")
+    @PostMapping(value = "/update-profile", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
     public ResponseEntity<String> updateProfile(
-            @Valid @RequestPart(value = "avatar", required = false) MultipartFile file,
-            @Valid @RequestPart(value = "userprofile") UserProfileRequest userProfileRequest
+            @RequestPart(value = "userprofile") UserProfileRequest userProfileRequest,
+            @Valid @RequestPart(value = "avatar", required = false) MultipartFile file
     ) {
         return MessageResponse.getResponseMessage(userService.updateProfile(userProfileRequest, file), HttpStatus.OK);
     }
-
-//    @PostMapping("/upload-avatar")
-//    public ResponseEntity<String> uploadFile(@RequestParam("avatar") MultipartFile file) {
-//        return MessageResponse.getResponseMessage(userService.uploadAvatar(file), HttpStatus.OK);
-//    }
 
     @GetMapping("/get-doctors-by-specialization/{specializationId}")
     public ResponseEntity<List<DoctorDTO>> getDoctorsBySpecialization (@PathVariable("specializationId") Long specializationId) {

@@ -43,11 +43,6 @@ public class UserServiceImpl implements UserService {
         return MessageConstants.UPDATE_PROFILE_SUCCESS;
     }
 
-//    @Override
-//    public String uploadAvatar(MultipartFile multipartFile) {
-//        return commonServiceImpl.uploadFile(multipartFile, "avatar");
-//    }
-
     @Override
     public List<DoctorDTO> getDoctorsBySpecialization(Long specializationId) {
         return userRepository.getDoctorsBySpecializationId(specializationId)
