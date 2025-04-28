@@ -11,6 +11,7 @@ import java.util.List;
 
 public interface AdminService {
     String resetPassword (String email) throws MessagingException;
+    String unlockAccount (String username);
     UserResponse getAllUsers(int page, int size, String[] sorts);
     DoctorResponse getAllDoctors(int page, int size, String[] sorts);
     List<SpecializationDTO> getAllSpecializations();

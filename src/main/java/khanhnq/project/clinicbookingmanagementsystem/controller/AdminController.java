@@ -37,6 +37,11 @@ public class AdminController {
         return MessageResponse.getResponseMessage(adminService.resetPassword(email), HttpStatus.OK);
     }
 
+    @PostMapping("/unlock-account/{username}")
+    public ResponseEntity<String> unlockAccount(@PathVariable("username") String username){
+        return MessageResponse.getResponseMessage(adminService.unlockAccount(username), HttpStatus.OK);
+    }
+
     @GetMapping("/get-all-users")
     public ResponseEntity<UserResponse> getAllUsers(@RequestParam(defaultValue = "0") int page,
                                                     @RequestParam(defaultValue = "3") int size,

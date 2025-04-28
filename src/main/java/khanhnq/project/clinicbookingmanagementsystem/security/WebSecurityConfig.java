@@ -3,25 +3,23 @@ package khanhnq.project.clinicbookingmanagementsystem.security;
 import jakarta.servlet.http.HttpServletRequest;
 import khanhnq.project.clinicbookingmanagementsystem.security.jwt.AuthEntryPointJwt;
 import khanhnq.project.clinicbookingmanagementsystem.security.jwt.AuthTokenFilter;
-import khanhnq.project.clinicbookingmanagementsystem.security.services.UserDetailsServiceImpl;
 import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 
 @Configuration
 @EnableMethodSecurity
@@ -30,39 +28,20 @@ public class WebSecurityConfig {
 
     private AuthEntryPointJwt authEntryPointJwt;
 
-    private UserDetailsServiceImpl userDetailsService;
+    private CustomAuthenticationProvider customAuthenticationProvider;
+
+    private AuthTokenFilter authTokenFilter;
 
     @Bean
-    public AuthTokenFilter authenticationJwtTokenFilter() {
-        return new AuthTokenFilter();
-    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder(){
-        return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    public DaoAuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(userDetailsService);
-        authProvider.setPasswordEncoder(passwordEncoder());
-        return authProvider;
-    }
-
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
-        return authConfig.getAuthenticationManager();
-    }
-
-    @Bean
-    public RestTemplate restTemplate() {
-        return new RestTemplate();
+    public AuthenticationManager authenticationManager() {
+        List<AuthenticationProvider> authenticationProviders = new ArrayList<>();
+        authenticationProviders.add(customAuthenticationProvider);
+        return new ProviderManager(authenticationProviders);
     }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
+        return http
                 .cors(corsCustomizer -> corsCustomizer.configurationSource(new CorsConfigurationSource() {
                     @Override
                     public CorsConfiguration getCorsConfiguration(HttpServletRequest request) {
@@ -84,14 +63,11 @@ public class WebSecurityConfig {
                                 .requestMatchers("/user/**").permitAll()
                                 .requestMatchers("/doctor/**").permitAll()
                                 .requestMatchers("/admin/**").permitAll()
-//                                .requestMatchers("/user/**").hasAuthority("ROLE_USER")
-//                                .requestMatchers("/doctor/**").hasAuthority("ROLE_DOCTOR")
-//                                .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
                                 .anyRequest().authenticated()
-                );
-        http.authenticationProvider(authenticationProvider());
-        http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
-        return http.build();
+                )
+                .authenticationManager(authenticationManager())
+                .addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class)
+                .build();
     }
 
 }

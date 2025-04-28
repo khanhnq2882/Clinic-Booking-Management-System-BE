@@ -5,6 +5,7 @@ import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import khanhnq.project.clinicbookingmanagementsystem.constant.MessageConstants;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EBookingStatus;
+import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EUserStatus;
 import khanhnq.project.clinicbookingmanagementsystem.exception.*;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.*;
 import khanhnq.project.clinicbookingmanagementsystem.dto.*;
@@ -13,6 +14,7 @@ import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EServiceStatus
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
 import khanhnq.project.clinicbookingmanagementsystem.request.ServiceRequest;
 import khanhnq.project.clinicbookingmanagementsystem.response.*;
+import khanhnq.project.clinicbookingmanagementsystem.security.services.BruteForceProtectionService;
 import khanhnq.project.clinicbookingmanagementsystem.service.AdminService;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import lombok.AllArgsConstructor;
@@ -34,6 +36,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -51,11 +54,46 @@ public class AdminServiceImpl implements AdminService {
     private final Workbook workbook = new XSSFWorkbook();
     private final JavaMailSender mailSender;
     private PasswordEncoder passwordEncoder;
+    private final BruteForceProtectionService bruteForceProtectionService;
 
     @Override
     public String resetPassword(String email) throws MessagingException {
         checkAccess();
-        return resetPasswordEmail(email);
+        User user = userRepository.findUserByEmail(email);
+        if (Objects.nonNull(user)) {
+            MimeMessage message = mailSender.createMimeMessage();
+            message.setFrom(new InternetAddress("quockhanhnguyen2882@gmail.com"));
+            message.setRecipients(MimeMessage.RecipientType.TO, email);
+            message.setSubject("Your password has been changed.");
+            user.setPassword(randomPassword());
+            String htmlContent =
+                    "<body>" +
+                            "<p>Your password has been changed. New password is <b>"+user.getPassword()+"</b>.</p>" +
+                            "<p>Regards, <br/><em>Admin Teams</em></p>" +
+                            "</body>";
+            message.setContent(htmlContent, "text/html; charset=utf-8");
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
+            mailSender.send(message);
+            userRepository.save(user);
+            return MessageConstants.RESET_PASSWORD_SUCCESS;
+        } else {
+            throw new ResourceNotFoundException("Email", email);
+        }
+    }
+
+    @Override
+    public String unlockAccount(String username) {
+        checkAccess();
+        User user = userRepository.findUserByUsername(username);
+        if (Objects.isNull(user)) {
+            throw new UsernameNotFoundException("Account with username '" +username+ "' is not found.");
+        }
+        if (user.getStatus() != null && user.getStatus().equals(EUserStatus.BANNED)) {
+            bruteForceProtectionService.unlockAccount(username);
+            user.setStatus(EUserStatus.ACTIVE);
+            userRepository.save(user);
+        }
+        return MessageConstants.UNLOCK_ACCOUNT_SUCCESSFULLY;
     }
 
     @Override
@@ -412,29 +450,6 @@ public class AdminServiceImpl implements AdminService {
         checkAccess();
         Page<Booking> bookingPage = bookingRepository.getBookingsWithNullUser(commonServiceImpl.pagingSort(page, size, sorts));
         return commonServiceImpl.getAllBookings(bookingPage);
-    }
-
-    public String resetPasswordEmail(String email) throws MessagingException {
-        User user = userRepository.findUserByEmail(email);
-        if (Objects.nonNull(user)) {
-            MimeMessage message = mailSender.createMimeMessage();
-            message.setFrom(new InternetAddress("quockhanhnguyen2882@gmail.com"));
-            message.setRecipients(MimeMessage.RecipientType.TO, email);
-            message.setSubject("Your password has been changed.");
-            user.setPassword(randomPassword());
-            String htmlContent =
-                    "<body>" +
-                    "<p>Your password has been changed. New password is <b>"+user.getPassword()+"</b>.</p>" +
-                    "<p>Regards, <br/><em>Admin Teams</em></p>" +
-                    "</body>";
-            message.setContent(htmlContent, "text/html; charset=utf-8");
-            user.setPassword(passwordEncoder.encode(user.getPassword()));
-            mailSender.send(message);
-            userRepository.save(user);
-            return MessageConstants.RESET_PASSWORD_SUCCESS;
-        } else {
-            throw new ResourceNotFoundException("Email", email);
-        }
     }
 
     public String randomPassword() {
