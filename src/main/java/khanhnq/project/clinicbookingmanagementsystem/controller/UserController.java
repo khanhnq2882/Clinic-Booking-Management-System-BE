@@ -25,9 +25,9 @@ public class UserController {
     @PostMapping(value = "/update-profile", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
     public ResponseEntity<String> updateProfile(
             @RequestPart(value = "userprofile") UserProfileRequest userProfileRequest,
-            @Valid @RequestPart(value = "avatar", required = false) MultipartFile file
+            @Valid @RequestPart(value = "avatar", required = false) MultipartFile avatar
     ) {
-        return MessageResponse.getResponseMessage(userService.updateProfile(userProfileRequest, file), HttpStatus.OK);
+        return MessageResponse.getResponseMessage(userService.updateProfile(userProfileRequest, avatar), HttpStatus.OK);
     }
 
     @GetMapping("/get-doctors-by-specialization/{specializationId}")

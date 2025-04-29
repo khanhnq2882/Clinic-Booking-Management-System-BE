@@ -36,9 +36,9 @@ public class UserServiceImpl implements UserService {
     private final CommonServiceImpl commonServiceImpl;
 
     @Override
-    public String updateProfile(UserProfileRequest profileRequest, MultipartFile file) {
+    public String updateProfile(UserProfileRequest profileRequest, MultipartFile avatar) {
         User currentUser = authService.getCurrentUser();
-        commonServiceImpl.updateProfile(profileRequest, currentUser, file);
+        commonServiceImpl.updateProfile(profileRequest, currentUser, avatar, null);
         userRepository.save(currentUser);
         return MessageConstants.UPDATE_PROFILE_SUCCESS;
     }

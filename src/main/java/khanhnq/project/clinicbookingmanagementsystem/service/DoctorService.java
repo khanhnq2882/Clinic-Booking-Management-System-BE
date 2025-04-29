@@ -7,11 +7,8 @@ import khanhnq.project.clinicbookingmanagementsystem.model.response.BookingRespo
 import org.springframework.web.multipart.MultipartFile;
 
 public interface DoctorService {
-    String updateProfile(UserProfileRequest userProfileRequest);
-    String uploadAvatar(MultipartFile file);
+    String updateProfile(UserProfileRequest userProfileRequest, MultipartFile avatar, MultipartFile specialDegree);
     String updateDoctorInformation(DoctorInformationRequest doctorInformationRequest);
-    String uploadMedicalDegree(MultipartFile file);
-    String uploadSpecialtyDegree(MultipartFile file);
     String registerWorkSchedules(RegisterWorkScheduleRequest registerWorkScheduleRequest);
     String confirmedBooking (Long bookingId);
     String cancelledBooking (Long bookingId);

@@ -1,5 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.controller;
 
+import jakarta.validation.Valid;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.DoctorInformationRequest;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.RegisterWorkScheduleRequest;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.UserProfileRequest;
@@ -20,29 +21,16 @@ public class DoctorController {
 
     private final DoctorService doctorService;
 
-    @PostMapping("/update-profile")
-    public ResponseEntity<String> updateProfile(@RequestBody UserProfileRequest userProfileRequest) {
-        return MessageResponse.getResponseMessage(doctorService.updateProfile(userProfileRequest), HttpStatus.OK);
-    }
-
-    @PostMapping("/upload-avatar")
-    public ResponseEntity<String> uploadAvatar(@RequestParam("avatar") MultipartFile file) {
-        return MessageResponse.getResponseMessage(doctorService.uploadAvatar(file), HttpStatus.OK);
+    @PostMapping(value = "/update-profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<String> updateProfile(@RequestPart("userProfileRequest") UserProfileRequest userProfileRequest,
+                                                @Valid @RequestPart(value = "avatar") MultipartFile avatar,
+                                                @Valid @RequestPart(value = "specialty-degree", required = false) MultipartFile specialDegree) {
+        return MessageResponse.getResponseMessage(doctorService.updateProfile(userProfileRequest, avatar, specialDegree), HttpStatus.OK);
     }
 
     @PostMapping("/update-doctor-information")
     public ResponseEntity<String> updateDoctorInformation(@RequestBody DoctorInformationRequest doctorInformationRequest) {
         return MessageResponse.getResponseMessage(doctorService.updateDoctorInformation(doctorInformationRequest), HttpStatus.OK);
-    }
-
-    @PostMapping("/upload-medical-degree")
-    public ResponseEntity<String> uploadMedicalDegree(@RequestParam("medical-degree") MultipartFile file) {
-        return MessageResponse.getResponseMessage(doctorService.uploadMedicalDegree(file), HttpStatus.OK);
-    }
-
-    @PostMapping("/upload-specialty-degree")
-    public ResponseEntity<String> uploadSpecialtyDegree(@RequestParam("specialty-degree") MultipartFile file) {
-        return MessageResponse.getResponseMessage(doctorService.uploadSpecialtyDegree(file), HttpStatus.OK);
     }
 
     @PostMapping("/register-work-schedules")
