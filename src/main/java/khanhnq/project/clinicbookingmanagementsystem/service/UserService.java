@@ -1,10 +1,10 @@
 package khanhnq.project.clinicbookingmanagementsystem.service;
 
-import khanhnq.project.clinicbookingmanagementsystem.dto.DoctorDTO;
-import khanhnq.project.clinicbookingmanagementsystem.dto.WorkScheduleDTO;
-import khanhnq.project.clinicbookingmanagementsystem.request.BookingAppointmentRequest;
-import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
-import khanhnq.project.clinicbookingmanagementsystem.response.BookingResponse;
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.DoctorDTO;
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.WorkScheduleDTO;
+import khanhnq.project.clinicbookingmanagementsystem.model.request.BookingAppointmentRequest;
+import khanhnq.project.clinicbookingmanagementsystem.model.request.UserProfileRequest;
+import khanhnq.project.clinicbookingmanagementsystem.model.response.BookingResponse;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 

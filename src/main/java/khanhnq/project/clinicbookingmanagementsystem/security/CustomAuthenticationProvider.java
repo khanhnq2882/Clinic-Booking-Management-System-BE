@@ -1,5 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.security;
 
+import khanhnq.project.clinicbookingmanagementsystem.constant.MessageConstants;
 import khanhnq.project.clinicbookingmanagementsystem.entity.User;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EUserStatus;
 import khanhnq.project.clinicbookingmanagementsystem.exception.UnauthorizedException;
@@ -47,12 +48,12 @@ public class CustomAuthenticationProvider implements AuthenticationProvider {
             throw new UnauthorizedException("Account with username '" +username+ "' is permanent lock. Please contact to admin.");
         }
         if (bruteForceProtectionService.isBlocked(username)) {
-            throw new UnauthorizedException("Account temporarily locked due to 5 incorrect password attempts. Try again in 5 minutes.");
+            throw new UnauthorizedException(MessageConstants.ACCOUNT_TEMPORARY_LOCK);
         }
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
         if (!beanConfig.passwordEncoder().matches(password, user.getPassword())) {
             bruteForceProtectionService.loginFailed(username);
-            throw new UnauthorizedException("Login failed due to incorrect password entered. Try again.");
+            throw new UnauthorizedException(MessageConstants.LOGIN_FAILED);
         }
         bruteForceProtectionService.loginSucceeded(username);
         return new UsernamePasswordAuthenticationToken(userDetails, password, userDetails.getAuthorities());

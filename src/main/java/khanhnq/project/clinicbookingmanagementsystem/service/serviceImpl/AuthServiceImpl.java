@@ -14,13 +14,14 @@ import khanhnq.project.clinicbookingmanagementsystem.exception.*;
 import khanhnq.project.clinicbookingmanagementsystem.repository.DoctorRepository;
 import khanhnq.project.clinicbookingmanagementsystem.repository.RoleRepository;
 import khanhnq.project.clinicbookingmanagementsystem.repository.UserRepository;
-import khanhnq.project.clinicbookingmanagementsystem.request.AccountSystemRequest;
-import khanhnq.project.clinicbookingmanagementsystem.request.ChangePasswordRequest;
-import khanhnq.project.clinicbookingmanagementsystem.request.LoginRequest;
-import khanhnq.project.clinicbookingmanagementsystem.request.RegisterRequest;
-import khanhnq.project.clinicbookingmanagementsystem.response.JwtResponse;
-import khanhnq.project.clinicbookingmanagementsystem.response.UserInfoResponse;
+import khanhnq.project.clinicbookingmanagementsystem.model.request.AccountSystemRequest;
+import khanhnq.project.clinicbookingmanagementsystem.model.request.ChangePasswordRequest;
+import khanhnq.project.clinicbookingmanagementsystem.model.request.LoginRequest;
+import khanhnq.project.clinicbookingmanagementsystem.model.request.RegisterRequest;
+import khanhnq.project.clinicbookingmanagementsystem.model.response.JwtResponse;
+import khanhnq.project.clinicbookingmanagementsystem.model.response.UserInfoResponse;
 import khanhnq.project.clinicbookingmanagementsystem.security.jwt.JwtUtils;
+import khanhnq.project.clinicbookingmanagementsystem.security.services.BruteForceProtectionService;
 import khanhnq.project.clinicbookingmanagementsystem.security.services.UserDetailsImpl;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import lombok.AllArgsConstructor;
@@ -29,7 +30,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import java.security.SecureRandom;
@@ -47,6 +47,7 @@ public class AuthServiceImpl implements AuthService {
     private AuthenticationManager authenticationManager;
     private JwtUtils jwtUtils;
     private final JavaMailSender mailSender;
+    private final BruteForceProtectionService bruteForceProtectionService;
 
     @Override
     public String register(RegisterRequest registerRequest) {
@@ -167,16 +168,28 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public String changePassword(ChangePasswordRequest changePasswordRequest) {
         User currentUser = getCurrentUser();
-        if (new BCryptPasswordEncoder().matches(changePasswordRequest.getCurrentPassword(), currentUser.getPassword())) {
-            if (changePasswordRequest.getNewPassword().equals(changePasswordRequest.getConfirmPassword())) {
-                currentUser.setPassword(passwordEncoder.encode(changePasswordRequest.getNewPassword()));
-                currentUser.setUpdatedBy(currentUser.getUsername());
-                userRepository.save(currentUser);
-                return MessageConstants.CHANGE_PASSWORD_SUCCESS;
-            }
-            throw new BusinessException(MessageConstants.NOT_MATCH_PASSWORD);
+        String username = currentUser.getUsername();
+        if (currentUser != null && currentUser.getStatus().equals(EUserStatus.BANNED)) {
+            throw new UnauthorizedException("Account with username '" +username+ "' is permanent lock. Please contact to admin.");
         }
-        throw new BusinessException(MessageConstants.INCORRECT_CURRENT_PASSWORD);
+        if (bruteForceProtectionService.isChangePasswordLocked(username)) {
+            currentUser.setStatus(EUserStatus.BANNED);
+            userRepository.save(currentUser);
+            throw new UnauthorizedException("Account with username '" +username+ "' is permanent lock. Please contact to admin.");
+        }
+        if (passwordEncoder.matches(changePasswordRequest.getCurrentPassword(), currentUser.getPassword())) {
+            if (!changePasswordRequest.getNewPassword().equals(changePasswordRequest.getConfirmPassword())) {
+                throw new BusinessException(MessageConstants.NOT_MATCH_PASSWORD);
+            }
+            currentUser.setPassword(passwordEncoder.encode(changePasswordRequest.getNewPassword()));
+            currentUser.setUpdatedBy(username);
+            userRepository.save(currentUser);
+            bruteForceProtectionService.passwordChangeSucceeded(username);
+            return MessageConstants.CHANGE_PASSWORD_SUCCESS;
+        } else {
+            bruteForceProtectionService.passwordChangeFailed(username);
+            throw new UnauthorizedException(MessageConstants.INCORRECT_CURRENT_PASSWORD);
+        }
     }
 
     @Override

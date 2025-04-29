@@ -1,12 +1,13 @@
 package khanhnq.project.clinicbookingmanagementsystem.controller;
 
 import jakarta.mail.MessagingException;
-import khanhnq.project.clinicbookingmanagementsystem.dto.ServicesDTO;
-import khanhnq.project.clinicbookingmanagementsystem.dto.SpecializationDTO;
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.ServicesDTO;
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.SpecializationDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.File;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Services;
+import khanhnq.project.clinicbookingmanagementsystem.model.response.*;
 import khanhnq.project.clinicbookingmanagementsystem.repository.ServicesRepository;
-import khanhnq.project.clinicbookingmanagementsystem.request.ServiceRequest;
+import khanhnq.project.clinicbookingmanagementsystem.model.request.ServiceRequest;
 import khanhnq.project.clinicbookingmanagementsystem.response.*;
 import khanhnq.project.clinicbookingmanagementsystem.service.AdminService;
 import khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl.CommonServiceImpl;
@@ -146,8 +147,8 @@ public class AdminController {
 
     @GetMapping("/get-bookings")
     public ResponseEntity<BookingResponse> getBookings(@RequestParam(defaultValue = "0") int page,
-                                                        @RequestParam(defaultValue = "3") int size,
-                                                        @RequestParam(defaultValue = "bookingId,asc") String[] sorts) {
+                                                       @RequestParam(defaultValue = "3") int size,
+                                                       @RequestParam(defaultValue = "bookingId,asc") String[] sorts) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllBookings(page, size, sorts));
     }
 

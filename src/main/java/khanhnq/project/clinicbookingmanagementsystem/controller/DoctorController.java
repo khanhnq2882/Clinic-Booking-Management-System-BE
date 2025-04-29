@@ -1,10 +1,10 @@
 package khanhnq.project.clinicbookingmanagementsystem.controller;
 
-import khanhnq.project.clinicbookingmanagementsystem.request.DoctorInformationRequest;
-import khanhnq.project.clinicbookingmanagementsystem.request.RegisterWorkScheduleRequest;
-import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
-import khanhnq.project.clinicbookingmanagementsystem.response.BookingResponse;
-import khanhnq.project.clinicbookingmanagementsystem.response.MessageResponse;
+import khanhnq.project.clinicbookingmanagementsystem.model.request.DoctorInformationRequest;
+import khanhnq.project.clinicbookingmanagementsystem.model.request.RegisterWorkScheduleRequest;
+import khanhnq.project.clinicbookingmanagementsystem.model.request.UserProfileRequest;
+import khanhnq.project.clinicbookingmanagementsystem.model.response.BookingResponse;
+import khanhnq.project.clinicbookingmanagementsystem.model.response.MessageResponse;
 import khanhnq.project.clinicbookingmanagementsystem.service.DoctorService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;

@@ -1,11 +1,11 @@
 package khanhnq.project.clinicbookingmanagementsystem.mapper;
 
-import khanhnq.project.clinicbookingmanagementsystem.dto.DoctorDTO;
-import khanhnq.project.clinicbookingmanagementsystem.dto.UserDTO;
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.DoctorDTO;
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.UserDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Role;
 import khanhnq.project.clinicbookingmanagementsystem.entity.User;
-import khanhnq.project.clinicbookingmanagementsystem.request.DoctorInformationRequest;
-import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
+import khanhnq.project.clinicbookingmanagementsystem.model.request.DoctorInformationRequest;
+import khanhnq.project.clinicbookingmanagementsystem.model.request.UserProfileRequest;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;

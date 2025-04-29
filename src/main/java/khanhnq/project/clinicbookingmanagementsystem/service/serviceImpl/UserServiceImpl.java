@@ -1,17 +1,17 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
 import khanhnq.project.clinicbookingmanagementsystem.constant.MessageConstants;
-import khanhnq.project.clinicbookingmanagementsystem.dto.DoctorDTO;
-import khanhnq.project.clinicbookingmanagementsystem.dto.WorkScheduleDTO;
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.DoctorDTO;
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.WorkScheduleDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EBookingStatus;
 import khanhnq.project.clinicbookingmanagementsystem.exception.BusinessException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceNotFoundException;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.BookingMapper;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
-import khanhnq.project.clinicbookingmanagementsystem.request.BookingAppointmentRequest;
-import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
-import khanhnq.project.clinicbookingmanagementsystem.response.BookingResponse;
+import khanhnq.project.clinicbookingmanagementsystem.model.request.BookingAppointmentRequest;
+import khanhnq.project.clinicbookingmanagementsystem.model.request.UserProfileRequest;
+import khanhnq.project.clinicbookingmanagementsystem.model.response.BookingResponse;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import khanhnq.project.clinicbookingmanagementsystem.service.UserService;
 import lombok.AllArgsConstructor;

@@ -1,8 +1,8 @@
 package khanhnq.project.clinicbookingmanagementsystem.controller;
 
-import khanhnq.project.clinicbookingmanagementsystem.response.CityResponse;
-import khanhnq.project.clinicbookingmanagementsystem.response.DistrictResponse;
-import khanhnq.project.clinicbookingmanagementsystem.response.WardResponse;
+import khanhnq.project.clinicbookingmanagementsystem.model.response.CityResponse;
+import khanhnq.project.clinicbookingmanagementsystem.model.response.DistrictResponse;
+import khanhnq.project.clinicbookingmanagementsystem.model.response.WardResponse;
 import khanhnq.project.clinicbookingmanagementsystem.service.AddressService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.MediaType;

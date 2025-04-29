@@ -1,8 +1,8 @@
 package khanhnq.project.clinicbookingmanagementsystem.mapper;
 
-import khanhnq.project.clinicbookingmanagementsystem.dto.ServicesDTO;
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.ServicesDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Services;
-import khanhnq.project.clinicbookingmanagementsystem.request.ServiceRequest;
+import khanhnq.project.clinicbookingmanagementsystem.model.request.ServiceRequest;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 

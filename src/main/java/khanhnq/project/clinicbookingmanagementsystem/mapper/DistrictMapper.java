@@ -1,7 +1,7 @@
 package khanhnq.project.clinicbookingmanagementsystem.mapper;
 
 import khanhnq.project.clinicbookingmanagementsystem.entity.District;
-import khanhnq.project.clinicbookingmanagementsystem.response.DistrictResponse;
+import khanhnq.project.clinicbookingmanagementsystem.model.response.DistrictResponse;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 

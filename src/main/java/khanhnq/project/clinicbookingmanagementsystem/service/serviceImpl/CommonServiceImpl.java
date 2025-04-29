@@ -1,7 +1,7 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
 import khanhnq.project.clinicbookingmanagementsystem.constant.MessageConstants;
-import khanhnq.project.clinicbookingmanagementsystem.dto.BookingDTO;
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.BookingDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.exception.BusinessException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.FileUploadFailedException;
@@ -9,10 +9,10 @@ import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceAlreadyEx
 import khanhnq.project.clinicbookingmanagementsystem.mapper.BookingMapper;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.UserMapper;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
-import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
-import khanhnq.project.clinicbookingmanagementsystem.response.AddressResponse;
-import khanhnq.project.clinicbookingmanagementsystem.response.BookingResponse;
-import khanhnq.project.clinicbookingmanagementsystem.response.FileResponse;
+import khanhnq.project.clinicbookingmanagementsystem.model.request.UserProfileRequest;
+import khanhnq.project.clinicbookingmanagementsystem.model.response.AddressResponse;
+import khanhnq.project.clinicbookingmanagementsystem.model.response.BookingResponse;
+import khanhnq.project.clinicbookingmanagementsystem.model.response.FileResponse;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import lombok.AllArgsConstructor;
 import org.apache.poi.ss.usermodel.*;

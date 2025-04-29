@@ -94,7 +94,5 @@ public class BruteForceProtectionService {
         attemptsCache.remove(key);
         lockCache.remove(key);
         postUnlockAttempts.remove(key);
-        changePasswordAttempts.remove(key);
-        changePasswordLocked.remove(key);
     }
 }

@@ -1,8 +1,8 @@
 package khanhnq.project.clinicbookingmanagementsystem.service;
 
-import khanhnq.project.clinicbookingmanagementsystem.response.CityResponse;
-import khanhnq.project.clinicbookingmanagementsystem.response.DistrictResponse;
-import khanhnq.project.clinicbookingmanagementsystem.response.WardResponse;
+import khanhnq.project.clinicbookingmanagementsystem.model.response.CityResponse;
+import khanhnq.project.clinicbookingmanagementsystem.model.response.DistrictResponse;
+import khanhnq.project.clinicbookingmanagementsystem.model.response.WardResponse;
 import java.util.List;
 
 public interface AddressService {

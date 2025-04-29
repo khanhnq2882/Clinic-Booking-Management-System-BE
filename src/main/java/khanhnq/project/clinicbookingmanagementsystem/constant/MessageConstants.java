@@ -3,7 +3,7 @@ package khanhnq.project.clinicbookingmanagementsystem.constant;
 public class MessageConstants {
     public static final String REGISTER_SUCCESS = "Successful account registration.";
     public static final String ADD_NEW_SYSTEM_ACCOUNT_SUCCESS = "Add new system account successfully.";
-//    public static final String LOGIN_FAILED = "Login failed. Please check username or password again.";
+    public static final String LOGIN_FAILED = "Login failed due to incorrect password entered. Try again.";
     public static final String LOGOUT_SUCCESS = "Logout successfully.";
     public static final String LOGOUT_FAILED = "Logout failed.";
     public static final String REQUEST_RESET_PASSWORD_SUCCESS = "Request reset password successfully. Please wait for a response from the administrator.";
@@ -34,4 +34,5 @@ public class MessageConstants {
     public static final String INVALID_APPOINTMENT_DATE = "The appointment date must start from today.";
     public static final String INVALID_SERVICE_STATUS = "The service status must be one of the values ACTIVE, INACTIVE , SUSPENDED.";
     public static final String UNLOCK_ACCOUNT_SUCCESSFULLY = "Unlock account successfully.";
+    public static final String ACCOUNT_TEMPORARY_LOCK = "Account temporarily locked due to 5 incorrect password attempts. Try again in 5 minutes.";
 }

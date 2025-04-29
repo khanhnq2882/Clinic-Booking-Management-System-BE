@@ -1,9 +1,9 @@
 package khanhnq.project.clinicbookingmanagementsystem.service;
 
-import khanhnq.project.clinicbookingmanagementsystem.request.DoctorInformationRequest;
-import khanhnq.project.clinicbookingmanagementsystem.request.RegisterWorkScheduleRequest;
-import khanhnq.project.clinicbookingmanagementsystem.request.UserProfileRequest;
-import khanhnq.project.clinicbookingmanagementsystem.response.BookingResponse;
+import khanhnq.project.clinicbookingmanagementsystem.model.request.DoctorInformationRequest;
+import khanhnq.project.clinicbookingmanagementsystem.model.request.RegisterWorkScheduleRequest;
+import khanhnq.project.clinicbookingmanagementsystem.model.request.UserProfileRequest;
+import khanhnq.project.clinicbookingmanagementsystem.model.response.BookingResponse;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface DoctorService {

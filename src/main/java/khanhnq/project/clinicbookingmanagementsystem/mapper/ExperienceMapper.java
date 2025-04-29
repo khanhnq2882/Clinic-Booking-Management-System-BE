@@ -1,6 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.mapper;
 
-import khanhnq.project.clinicbookingmanagementsystem.dto.ExperienceDTO;
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.ExperienceDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Experience;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
