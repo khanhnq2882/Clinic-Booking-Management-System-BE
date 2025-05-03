@@ -5,11 +5,13 @@ import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import jakarta.servlet.http.HttpServletRequest;
 import khanhnq.project.clinicbookingmanagementsystem.constant.MessageConstants;
+import khanhnq.project.clinicbookingmanagementsystem.entity.Doctor;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ERole;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Role;
 import khanhnq.project.clinicbookingmanagementsystem.entity.User;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EUserStatus;
 import khanhnq.project.clinicbookingmanagementsystem.exception.*;
+import khanhnq.project.clinicbookingmanagementsystem.repository.DoctorRepository;
 import khanhnq.project.clinicbookingmanagementsystem.repository.RoleRepository;
 import khanhnq.project.clinicbookingmanagementsystem.repository.UserRepository;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.AccountSystemRequest;
@@ -45,6 +47,7 @@ public class AuthServiceImpl implements AuthService {
     private JwtUtils jwtUtils;
     private final JavaMailSender mailSender;
     private final BruteForceProtectionService bruteForceProtectionService;
+    private DoctorRepository doctorRepository;
 
     @Override
     public String register(RegisterRequest registerRequest) {
@@ -96,6 +99,7 @@ public class AuthServiceImpl implements AuthService {
                 .password(passwordEncoder.encode(password))
                 .status(EUserStatus.ACTIVE)
                 .build();
+        Doctor doctor = new Doctor();
         accountSystemRequest.getRoles().forEach(role -> {
             switch (role) {
                 case "ROLE_ADMIN" -> {
@@ -109,6 +113,7 @@ public class AuthServiceImpl implements AuthService {
                         throw new ResourceNotFoundException("Role", role);
                     }
                     user.setUserCode(createUserCode(userRepository.getDoctors(), "DT"));
+                    doctor.setCreatedBy(currentUser.getUsername());
                 }
                 case "ROLE_USER" -> {
                     if (Objects.isNull(roleRepository.findRoleByRoleName(ERole.ROLE_USER))) {
@@ -122,8 +127,10 @@ public class AuthServiceImpl implements AuthService {
         Set<Role> roles = accountSystemRequest.getRoles().stream()
                 .map(role -> roleRepository.findRoleByRoleName(ERole.valueOf(role)).get()).collect(Collectors.toSet());
         user.setRoles(roles);
-        user.setCreatedBy(currentUser.getEmail());
+        user.setCreatedBy(currentUser.getUsername());
         userRepository.save(user);
+        doctor.setUser(user);
+        doctorRepository.save(doctor);
         newAccountEmail(accountSystemRequest.getEmail(), accountSystemRequest.getUsername(), password);
         return MessageConstants.ADD_NEW_SYSTEM_ACCOUNT_SUCCESS;
     }

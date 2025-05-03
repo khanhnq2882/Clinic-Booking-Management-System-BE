@@ -20,9 +20,9 @@ INSERT INTO `cbmsdb`.`specialization` (`specialization_name`) VALUES ('Tropical 
 INSERT INTO `cbmsdb`.`specialization` (`specialization_name`) VALUES ('Dentistry');
 
 /* -- insert role */
-INSERT INTO `cbmsdb`.`roles` (`role_name`) VALUES ('ROLE_USER');
-INSERT INTO `cbmsdb`.`roles` (`role_name`) VALUES ('ROLE_ADMIN');
-INSERT INTO `cbmsdb`.`roles` (`role_name`) VALUES ('ROLE_DOCTOR');
+INSERT INTO `cbmsdb`.`role` (`role_name`) VALUES ('ROLE_USER');
+INSERT INTO `cbmsdb`.`role` (`role_name`) VALUES ('ROLE_ADMIN');
+INSERT INTO `cbmsdb`.`role` (`role_name`) VALUES ('ROLE_DOCTOR');
 
 
 

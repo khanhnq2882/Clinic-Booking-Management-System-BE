@@ -8,27 +8,28 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "experience")
+@Table(name = "work_experience")
 @Builder
-public class Experience extends BaseEntity {
+public class WorkExperience extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long experienceId;
+    private Long workExperienceId;
 
     @Column(nullable = false)
     private String position;
 
     @Column(nullable = false)
-    private String specialization;
+    private String workSpecializationName;
 
     @Column(nullable = false)
     private String workPlace;
 
     @Column(nullable = false)
-    private int yearOfStartWork;
+    private Integer yearOfStartWork;
 
-    @Column(nullable = false)
-    private int yearOfEndWork;
+    private Integer yearOfEndWork;
+
+    private String description;
 
     @ManyToOne
     @JoinColumn(name = "doctor_id")

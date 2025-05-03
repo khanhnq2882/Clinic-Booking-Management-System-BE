@@ -1,15 +1,14 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
 import khanhnq.project.clinicbookingmanagementsystem.constant.MessageConstants;
+import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EEducationLevel;
+import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceNotFoundException;
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.SpecializationDTO;
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.WorkScheduleDTO;
-import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EUserStatus;
 import khanhnq.project.clinicbookingmanagementsystem.exception.BusinessException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ForbiddenException;
-import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceNotFoundException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.UnauthorizedException;
-import khanhnq.project.clinicbookingmanagementsystem.mapper.ExperienceMapper;
-import khanhnq.project.clinicbookingmanagementsystem.mapper.SpecializationMapper;
+import khanhnq.project.clinicbookingmanagementsystem.mapper.WorkExperienceMapper;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.WorkScheduleMapper;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.RegisterWorkScheduleRequest;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
@@ -21,12 +20,12 @@ import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import khanhnq.project.clinicbookingmanagementsystem.service.DoctorService;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import java.text.SimpleDateFormat;
-import java.time.DayOfWeek;
-import java.time.LocalDate;
-import java.time.ZoneId;
+import java.time.*;
+import java.time.temporal.TemporalAdjusters;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -37,54 +36,74 @@ public class DoctorServiceImpl implements DoctorService {
     private final SpecializationRepository specializationRepository;
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
+    private final DoctorRepository doctorRepository;
     private final WorkScheduleRepository workScheduleRepository;
     private final DayOfWeekRepository dayOfWeekRepository;
+    private final WorkExperienceRepository workExperienceRepository;
     private final CommonServiceImpl commonServiceImpl;
 
     @Override
-    public String updateProfile(UserProfileRequest userProfileRequest, MultipartFile avatar, MultipartFile specialDegree) {
+    public String updateProfile(UserProfileRequest userProfileRequest, MultipartFile avatar) {
         User currentUser = checkAccess();
-        commonServiceImpl.updateProfile(userProfileRequest, currentUser, avatar, specialDegree);
+        commonServiceImpl.updateProfile(userProfileRequest, currentUser, avatar);
         userRepository.save(currentUser);
         return MessageConstants.UPDATE_PROFILE_SUCCESS;
     }
 
     @Override
-    public String updateDoctorInformation(DoctorInformationRequest doctorInformationRequest) {
+    public String updateDoctorInformation(DoctorInformationRequest doctorInformationRequest, MultipartFile specialtyDegree) {
         User currentUser = checkAccess();
-        List<SpecializationDTO> specializations = specializationRepository.findAll()
-                .stream().map(SpecializationMapper.SPECIALIZATION_MAPPER::mapToSpecializationDTO).toList();
-        String specializationName = doctorInformationRequest.getSpecialization().getSpecializationName();
-        if (!checkSpecializationExist(specializations, doctorInformationRequest.getSpecialization())) {
-            throw new ResourceNotFoundException("Specialization", specializationName);
+        Optional<Specialization> specializationOptional =
+                specializationRepository.findById(doctorInformationRequest.getSpecializationId());
+        if (specializationOptional.isEmpty()) {
+            throw new ResourceNotFoundException("Specialization id", doctorInformationRequest.getSpecializationId().toString());
         }
-        Set<Experience> experiences = doctorInformationRequest.getWorkExperiences()
-                .stream().map(experienceDTO -> {
-                    Experience experience = ExperienceMapper.EXPERIENCE_MAPPER.mapToExperience(experienceDTO);
-//                    experience.setUser(currentUser);
-                    experience.setCreatedBy(currentUser.getUsername());
-                    return experience;
+        Doctor doctor = doctorRepository.findDoctorByUserId(currentUser.getUserId());
+        if (Objects.nonNull(doctor)) {
+            List<WorkExperience> workExperiences =
+                    workExperienceRepository.findWorkExperienceByDoctorId(doctor.getDoctorId());
+            workExperienceRepository.deleteAll(workExperiences);
+        }
+        Doctor savedDoctor = Objects.nonNull(doctor) ? doctor : new Doctor();
+        Set<WorkExperience> workExperiences = doctorInformationRequest.getWorkExperiences().stream()
+                .map(workExperienceDTO -> {
+                    WorkExperience workExperience =
+                            WorkExperienceMapper.WORK_EXPERIENCE_MAPPER.mapToExperience(workExperienceDTO);
+                    workExperience.setCreatedBy(currentUser.getUsername());
+                    workExperience.setCreatedAt(LocalDateTime.now());
+                    workExperience.setDoctor(savedDoctor);
+                    return workExperience;
                 }).collect(Collectors.toSet());
-        Specialization specialization  = specializationRepository.getSpecializationBySpecializationName(specializationName);
-//        currentUser.setSpecialization(specialization);
-//        currentUser.setExperiences(experiences);
-//        currentUser.setCareerDescription(doctorInformationRequest.getCareerDescription());
-        currentUser.setStatus(EUserStatus.PENDING);
-        currentUser.setUpdatedBy(currentUser.getUsername());
-        userRepository.save(currentUser);
+        savedDoctor.setSpecialization(specializationOptional.get());
+        savedDoctor.setWorkExperiences(workExperiences);
+        savedDoctor.setBiography(doctorInformationRequest.getBiography());
+        savedDoctor.setCareerDescription(doctorInformationRequest.getCareerDescription());
+        savedDoctor.setEducationLevel(validateEducationLevel(doctorInformationRequest.getEducationLevel()));
+        savedDoctor.setUser(currentUser);
+        savedDoctor.setUpdatedBy(currentUser.getUsername());
+        savedDoctor.setUpdatedAt(LocalDateTime.now());
+        doctorRepository.save(savedDoctor);
+        if (Objects.nonNull(specialtyDegree)) {
+            commonServiceImpl.uploadFile(specialtyDegree, "specialty-degree", currentUser);
+        }
         return MessageConstants.UPDATE_DOCTOR_INFORMATION_SUCCESS;
     }
 
     @Override
     public String registerWorkSchedules(RegisterWorkScheduleRequest registerWorkSchedule) {
         User currentUser = checkAccess();
-//        if (Objects.isNull(currentUser.getSpecialization())) {
-//            throw new BusinessException(MessageConstants.SPECIALIZATION_NOT_FOUND);
-//        }
+        Doctor doctor = doctorRepository.findDoctorByUserId(currentUser.getUserId());
+        if (Objects.isNull(doctor.getSpecialization())) {
+            throw new BusinessException(MessageConstants.SPECIALIZATION_NOT_FOUND);
+        }
         Date workingDay = registerWorkSchedule.getWorkingDay();
-        LocalDate ld1 = workingDay.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-        LocalDate ld2 = new Date().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-        if (ld1.isBefore(ld2)) {
+        LocalDate workingDayLocalDate = workingDay.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        LocalDate nowLocalDate = new Date().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        LocalDate startOfWeek = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        LocalDate endOfWeek = LocalDate.now().with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
+        if (workingDayLocalDate.isBefore(nowLocalDate) ||
+                workingDayLocalDate.isBefore(startOfWeek) ||
+                workingDayLocalDate.isAfter(endOfWeek)) {
             throw new BusinessException(MessageConstants.INVALID_WORKING_DAY);
         }
         DayOfWeek dayOfWeek = workingDay.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().getDayOfWeek();
@@ -95,33 +114,35 @@ public class DoctorServiceImpl implements DoctorService {
         if (newWorkSchedules.size() != registerWorkSchedule.getNumberOfShiftsPerDay()) {
             throw new BusinessException(MessageConstants.INVALID_WORK_SCHEDULES);
         }
-        DaysOfWeek oldDaysOfWeek = dayOfWeekRepository.getDayOfWeekByDay(currentUser.getUserId(), dayOfWeek);
+        DaysOfWeek oldDaysOfWeek = dayOfWeekRepository.getDayOfWeekByDay(doctor.getDoctorId(), dayOfWeek);
         if (Objects.nonNull(oldDaysOfWeek)) {
             dayOfWeekRepository.delete(oldDaysOfWeek);
         }
-//        List<User> doctors = userRepository.getDoctorsBySpecializationId(currentUser.getSpecialization().getSpecializationId())
-//                .stream().filter(user -> !user.equals(currentUser)).toList();
-//        List<WorkScheduleDTO> invalidWorkSchedules = getInvalidWorkSchedules(doctors, registerWorkSchedule);
-//        DaysOfWeek newDayOfWeek = new DaysOfWeek();
-//        newDayOfWeek.setDayOfWeek(dayOfWeek);
-//        newDayOfWeek.setWorkingDay(workingDay);
-//        newDayOfWeek.setUser(currentUser);
-//        List<WorkSchedule> validWorkSchedules = newWorkSchedules.stream()
-//                .filter(workScheduleDTO -> !invalidWorkSchedules.contains(workScheduleDTO))
-//                .map(workScheduleDTO -> {
-//                    WorkSchedule workSchedule = WorkScheduleMapper.WORK_SCHEDULE_MAPPER.mapToWorkSchedule(workScheduleDTO);
-//                    workSchedule.setDaysOfWeek(newDayOfWeek);
-//                    workSchedule.setCreatedBy(currentUser.getUsername());
-//                    return workSchedule;
-//                }).toList();
-//        newDayOfWeek.setNumberOfShiftsPerDay(validWorkSchedules.size());
-//        newDayOfWeek.setWorkSchedules(validWorkSchedules);
-//        newDayOfWeek.setCreatedBy(currentUser.getUsername());
-//        currentUser.getDaysOfWeeks().add(newDayOfWeek);
-//        currentUser.setDaysOfWeeks(currentUser.getDaysOfWeeks());
-//        userRepository.save(currentUser);
-//        return workSchedulesMessage(invalidWorkSchedules, workingDay);
-        return "";
+        DaysOfWeek newDayOfWeek = Objects.nonNull(oldDaysOfWeek) ? oldDaysOfWeek : new DaysOfWeek();
+        Long specializationId = doctor.getSpecialization().getSpecializationId();
+        List<Doctor> doctors = doctorRepository.getDoctorsBySpecializationId(specializationId)
+                .stream().filter(dt -> !dt.equals(doctor)).toList();
+        List<WorkScheduleDTO> invalidWorkSchedules = invalidWorkSchedules(doctors, registerWorkSchedule);
+        newDayOfWeek.setDayOfWeek(dayOfWeek);
+        newDayOfWeek.setWorkingDay(workingDay);
+        newDayOfWeek.setDoctor(doctor);
+        List<WorkSchedule> validWorkSchedules = newWorkSchedules.stream()
+                .filter(workScheduleDTO -> !invalidWorkSchedules.contains(workScheduleDTO))
+                .map(workScheduleDTO -> {
+                    WorkSchedule workSchedule = WorkScheduleMapper.WORK_SCHEDULE_MAPPER.mapToWorkSchedule(workScheduleDTO);
+                    workSchedule.setDaysOfWeek(newDayOfWeek);
+                    workSchedule.setCreatedBy(currentUser.getUsername());
+                    workSchedule.setCreatedAt(LocalDateTime.now());
+                    return workSchedule;
+                }).toList();
+        newDayOfWeek.setNumberOfShiftsPerDay(validWorkSchedules.size());
+        newDayOfWeek.setWorkSchedules(validWorkSchedules);
+        newDayOfWeek.setCreatedBy(currentUser.getUsername());
+        newDayOfWeek.setCreatedAt(LocalDateTime.now());
+        doctor.getDaysOfWeeks().add(newDayOfWeek);
+        doctor.setDaysOfWeeks(doctor.getDaysOfWeeks());
+        doctorRepository.save(doctor);
+        return workSchedulesMessage(invalidWorkSchedules, workingDay);
     }
 
     @Override
@@ -148,7 +169,8 @@ public class DoctorServiceImpl implements DoctorService {
     @Override
     public BookingResponse getAllBookings(int page, int size, String[] sorts) {
         User currentUser = authService.getCurrentUser();
-        Page<Booking> bookingPage = bookingRepository.getAllBookings(currentUser.getUserId() , commonServiceImpl.pagingSort(page, size, sorts));
+        Pageable pageable = commonServiceImpl.pagingSort(page, size, sorts);
+        Page<Booking> bookingPage = bookingRepository.getAllBookings(currentUser.getUserId() , pageable);
         return commonServiceImpl.getAllBookings(bookingPage);
     }
 
@@ -174,19 +196,32 @@ public class DoctorServiceImpl implements DoctorService {
         return isExist;
     }
 
-    public List<WorkScheduleDTO> getInvalidWorkSchedules (List<User> doctors, RegisterWorkScheduleRequest registerWorkSchedule) {
+    public List<WorkScheduleDTO> invalidWorkSchedules(List<Doctor> doctors, RegisterWorkScheduleRequest registerWorkSchedule) {
         List<WorkScheduleDTO> invalidWorkSchedules = new ArrayList<>();
+        DayOfWeek dayOfWeek =
+                registerWorkSchedule.getWorkingDay().toInstant().atZone(ZoneId.systemDefault()).toLocalDate().getDayOfWeek();
         doctors.forEach(doctor -> {
-            DaysOfWeek daysOfWeek = dayOfWeekRepository.getDayOfWeekByDay(doctor.getUserId(),
-                    registerWorkSchedule.getWorkingDay().toInstant().atZone(ZoneId.systemDefault()).toLocalDate().getDayOfWeek());
+            DaysOfWeek daysOfWeek = dayOfWeekRepository.getDayOfWeekByDay(doctor.getDoctorId(), dayOfWeek);
             List<WorkScheduleDTO> existWorkSchedules = workScheduleRepository.getWorkSchedulesByDayOfWeek(daysOfWeek)
                     .stream().map(WorkScheduleMapper.WORK_SCHEDULE_MAPPER::mapToWorkScheduleDTO).toList();
             List<WorkScheduleDTO> workSchedules = registerWorkSchedule.getWorkSchedules().stream()
-                    .flatMap(newWorkSchedule -> existWorkSchedules.stream()
-                            .filter(newWorkSchedule::equals)).toList();
+                    .filter(newSchedule -> !isValidDuration(newSchedule.getStartTime(), newSchedule.getEndTime()) ||
+                            existWorkSchedules.stream().anyMatch(existSchedule ->
+                                    isTimeOverlap(newSchedule.getStartTime(), newSchedule.getEndTime(),
+                                            existSchedule.getStartTime(), existSchedule.getEndTime())
+                            )
+                    ).toList();
             invalidWorkSchedules.addAll(workSchedules);
         });
         return invalidWorkSchedules;
+    }
+
+    private boolean isTimeOverlap(LocalTime start1, LocalTime end1, LocalTime start2, LocalTime end2) {
+        return start1.isBefore(end2) && start2.isBefore(end1);
+    }
+
+    private boolean isValidDuration(LocalTime start, LocalTime end) {
+        return Duration.between(start, end).toMinutes() == 30;
     }
 
     public String workSchedulesMessage(List<WorkScheduleDTO> invalidWorkSchedules, Date day) {
@@ -202,9 +237,27 @@ public class DoctorServiceImpl implements DoctorService {
                         .append(invalidWorkSchedules.get(i).getEndTime()).append((i != size-1) ? ", " : "");
             }
             workSchedulesMessage = "Successfully registered for work schedules for "+ workingDay
-                    +". Except for work schedules "+invalidMessage+" because someone has already registered.";
+                    + ".However, the following time slots could not be registered because they are already taken: " + invalidMessage
+                    + ". Note: Each work schedule time should only be 30 minutes.";
         }
         return workSchedulesMessage;
     }
 
+    private EEducationLevel validateEducationLevel(String educationLevel) {
+        String enumValue = "";
+        if (educationLevel.equalsIgnoreCase("BACHELOR")) {
+            enumValue = "BACHELOR";
+        } else if (educationLevel.equalsIgnoreCase("MASTER")) {
+            enumValue = "MASTER";
+        } else if (educationLevel.equalsIgnoreCase("DOCTOR")) {
+            enumValue = "DOCTOR";
+        } else if (educationLevel.equalsIgnoreCase("PROFESSOR")) {
+            enumValue = "PROFESSOR";
+        } else if (educationLevel.equalsIgnoreCase("ASSOCIATE_PROFESSOR")) {
+            enumValue = "ASSOCIATE_PROFESSOR";
+        } else {
+            throw new ResourceNotFoundException("Education level", educationLevel);
+        }
+        return EEducationLevel.valueOf(enumValue);
+    }
 }

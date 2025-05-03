@@ -263,7 +263,7 @@ public class CommonServiceImpl {
         }
     }
 
-    public void updateProfile (UserProfileRequest profileRequest, User currentUser, MultipartFile avatar, MultipartFile specialDegree) {
+    public void updateProfile (UserProfileRequest profileRequest, User currentUser, MultipartFile avatar) {
         userRepository.findAll().stream().filter(user -> Objects.nonNull(user.getPhoneNumber())).toList().forEach(user -> {
             if (profileRequest.getPhoneNumber().equals(user.getPhoneNumber()))
                 throw new ResourceAlreadyExistException("Phone number", profileRequest.getPhoneNumber());
@@ -277,9 +277,6 @@ public class CommonServiceImpl {
         address.setCreatedBy(currentUser.getUsername());
         currentUser.setAddress(address);
         uploadFile(avatar, "avatar", currentUser);
-        if (Objects.nonNull(specialDegree)) {
-            uploadFile(specialDegree, "special-degree", currentUser);
-        }
     }
 
     public Stream<File> loadFilesByUserId(Long userId) {

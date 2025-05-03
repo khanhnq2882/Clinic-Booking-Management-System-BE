@@ -20,7 +20,7 @@ public class DoctorDTO {
     private String phoneNumber;
     private AddressResponse doctorAddress;
     private String specializationName;
-    private Set<ExperienceDTO> experiences;
+    private Set<WorkExperienceDTO> experiences;
     private String status;
     private List<FileResponse> files;
 }

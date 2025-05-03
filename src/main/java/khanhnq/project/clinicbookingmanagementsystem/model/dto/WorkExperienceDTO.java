@@ -7,10 +7,11 @@ import lombok.*;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class ExperienceDTO {
+public class WorkExperienceDTO {
     private String position;
-    private String specialization;
+    private String workSpecializationName;
     private String workPlace;
     private int yearOfStartWork;
     private int yearOfEndWork;
+    private String description;
 }

@@ -18,9 +18,9 @@ import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -38,7 +38,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public String updateProfile(UserProfileRequest profileRequest, MultipartFile avatar) {
         User currentUser = authService.getCurrentUser();
-        commonServiceImpl.updateProfile(profileRequest, currentUser, avatar, null);
+        commonServiceImpl.updateProfile(profileRequest, currentUser, avatar);
         userRepository.save(currentUser);
         return MessageConstants.UPDATE_PROFILE_SUCCESS;
     }
@@ -70,33 +70,35 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public String bookingAppointment(BookingAppointmentRequest bookingAppointmentRequest) {
-        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
         User currentUser = authService.getCurrentUser();
         LocalDate ld1 = bookingAppointmentRequest.getAppointmentDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
         LocalDate ld2 = new Date().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
         if (ld1.isBefore(ld2)) {
             throw new BusinessException(MessageConstants.INVALID_APPOINTMENT_DATE);
         }
-        String appointmentDate = dateFormat.format(bookingAppointmentRequest.getAppointmentDate());
+        String appointmentDate = new SimpleDateFormat("yyyy-MM-dd").format(bookingAppointmentRequest.getAppointmentDate());
         Long workScheduleId = bookingAppointmentRequest.getWorkScheduleId();
-        WorkSchedule workSchedule = workScheduleRepository.findById(workScheduleId).orElseThrow(() -> new ResourceNotFoundException("Work schedule ID", workScheduleId.toString()));
+        WorkSchedule workSchedule = workScheduleRepository.findById(workScheduleId).orElseThrow(()
+                -> new ResourceNotFoundException("Work schedule id", workScheduleId.toString()));
         bookingRepository.findAll().forEach(booking -> {
-            if (workScheduleId.equals(booking.getWorkSchedule().getWorkScheduleId()) && appointmentDate.equals(booking.getAppointmentDate().toString())) {
-                throw new BusinessException("You cannot booking an appointment at time " + workSchedule.getStartTime() +"-"+ workSchedule.getEndTime()
-                        +" on day "+appointmentDate+" because someone has already booked.");
+            if (workScheduleId.equals(booking.getWorkSchedule().getWorkScheduleId())
+                    && appointmentDate.equals(booking.getAppointmentDate().toString())) {
+                String workScheduleTime = workSchedule.getStartTime() +"-"+ workSchedule.getEndTime();
+                throw new BusinessException("You cannot booking an appointment at time " + workScheduleTime
+                        + " on day "+appointmentDate+" because someone has already booked.");
             }
         });
-        Booking bookingAppointment = BookingMapper.BOOKING_MAPPER.mapToBooking(bookingAppointmentRequest);
-        Ward ward = wardRepository.findById(bookingAppointmentRequest.getWardId()).orElse(null);
-        if (Objects.isNull(ward))
-            throw new ResourceNotFoundException("Ward ID", bookingAppointmentRequest.getWardId().toString());
+        Ward ward = wardRepository.findById(bookingAppointmentRequest.getWardId()).orElseThrow(()
+                -> new ResourceNotFoundException("Ward id", bookingAppointmentRequest.getWardId().toString()));
         Address address = Address.builder().specificAddress(bookingAppointmentRequest.getSpecificAddress()).ward(ward).build();
+        Booking bookingAppointment = BookingMapper.BOOKING_MAPPER.mapToBooking(bookingAppointmentRequest);
         bookingAppointment.setAddress(address);
         bookingAppointment.setBookingCode(commonServiceImpl.bookingCode());
         bookingAppointment.setWorkSchedule(workSchedule);
         bookingAppointment.setStatus(EBookingStatus.PENDING);
         bookingAppointment.setUser(currentUser);
         bookingAppointment.setCreatedBy(currentUser.getUsername());
+        bookingAppointment.setCreatedAt(LocalDateTime.now());
         bookingRepository.save(bookingAppointment);
         return MessageConstants.BOOKING_SUCCESS;
     }

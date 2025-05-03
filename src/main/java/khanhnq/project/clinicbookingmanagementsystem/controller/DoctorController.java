@@ -23,14 +23,14 @@ public class DoctorController {
 
     @PostMapping(value = "/update-profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> updateProfile(@RequestPart("userProfileRequest") UserProfileRequest userProfileRequest,
-                                                @Valid @RequestPart(value = "avatar") MultipartFile avatar,
-                                                @Valid @RequestPart(value = "specialty-degree", required = false) MultipartFile specialDegree) {
-        return MessageResponse.getResponseMessage(doctorService.updateProfile(userProfileRequest, avatar, specialDegree), HttpStatus.OK);
+                                                @Valid @RequestPart(value = "avatar") MultipartFile avatar) {
+        return MessageResponse.getResponseMessage(doctorService.updateProfile(userProfileRequest, avatar), HttpStatus.OK);
     }
 
     @PostMapping("/update-doctor-information")
-    public ResponseEntity<String> updateDoctorInformation(@RequestBody DoctorInformationRequest doctorInformationRequest) {
-        return MessageResponse.getResponseMessage(doctorService.updateDoctorInformation(doctorInformationRequest), HttpStatus.OK);
+    public ResponseEntity<String> updateDoctorInformation(@RequestPart DoctorInformationRequest doctorInformationRequest,
+                                                          @Valid @RequestPart(value = "specialty-degree", required = false) MultipartFile specialtyDegree) {
+        return MessageResponse.getResponseMessage(doctorService.updateDoctorInformation(doctorInformationRequest, specialtyDegree), HttpStatus.OK);
     }
 
     @PostMapping("/register-work-schedules")
