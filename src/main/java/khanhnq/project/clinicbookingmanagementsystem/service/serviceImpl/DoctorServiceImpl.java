@@ -200,19 +200,26 @@ public class DoctorServiceImpl implements DoctorService {
         List<WorkScheduleDTO> invalidWorkSchedules = new ArrayList<>();
         DayOfWeek dayOfWeek =
                 registerWorkSchedule.getWorkingDay().toInstant().atZone(ZoneId.systemDefault()).toLocalDate().getDayOfWeek();
-        doctors.forEach(doctor -> {
-            DaysOfWeek daysOfWeek = dayOfWeekRepository.getDayOfWeekByDay(doctor.getDoctorId(), dayOfWeek);
-            List<WorkScheduleDTO> existWorkSchedules = workScheduleRepository.getWorkSchedulesByDayOfWeek(daysOfWeek)
-                    .stream().map(WorkScheduleMapper.WORK_SCHEDULE_MAPPER::mapToWorkScheduleDTO).toList();
+        if (doctors.size() == 0) {
             List<WorkScheduleDTO> workSchedules = registerWorkSchedule.getWorkSchedules().stream()
-                    .filter(newSchedule -> !isValidDuration(newSchedule.getStartTime(), newSchedule.getEndTime()) ||
-                            existWorkSchedules.stream().anyMatch(existSchedule ->
-                                    isTimeOverlap(newSchedule.getStartTime(), newSchedule.getEndTime(),
-                                            existSchedule.getStartTime(), existSchedule.getEndTime())
-                            )
-                    ).toList();
+                    .filter(newSchedule -> !isValidDuration(newSchedule.getStartTime(), newSchedule.getEndTime()))
+                    .toList();
             invalidWorkSchedules.addAll(workSchedules);
-        });
+        } else {
+            doctors.forEach(doctor -> {
+                DaysOfWeek daysOfWeek = dayOfWeekRepository.getDayOfWeekByDay(doctor.getDoctorId(), dayOfWeek);
+                List<WorkScheduleDTO> existWorkSchedules = workScheduleRepository.getWorkSchedulesByDayOfWeek(daysOfWeek)
+                        .stream().map(WorkScheduleMapper.WORK_SCHEDULE_MAPPER::mapToWorkScheduleDTO).toList();
+                List<WorkScheduleDTO> workSchedules = registerWorkSchedule.getWorkSchedules().stream()
+                        .filter(newSchedule -> !isValidDuration(newSchedule.getStartTime(), newSchedule.getEndTime()) ||
+                                existWorkSchedules.stream().anyMatch(existSchedule ->
+                                        isTimeOverlap(newSchedule.getStartTime(), newSchedule.getEndTime(),
+                                                existSchedule.getStartTime(), existSchedule.getEndTime())
+                                )
+                        ).toList();
+                invalidWorkSchedules.addAll(workSchedules);
+            });
+        }
         return invalidWorkSchedules;
     }
 

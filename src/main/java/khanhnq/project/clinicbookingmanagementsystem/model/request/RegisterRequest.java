@@ -13,8 +13,8 @@ public class RegisterRequest {
     @EmailConstraint
     private String email;
 
-    @NotNull(message = "User name can't be empty.")
-    @Length(min = 5, max = 20, message = "Username must have a minimum of 5 characters and a maximum of 20 characters")
+    @NotNull(message = "Username can't be empty.")
+    @Length(min = 4, max = 20, message = "Username must have a minimum of 4 characters and a maximum of 20 characters")
     private String username;
 
     @PasswordConstraint

@@ -1,13 +1,13 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
 import khanhnq.project.clinicbookingmanagementsystem.constant.MessageConstants;
-import khanhnq.project.clinicbookingmanagementsystem.model.dto.DoctorDTO;
-import khanhnq.project.clinicbookingmanagementsystem.model.dto.WorkScheduleDTO;
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EBookingStatus;
 import khanhnq.project.clinicbookingmanagementsystem.exception.BusinessException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceNotFoundException;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.BookingMapper;
+import khanhnq.project.clinicbookingmanagementsystem.model.response.FileResponse;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.BookingAppointmentRequest;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.UserProfileRequest;
@@ -18,12 +18,14 @@ import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @AllArgsConstructor
@@ -32,6 +34,7 @@ public class UserServiceImpl implements UserService {
     private final WardRepository wardRepository;
     private final WorkScheduleRepository workScheduleRepository;
     private final BookingRepository bookingRepository;
+    private final DoctorRepository doctorRepository;
     private final AuthService authService;
     private final CommonServiceImpl commonServiceImpl;
 
@@ -45,27 +48,58 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<DoctorDTO> getDoctorsBySpecialization(Long specializationId) {
-        return userRepository.getDoctorsBySpecializationId(specializationId)
-                .stream()
-                .map(user -> DoctorDTO.builder()
-                        .userId(user.getUserId())
-                        .userCode(user.getUserCode())
-                        .firstName(user.getFirstName())
-                        .lastName(user.getLastName())
-                        .build())
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<WorkScheduleDTO> getWorkSchedulesByDoctor(Long userId) {
-        return workScheduleRepository.getWorkSchedulesByDoctorId(userId)
-                .stream()
-                .map(workSchedule -> WorkScheduleDTO.builder()
-                        .startTime(workSchedule.getStartTime())
-                        .endTime(workSchedule.getEndTime())
-                        .build())
-                .sorted(Comparator.comparing(WorkScheduleDTO::getStartTime))
-                .toList();
+        List<DoctorInfoDTO> doctorInfoList = doctorRepository.getDoctorsInfo(specializationId);
+        Map<Long, DoctorDTO> doctorMap = new HashMap<>();
+        doctorInfoList.forEach(doctorInfoDTO -> {
+            Long doctorId = doctorInfoDTO.getDoctorId();
+            DoctorDTO doctorDTO = doctorMap.getOrDefault(doctorId, new DoctorDTO());
+            doctorDTO.setDoctorId(doctorId);
+            doctorDTO.setUserCode(doctorInfoDTO.getUserCode());
+            doctorDTO.setFirstName(doctorInfoDTO.getFirstName());
+            doctorDTO.setLastName(doctorInfoDTO.getLastName());
+            doctorDTO.setSpecializationName(doctorInfoDTO.getSpecializationName());
+            doctorDTO.setBiography(doctorInfoDTO.getBiography());
+            doctorDTO.setCareerDescription(doctorInfoDTO.getCareerDescription());
+            doctorDTO.setEducationLevel(doctorInfoDTO.getEducationLevel());
+            WorkExperienceDTO workExperienceDTO = WorkExperienceDTO.builder()
+                    .position(doctorInfoDTO.getPosition())
+                    .workSpecializationName(doctorInfoDTO.getWorkSpecializationName())
+                    .workPlace(doctorInfoDTO.getWorkPlace())
+                    .yearOfStartWork(doctorInfoDTO.getYearOfStartWork())
+                    .yearOfEndWork(doctorInfoDTO.getYearOfEndWork())
+                    .description(doctorInfoDTO.getDescription())
+                    .build();
+            doctorDTO.getWorkExperiences().add(workExperienceDTO);
+            String fileUrl = ServletUriComponentsBuilder.fromCurrentContextPath().path("/admin/files/").path(doctorInfoDTO.getFileId().toString()).toUriString();
+            FileResponse fileResponse = new FileResponse(doctorInfoDTO.getFileType(), doctorInfoDTO.getFileName(), fileUrl);
+            doctorDTO.getFiles().add(fileResponse);
+            if (doctorInfoDTO.getWorkingDay() != null) {
+                Set<DayOfWeekDTO> daysOfWeek = doctorDTO.getDaysOfWeek();
+                DayOfWeekDTO existingDay = daysOfWeek.stream()
+                        .filter(d -> d.getWorkingDay().equals(doctorInfoDTO.getWorkingDay()))
+                        .findFirst()
+                        .orElse(null);
+                WorkScheduleDTO workScheduleDTO = new WorkScheduleDTO();
+                workScheduleDTO.setStartTime(doctorInfoDTO.getStartTime());
+                workScheduleDTO.setEndTime(doctorInfoDTO.getEndTime());
+                if (existingDay != null) {
+                    existingDay.getWorkSchedules().add(workScheduleDTO);
+                    Set<WorkScheduleDTO> sorted = existingDay.getWorkSchedules().stream()
+                            .sorted(Comparator.comparing(WorkScheduleDTO::getStartTime))
+                            .collect(Collectors.toCollection(LinkedHashSet::new));
+                    existingDay.setWorkSchedules(sorted);
+                } else {
+                    DayOfWeekDTO newDay = new DayOfWeekDTO();
+                    newDay.setWorkingDay(doctorInfoDTO.getWorkingDay());
+                    Set<WorkScheduleDTO> sorted = Stream.of(workScheduleDTO)
+                            .collect(Collectors.toCollection(LinkedHashSet::new));
+                    newDay.setWorkSchedules(sorted);
+                    daysOfWeek.add(newDay);
+                }
+            }
+            doctorMap.put(doctorId, doctorDTO);
+        });
+        return doctorMap.values().stream().toList();
     }
 
     @Override

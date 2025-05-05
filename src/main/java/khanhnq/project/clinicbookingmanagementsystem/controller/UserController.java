@@ -2,7 +2,6 @@ package khanhnq.project.clinicbookingmanagementsystem.controller;
 
 import jakarta.validation.Valid;
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.DoctorDTO;
-import khanhnq.project.clinicbookingmanagementsystem.model.dto.WorkScheduleDTO;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.BookingAppointmentRequest;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.UserProfileRequest;
 import khanhnq.project.clinicbookingmanagementsystem.model.response.BookingResponse;
@@ -18,7 +17,7 @@ import java.util.List;
 
 @RestController
 @AllArgsConstructor
-@RequestMapping(path = "/user", consumes = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping(path = "/user")
 public class UserController {
     private final UserService userService;
 
@@ -35,11 +34,6 @@ public class UserController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(userService.getDoctorsBySpecialization(specializationId));
     }
 
-    @GetMapping("/get-work-schedules-by-doctor/{userId}")
-    public ResponseEntity<List<WorkScheduleDTO>> getWorkSchedulesByDoctor (@PathVariable("userId") Long userId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(userService.getWorkSchedulesByDoctor(userId));
-    }
-
     @PostMapping("/booking-appointment")
     public ResponseEntity<String> bookingAppointment(@RequestBody BookingAppointmentRequest bookingAppointmentRequest) {
         return MessageResponse.getResponseMessage(userService.bookingAppointment(bookingAppointmentRequest), HttpStatus.OK);
@@ -51,5 +45,4 @@ public class UserController {
                                                        @RequestParam(defaultValue = "bookingId,asc") String[] sorts) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(userService.getAllBookings(page, size, sorts));
     }
-
 }

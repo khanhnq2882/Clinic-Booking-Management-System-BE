@@ -1,9 +1,8 @@
 package khanhnq.project.clinicbookingmanagementsystem.model.dto;
 
-import khanhnq.project.clinicbookingmanagementsystem.model.response.AddressResponse;
 import khanhnq.project.clinicbookingmanagementsystem.model.response.FileResponse;
 import lombok.*;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Set;
 
 @Getter
@@ -12,15 +11,15 @@ import java.util.Set;
 @NoArgsConstructor
 @Builder
 public class DoctorDTO {
-    private Long userId;
+    private Long doctorId;
     private String userCode;
-    private String email;
     private String firstName;
     private String lastName;
-    private String phoneNumber;
-    private AddressResponse doctorAddress;
+    private String biography;
+    private String careerDescription;
+    private String educationLevel;
     private String specializationName;
-    private Set<WorkExperienceDTO> experiences;
-    private String status;
-    private List<FileResponse> files;
+    private Set<WorkExperienceDTO> workExperiences = new HashSet<>();
+    private Set<FileResponse> files = new HashSet<>();
+    private Set<DayOfWeekDTO> daysOfWeek = new HashSet<>();
 }

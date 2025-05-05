@@ -118,20 +118,20 @@ public class AdminServiceImpl implements AdminService {
     public DoctorResponse getAllDoctors(int page, int size, String[] sorts) {
         checkAccess();
         Page<User> doctorPage = userRepository.getAllDoctors(commonServiceImpl.pagingSort(page, size, sorts));
-        List<DoctorDTO> doctors = doctorPage.getContent().stream()
-                .map(user -> {
-                    DoctorDTO doctorDTO = UserMapper.USER_MAPPER.mapToDoctorResponse(user);
-//                    if (user.getSpecialization() != null)
-//                        doctorDTO.setSpecializationName(user.specializationName());
-                    doctorDTO.setDoctorAddress(commonServiceImpl.getAddress(user));
-                    doctorDTO.setFiles(commonServiceImpl.getAllFiles(user.getUserId()));
-                    return doctorDTO;
-                }).toList();
+//        List<DoctorDTO> doctors = doctorPage.getContent().stream()
+//                .map(user -> {
+//                    DoctorDTO doctorDTO = UserMapper.USER_MAPPER.mapToDoctorResponse(user);
+////                    if (user.getSpecialization() != null)
+////                        doctorDTO.setSpecializationName(user.specializationName());
+//                    doctorDTO.setDoctorAddress(commonServiceImpl.getAddress(user));
+//                    doctorDTO.setFiles(commonServiceImpl.getAllFiles(user.getUserId()));
+//                    return doctorDTO;
+//                }).toList();
         return DoctorResponse.builder()
                 .totalItems(doctorPage.getTotalElements())
                 .totalPages(doctorPage.getTotalPages())
                 .currentPage(doctorPage.getNumber())
-                .doctors(doctors)
+//                .doctors(doctors)
                 .build();
     }
 
