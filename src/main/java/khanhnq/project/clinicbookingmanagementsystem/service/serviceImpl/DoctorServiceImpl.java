@@ -5,7 +5,7 @@ import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EEducationLeve
 import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceNotFoundException;
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.SpecializationDTO;
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.WorkScheduleDTO;
-import khanhnq.project.clinicbookingmanagementsystem.exception.BusinessException;
+import khanhnq.project.clinicbookingmanagementsystem.exception.SystemException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ForbiddenException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.UnauthorizedException;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.WorkExperienceMapper;
@@ -100,7 +100,7 @@ public class DoctorServiceImpl implements DoctorService {
         User currentUser = checkAccess();
         Doctor doctor = doctorRepository.findDoctorByUserId(currentUser.getUserId());
         if (Objects.isNull(doctor.getSpecialization())) {
-            throw new BusinessException(MessageConstants.SPECIALIZATION_NOT_FOUND);
+            throw new SystemException(MessageConstants.SPECIALIZATION_NOT_FOUND);
         }
         Date workingDay = registerWorkSchedule.getWorkingDay();
         LocalDate workingDayLocalDate = workingDay.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
@@ -110,15 +110,15 @@ public class DoctorServiceImpl implements DoctorService {
         if (workingDayLocalDate.isBefore(nowLocalDate) ||
                 workingDayLocalDate.isBefore(startOfWeek) ||
                 workingDayLocalDate.isAfter(endOfWeek)) {
-            throw new BusinessException(MessageConstants.INVALID_WORKING_DAY);
+            throw new SystemException(MessageConstants.INVALID_WORKING_DAY);
         }
         DayOfWeek dayOfWeek = workingDay.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().getDayOfWeek();
         if (Arrays.stream(DayOfWeek.values()).noneMatch(dayOfWeek::equals)) {
-            throw new BusinessException(MessageConstants.INVALID_DAY_OF_WEEK);
+            throw new SystemException(MessageConstants.INVALID_DAY_OF_WEEK);
         }
         List<WorkScheduleDTO> newWorkSchedules = registerWorkSchedule.getWorkSchedules();
         if (newWorkSchedules.size() != registerWorkSchedule.getNumberOfShiftsPerDay()) {
-            throw new BusinessException(MessageConstants.INVALID_WORK_SCHEDULES);
+            throw new SystemException(MessageConstants.INVALID_WORK_SCHEDULES);
         }
         DaysOfWeek oldDaysOfWeek = dayOfWeekRepository.getDayOfWeekByDay(doctor.getDoctorId(), dayOfWeek);
         if (Objects.nonNull(oldDaysOfWeek)) {

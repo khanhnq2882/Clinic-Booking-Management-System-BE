@@ -1,6 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.mapper;
 
-import khanhnq.project.clinicbookingmanagementsystem.model.dto.DoctorDTO;
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.DoctorDetailsDTO;
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.UserDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Role;
 import khanhnq.project.clinicbookingmanagementsystem.entity.User;
@@ -17,7 +17,7 @@ public interface UserMapper {
     void mapToUser(@MappingTarget User currentUser, UserProfileRequest userProfileRequest);
     @Mapping(target = "roleNames", source = "roles")
     UserDTO mapToUserDTO(User user);
-    DoctorDTO mapToDoctorResponse(User user);
+    DoctorDetailsDTO mapToDoctorResponse(User user);
     default String mapRolesToString(Role role) {
         return role.getRoleName().name();
     }

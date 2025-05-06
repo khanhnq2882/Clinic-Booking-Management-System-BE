@@ -279,7 +279,7 @@ public class AdminServiceImpl implements AdminService {
             workbook.write(outputStream);
             return new ByteArrayInputStream(outputStream.toByteArray());
         } catch (IOException ex) {
-            throw new BusinessException(MessageConstants.FAILED_EXPORT_DATA_EXCEL);
+            throw new SystemException(MessageConstants.FAILED_EXPORT_DATA_EXCEL);
         }
     }
 
@@ -303,7 +303,7 @@ public class AdminServiceImpl implements AdminService {
             workbook.write(outputStream);
             return new ByteArrayInputStream(outputStream.toByteArray());
         } catch (IOException ex) {
-            throw new BusinessException(MessageConstants.FAILED_EXPORT_DATA_EXCEL);
+            throw new SystemException(MessageConstants.FAILED_EXPORT_DATA_EXCEL);
         }
     }
 
@@ -336,7 +336,7 @@ public class AdminServiceImpl implements AdminService {
             workbook.write(outputStream);
             return new ByteArrayInputStream(outputStream.toByteArray());
         } catch (IOException ex) {
-            throw new BusinessException(MessageConstants.FAILED_EXPORT_DATA_EXCEL);
+            throw new SystemException(MessageConstants.FAILED_EXPORT_DATA_EXCEL);
         }
     }
 
@@ -381,7 +381,7 @@ public class AdminServiceImpl implements AdminService {
                         case "Status" -> {
                             String serviceStatus = commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue();
                             if (Arrays.stream(EServiceStatus.values()).noneMatch(eServiceStatus -> eServiceStatus.name().equalsIgnoreCase(serviceStatus))) {
-                                throw new BusinessException(MessageConstants.INVALID_SERVICE_STATUS);
+                                throw new SystemException(MessageConstants.INVALID_SERVICE_STATUS);
                             }
                             service.setStatus(EServiceStatus.valueOf(serviceStatus.toUpperCase()));
                         }
@@ -393,7 +393,7 @@ public class AdminServiceImpl implements AdminService {
             }
             return services;
         } catch (IOException e) {
-            throw new BusinessException(MessageConstants.FAILED_IMPORT_DATA_EXCEL);
+            throw new SystemException(MessageConstants.FAILED_IMPORT_DATA_EXCEL);
         }
     }
 
@@ -430,7 +430,7 @@ public class AdminServiceImpl implements AdminService {
                         case "Appointment Date" -> {
                             Date appointmentDate = checkFormatDate(cells.get(indexCell), indexRow, colName);
                             if (appointmentDate.before(Date.from(LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant()))) {
-                                throw new BusinessException("Appointment date must be start from today.");
+                                throw new SystemException("Appointment date must be start from today.");
                             }
                             bookingExcelResponse.getBookingExcelDTO().setAppointmentDate(appointmentDate);
                         }
@@ -465,7 +465,7 @@ public class AdminServiceImpl implements AdminService {
             response.setData(responseMessage.toString());
             return response;
         } catch (IOException e) {
-            throw new BusinessException(MessageConstants.FAILED_IMPORT_DATA_EXCEL);
+            throw new SystemException(MessageConstants.FAILED_IMPORT_DATA_EXCEL);
         }
     }
 
@@ -556,7 +556,7 @@ public class AdminServiceImpl implements AdminService {
         Date date = commonServiceImpl.checkDateType(cell, indexRow, colName).getDateCellValue();
         DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
         if (!dateFormat.format(date).matches("^\\d{4}-(0?[1-9]|1[012])-(0?[1-9]|[12][0-9]|3[01])$")) {
-            throw new BusinessException("Import failed. "+ colName +" in row " + (indexRow + 1) + " must be yyyy-MM-dd format.");
+            throw new SystemException("Import failed. "+ colName +" in row " + (indexRow + 1) + " must be yyyy-MM-dd format.");
         }
         return date;
     }
@@ -570,7 +570,7 @@ public class AdminServiceImpl implements AdminService {
     private void checkGender (Cell cell, int indexRow, String colName, BookingExcelResponse bookingExcelResponse) {
         String gender = commonServiceImpl.checkStringType(cell, indexRow, colName).getStringCellValue();
         if (!gender.equalsIgnoreCase("Male") && !gender.equalsIgnoreCase("Female")) {
-            throw new BusinessException("Import failed. "+ colName +" in row " + (indexRow + 1) + " must be 'Male' or 'Female'.");
+            throw new SystemException("Import failed. "+ colName +" in row " + (indexRow + 1) + " must be 'Male' or 'Female'.");
         }
         bookingExcelResponse.getBookingExcelDTO().setGender(gender.equalsIgnoreCase("Male") ? 1 : 0);
     }
@@ -579,7 +579,7 @@ public class AdminServiceImpl implements AdminService {
         String specializationName = commonServiceImpl.checkStringType(cell, indexRow, colName).getStringCellValue();
         Specialization specialization = specializationRepository.getSpecializationBySpecializationName(specializationName);
         if (Objects.isNull(specialization)) {
-            throw new BusinessException("Import failed. Specialization named " + specializationName + " is not exist.");
+            throw new SystemException("Import failed. Specialization named " + specializationName + " is not exist.");
         }
         bookingExcelResponse.getBookingExcelDTO().setSpecializationName(specializationName);
     }

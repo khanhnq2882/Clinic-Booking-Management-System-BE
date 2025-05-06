@@ -30,12 +30,6 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
     }
 
-    @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<ResponseEntityBase> handlerBusinessException(BusinessException exception) {
-        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.BAD_REQUEST.value(), exception.getMessage(), null);
-        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-    }
-
     @ExceptionHandler(FileUploadFailedException.class)
     public ResponseEntity<ResponseEntityBase> handlerFileUploadFailedException(FileUploadFailedException exception) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.EXPECTATION_FAILED.value(), exception.getMessage(), null);
@@ -52,6 +46,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<ResponseEntityBase> handlerForbiddenException(ForbiddenException exception) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.FORBIDDEN.value(), exception.getMessage(), null);
         return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
+    }
+
+    @ExceptionHandler(SystemException.class)
+    public ResponseEntity<ResponseEntityBase> handlerSystemException(SystemException exception) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.INTERNAL_SERVER_ERROR.value(), exception.getMessage(), null);
+        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @Override

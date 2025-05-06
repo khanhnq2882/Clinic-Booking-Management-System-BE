@@ -45,4 +45,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     @Query(value = "SELECT b FROM Booking AS b WHERE b.user.userId = :userId")
     Page<Booking> getBookingsWithUserId (@Param("userId") Long userId, Pageable pageable);
 
+    @Query(value = "SELECT * FROM Booking WHERE status NOT IN 'CANCELLED'", nativeQuery = true)
+    List<Booking> getBookingsWithoutCancelledStatus();
+
 }

@@ -31,7 +31,7 @@ public class MessageConstants {
     public static final String ADD_SERVICE_CATEGORY_SUCCESS = "Add service category successfully.";
     public static final String UPDATE_SERVICE_CATEGORY_SUCCESS = "Update service category successfully.";
     public static final String INVALID_WORKING_DAY = "The working day must start from today and must fall within the current working week.";
-    public static final String INVALID_APPOINTMENT_DATE = "The appointment date must start from today.";
+    public static final String INVALID_APPOINTMENT_DATE = "The appointment date must start from today and must fall within the current working week.";
     public static final String INVALID_SERVICE_STATUS = "The service status must be one of the values ACTIVE, INACTIVE , SUSPENDED.";
     public static final String UNLOCK_ACCOUNT_SUCCESSFULLY = "Unlock account successfully.";
     public static final String ACCOUNT_TEMPORARY_LOCK = "Account temporarily locked due to 5 incorrect password attempts. Try again in 5 minutes.";

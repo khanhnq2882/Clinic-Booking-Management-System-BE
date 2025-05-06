@@ -10,13 +10,16 @@ import java.util.Set;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class DoctorDTO {
+public class DoctorDetailsDTO {
     private Long doctorId;
+    private String userCode;
     private String firstName;
     private String lastName;
-    private String specializationName;
     private String biography;
+    private String careerDescription;
     private String educationLevel;
-    private FileResponse file;
+    private String specializationName;
+    private Set<WorkExperienceDTO> workExperiences = new HashSet<>();
+    private Set<FileResponse> files = new HashSet<>();
     private Set<DayOfWeekDTO> daysOfWeek = new HashSet<>();
 }

@@ -30,6 +30,11 @@ public class UserController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(userService.getDoctorsBySpecialization(specializationId));
     }
 
+    @GetMapping("/get-doctor-details/{doctorId}")
+    public ResponseEntity<ResponseEntityBase> getDoctorDetails (@PathVariable("doctorId") Long doctorId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(userService.getDoctorDetails(doctorId));
+    }
+
     @PostMapping("/booking-appointment")
     public ResponseEntity<ResponseEntityBase> bookingAppointment(@RequestBody BookingAppointmentRequest bookingAppointmentRequest) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(userService.bookingAppointment(bookingAppointmentRequest));
