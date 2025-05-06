@@ -1,7 +1,8 @@
 package khanhnq.project.clinicbookingmanagementsystem.security;
 
 import jakarta.servlet.http.HttpServletRequest;
-import khanhnq.project.clinicbookingmanagementsystem.security.jwt.AuthEntryPointJwt;
+import khanhnq.project.clinicbookingmanagementsystem.exception.handler.CustomAccessDeniedHandler;
+import khanhnq.project.clinicbookingmanagementsystem.exception.handler.CustomBadCredentialHandler;
 import khanhnq.project.clinicbookingmanagementsystem.security.jwt.AuthTokenFilter;
 import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -26,11 +27,13 @@ import java.util.List;
 @AllArgsConstructor
 public class WebSecurityConfig {
 
-    private AuthEntryPointJwt authEntryPointJwt;
-
     private CustomAuthenticationProvider customAuthenticationProvider;
 
     private AuthTokenFilter authTokenFilter;
+
+    private CustomAccessDeniedHandler customAccessDeniedHandler;
+
+    private CustomBadCredentialHandler customBadCredentialHandler;
 
     @Bean
     public AuthenticationManager authenticationManager() {
@@ -55,7 +58,9 @@ public class WebSecurityConfig {
                     }
                 }))
                 .csrf(AbstractHttpConfigurer::disable)
-                .exceptionHandling(exception -> exception.authenticationEntryPoint(authEntryPointJwt))
+                .exceptionHandling(exception -> exception
+                        .accessDeniedHandler(customAccessDeniedHandler)
+                        .authenticationEntryPoint(customBadCredentialHandler))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth ->
                         auth.requestMatchers("/auth/**").permitAll()

@@ -8,14 +8,15 @@ import khanhnq.project.clinicbookingmanagementsystem.exception.BusinessException
 import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceNotFoundException;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.BookingMapper;
 import khanhnq.project.clinicbookingmanagementsystem.model.response.FileResponse;
+import khanhnq.project.clinicbookingmanagementsystem.model.response.ResponseEntityBase;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.BookingAppointmentRequest;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.UserProfileRequest;
-import khanhnq.project.clinicbookingmanagementsystem.model.response.BookingResponse;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import khanhnq.project.clinicbookingmanagementsystem.service.UserService;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -39,15 +40,18 @@ public class UserServiceImpl implements UserService {
     private final CommonServiceImpl commonServiceImpl;
 
     @Override
-    public String updateProfile(UserProfileRequest profileRequest, MultipartFile avatar) {
-        User currentUser = authService.getCurrentUser();
+    public ResponseEntityBase updateProfile(UserProfileRequest profileRequest, MultipartFile avatar) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        User currentUser = (User) authService.getCurrentUser().getData();
         commonServiceImpl.updateProfile(profileRequest, currentUser, avatar);
         userRepository.save(currentUser);
-        return MessageConstants.UPDATE_PROFILE_SUCCESS;
+        response.setData(MessageConstants.UPDATE_PROFILE_SUCCESS);
+        return response;
     }
 
     @Override
-    public List<DoctorDTO> getDoctorsBySpecialization(Long specializationId) {
+    public ResponseEntityBase getDoctorsBySpecialization(Long specializationId) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         List<DoctorInfoDTO> doctorInfoList = doctorRepository.getDoctorsInfo(specializationId);
         Map<Long, DoctorDTO> doctorMap = new HashMap<>();
         doctorInfoList.forEach(doctorInfoDTO -> {
@@ -99,12 +103,14 @@ public class UserServiceImpl implements UserService {
             }
             doctorMap.put(doctorId, doctorDTO);
         });
-        return doctorMap.values().stream().toList();
+        response.setData(doctorMap.values().stream().toList());
+        return response;
     }
 
     @Override
-    public String bookingAppointment(BookingAppointmentRequest bookingAppointmentRequest) {
-        User currentUser = authService.getCurrentUser();
+    public ResponseEntityBase bookingAppointment(BookingAppointmentRequest bookingAppointmentRequest) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        User currentUser = (User) authService.getCurrentUser().getData();
         LocalDate ld1 = bookingAppointmentRequest.getAppointmentDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
         LocalDate ld2 = new Date().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
         if (ld1.isBefore(ld2)) {
@@ -134,14 +140,17 @@ public class UserServiceImpl implements UserService {
         bookingAppointment.setCreatedBy(currentUser.getUsername());
         bookingAppointment.setCreatedAt(LocalDateTime.now());
         bookingRepository.save(bookingAppointment);
-        return MessageConstants.BOOKING_SUCCESS;
+        response.setData(MessageConstants.BOOKING_SUCCESS);
+        return response;
     }
 
     @Override
-    public BookingResponse getAllBookings(int page, int size, String[] sorts) {
-        User currentUser = authService.getCurrentUser();
+    public ResponseEntityBase getAllBookings(int page, int size, String[] sorts) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        User currentUser = (User) authService.getCurrentUser().getData();
         Page<Booking> bookingPage = bookingRepository.getBookingsWithUserId(currentUser.getUserId(), commonServiceImpl.pagingSort(page, size, sorts));
-        return commonServiceImpl.getAllBookings(bookingPage);
+        response.setData(commonServiceImpl.getAllBookings(bookingPage));
+        return response;
     }
 
 }

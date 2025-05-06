@@ -12,15 +12,16 @@ import khanhnq.project.clinicbookingmanagementsystem.mapper.WorkExperienceMapper
 import khanhnq.project.clinicbookingmanagementsystem.mapper.WorkScheduleMapper;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.RegisterWorkScheduleRequest;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
+import khanhnq.project.clinicbookingmanagementsystem.model.response.ResponseEntityBase;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.DoctorInformationRequest;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.UserProfileRequest;
-import khanhnq.project.clinicbookingmanagementsystem.model.response.BookingResponse;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import khanhnq.project.clinicbookingmanagementsystem.service.DoctorService;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import java.text.SimpleDateFormat;
@@ -43,15 +44,18 @@ public class DoctorServiceImpl implements DoctorService {
     private final CommonServiceImpl commonServiceImpl;
 
     @Override
-    public String updateProfile(UserProfileRequest userProfileRequest, MultipartFile avatar) {
+    public ResponseEntityBase updateProfile(UserProfileRequest userProfileRequest, MultipartFile avatar) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         User currentUser = checkAccess();
         commonServiceImpl.updateProfile(userProfileRequest, currentUser, avatar);
         userRepository.save(currentUser);
-        return MessageConstants.UPDATE_PROFILE_SUCCESS;
+        response.setData(MessageConstants.UPDATE_PROFILE_SUCCESS);
+        return response;
     }
 
     @Override
-    public String updateDoctorInformation(DoctorInformationRequest doctorInformationRequest, MultipartFile specialtyDegree) {
+    public ResponseEntityBase updateDoctorInformation(DoctorInformationRequest doctorInformationRequest, MultipartFile specialtyDegree) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         User currentUser = checkAccess();
         Optional<Specialization> specializationOptional =
                 specializationRepository.findById(doctorInformationRequest.getSpecializationId());
@@ -86,11 +90,13 @@ public class DoctorServiceImpl implements DoctorService {
         if (Objects.nonNull(specialtyDegree)) {
             commonServiceImpl.uploadFile(specialtyDegree, "specialty-degree", currentUser);
         }
-        return MessageConstants.UPDATE_DOCTOR_INFORMATION_SUCCESS;
+        response.setData(MessageConstants.UPDATE_DOCTOR_INFORMATION_SUCCESS);
+        return response;
     }
 
     @Override
-    public String registerWorkSchedules(RegisterWorkScheduleRequest registerWorkSchedule) {
+    public ResponseEntityBase registerWorkSchedules(RegisterWorkScheduleRequest registerWorkSchedule) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         User currentUser = checkAccess();
         Doctor doctor = doctorRepository.findDoctorByUserId(currentUser.getUserId());
         if (Objects.isNull(doctor.getSpecialization())) {
@@ -142,40 +148,49 @@ public class DoctorServiceImpl implements DoctorService {
         doctor.getDaysOfWeeks().add(newDayOfWeek);
         doctor.setDaysOfWeeks(doctor.getDaysOfWeeks());
         doctorRepository.save(doctor);
-        return workSchedulesMessage(invalidWorkSchedules, workingDay);
+        response.setData(workSchedulesMessage(invalidWorkSchedules, workingDay));
+        return response;
     }
 
     @Override
-    public String confirmedBooking(Long bookingId) {
+    public ResponseEntityBase confirmedBooking(Long bookingId) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         checkAccess();
         bookingRepository.confirmedBooking(bookingId);
-        return MessageConstants.CONFIRM_BOOKING_SUCCESS;
+        response.setData(MessageConstants.CONFIRM_BOOKING_SUCCESS);
+        return response;
     }
 
     @Override
-    public String cancelledBooking(Long bookingId) {
+    public ResponseEntityBase cancelledBooking(Long bookingId) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         checkAccess();
         bookingRepository.cancelledBooking(bookingId);
-        return MessageConstants.CANCELED_BOOKING_SUCCESS;
+        response.setData(MessageConstants.CANCELED_BOOKING_SUCCESS);
+        return response;
     }
 
     @Override
-    public String completedBooking(Long bookingId) {
+    public ResponseEntityBase completedBooking(Long bookingId) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         checkAccess();
         bookingRepository.completedBooking(bookingId);
-        return MessageConstants.COMPLETED_BOOKING_SUCCESS;
+        response.setData(MessageConstants.COMPLETED_BOOKING_SUCCESS);
+        return response;
     }
 
     @Override
-    public BookingResponse getAllBookings(int page, int size, String[] sorts) {
-        User currentUser = authService.getCurrentUser();
+    public ResponseEntityBase getAllBookings(int page, int size, String[] sorts) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        User currentUser = (User) authService.getCurrentUser().getData();
         Pageable pageable = commonServiceImpl.pagingSort(page, size, sorts);
         Page<Booking> bookingPage = bookingRepository.getAllBookings(currentUser.getUserId() , pageable);
-        return commonServiceImpl.getAllBookings(bookingPage);
+        response.setData(commonServiceImpl.getAllBookings(bookingPage));
+        return response;
     }
 
     public User checkAccess() {
-        User currentUser = authService.getCurrentUser();
+        User currentUser = (User) authService.getCurrentUser().getData();
         if (Objects.isNull(currentUser)) {
             throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
         }

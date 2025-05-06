@@ -1,14 +1,11 @@
 package khanhnq.project.clinicbookingmanagementsystem.controller;
 
-import khanhnq.project.clinicbookingmanagementsystem.model.response.CityResponse;
-import khanhnq.project.clinicbookingmanagementsystem.model.response.DistrictResponse;
-import khanhnq.project.clinicbookingmanagementsystem.model.response.WardResponse;
+import khanhnq.project.clinicbookingmanagementsystem.model.response.ResponseEntityBase;
 import khanhnq.project.clinicbookingmanagementsystem.service.AddressService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import java.util.List;
 
 @RestController
 @AllArgsConstructor
@@ -17,19 +14,19 @@ public class AddressController {
     private final AddressService addressService;
 
     @GetMapping( "/cities")
-    public ResponseEntity<List<CityResponse>> getCities()
+    public ResponseEntity<ResponseEntityBase> getCities()
     {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(addressService.getCities());
     }
 
     @GetMapping( "/districts/{cityId}")
-    public ResponseEntity<List<DistrictResponse>> getDistricts(@PathVariable("cityId") Long cityId)
+    public ResponseEntity<ResponseEntityBase> getDistricts(@PathVariable("cityId") Long cityId)
     {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(addressService.getDistricts(cityId));
     }
 
     @GetMapping( "/wards/{districtId}")
-    public ResponseEntity<List<WardResponse>> getWards(@PathVariable("districtId") Long districtId)
+    public ResponseEntity<ResponseEntityBase> getWards(@PathVariable("districtId") Long districtId)
     {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(addressService.getWards(districtId));
     }

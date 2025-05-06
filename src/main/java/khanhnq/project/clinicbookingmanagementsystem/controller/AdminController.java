@@ -1,8 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.controller;
 
 import jakarta.mail.MessagingException;
-import khanhnq.project.clinicbookingmanagementsystem.model.dto.ServicesDTO;
-import khanhnq.project.clinicbookingmanagementsystem.model.dto.SpecializationDTO;
 import khanhnq.project.clinicbookingmanagementsystem.entity.File;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Services;
 import khanhnq.project.clinicbookingmanagementsystem.model.response.*;
@@ -16,6 +14,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
@@ -33,17 +32,18 @@ public class AdminController {
     private final ServicesRepository serviceRepository;
 
     @PostMapping("/reset-password/{email}")
-    public ResponseEntity<String> resetPassword(@PathVariable("email") String email) throws MessagingException {
-        return MessageResponse.getResponseMessage(adminService.resetPassword(email), HttpStatus.OK);
+    public ResponseEntity<ResponseEntityBase> resetPassword(@PathVariable("email") String email) throws MessagingException {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.resetPassword(email));
     }
 
     @PostMapping("/unlock-account/{username}")
-    public ResponseEntity<String> unlockAccount(@PathVariable("username") String username){
-        return MessageResponse.getResponseMessage(adminService.unlockAccount(username), HttpStatus.OK);
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<ResponseEntityBase> unlockAccount(@PathVariable("username") String username){
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.unlockAccount(username));
     }
 
     @GetMapping("/get-all-users")
-    public ResponseEntity<UserResponse> getAllUsers(@RequestParam(defaultValue = "0") int page,
+    public ResponseEntity<ResponseEntityBase> getAllUsers(@RequestParam(defaultValue = "0") int page,
                                                     @RequestParam(defaultValue = "3") int size,
                                                     @RequestParam(defaultValue = "userId,asc") String[] sorts) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllUsers(page, size, sorts));
@@ -58,37 +58,37 @@ public class AdminController {
     }
 
     @GetMapping("/get-all-doctors")
-    public ResponseEntity<DoctorResponse> getAllDoctors(@RequestParam(defaultValue = "0") int page,
+    public ResponseEntity<ResponseEntityBase> getAllDoctors(@RequestParam(defaultValue = "0") int page,
                                                         @RequestParam(defaultValue = "3") int size,
                                                         @RequestParam(defaultValue = "userId,asc") String[] sorts) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllDoctors(page, size, sorts));
     }
 
     @GetMapping("/get-all-specializations")
-    public ResponseEntity<List<SpecializationDTO>> getAllSpecializations() {
+    public ResponseEntity<ResponseEntityBase> getAllSpecializations() {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllSpecializations());
     }
 
     @GetMapping("/get-all-services")
-    public ResponseEntity<ServicesResponse> getAllServices(@RequestParam(defaultValue = "0") int page,
+    public ResponseEntity<ResponseEntityBase> getAllServices(@RequestParam(defaultValue = "0") int page,
                                                            @RequestParam(defaultValue = "3") int size,
                                                            @RequestParam(defaultValue = "serviceId,asc") String[] sort) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllServices(page, size, sort));
     }
 
     @PostMapping("/add-service")
-    public ResponseEntity<String> addService(@RequestBody ServiceRequest serviceRequest) {
-        return MessageResponse.getResponseMessage(adminService.addService(serviceRequest), HttpStatus.OK);
+    public ResponseEntity<ResponseEntityBase> addService(@RequestBody ServiceRequest serviceRequest) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.addService(serviceRequest));
     }
 
     @GetMapping("/get-service/{serviceId}")
-    public ResponseEntity<ServicesDTO> getService(@PathVariable("serviceId") Long serviceId) {
+    public ResponseEntity<ResponseEntityBase> getService(@PathVariable("serviceId") Long serviceId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getServiceById(serviceId));
     }
 
     @PostMapping("/update-service/{serviceId}")
-    public ResponseEntity<String> updateService(@PathVariable("serviceId") Long serviceId ,@RequestBody ServiceRequest serviceRequest) {
-        return MessageResponse.getResponseMessage(adminService.updateService(serviceRequest, serviceId), HttpStatus.OK);
+    public ResponseEntity<ResponseEntityBase> updateService(@PathVariable("serviceId") Long serviceId ,@RequestBody ServiceRequest serviceRequest) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.updateService(serviceRequest, serviceId));
     }
 
     @GetMapping("/export-users-to-excel")
@@ -113,15 +113,17 @@ public class AdminController {
     }
 
     @PostMapping("/import-services-from-excel")
-    public ResponseEntity<String> importServicesFromExcel (@RequestParam("file") MultipartFile file){
+    public ResponseEntity<ResponseEntityBase> importServicesFromExcel (@RequestParam("file") MultipartFile file){
+        ResponseEntityBase response;
         try {
             commonService.checkExcelFormat(file);
             List<Services> services = adminService.importServicesFromExcel(file.getInputStream());
             serviceRepository.saveAll(services);
-            return MessageResponse.getResponseMessage("Import data successfully.", HttpStatus.OK);
+            response = new ResponseEntityBase(HttpStatus.OK.value(), null, "Import data successfully.");
         } catch (IOException e) {
-            return MessageResponse.getResponseMessage("Failed to store data from file excel.", HttpStatus.BAD_REQUEST);
+            response = new ResponseEntityBase(HttpStatus.BAD_REQUEST.value(), "Failed to store data from file excel.", null);
         }
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(response);
     }
 
     @GetMapping("/export-bookings-to-excel")
@@ -135,17 +137,19 @@ public class AdminController {
     }
 
     @PostMapping("/import-bookings-from-excel")
-    public ResponseEntity<String> importBookingsFromExcel (@RequestParam("file") MultipartFile file){
+    public ResponseEntity<ResponseEntityBase> importBookingsFromExcel (@RequestParam("file") MultipartFile file) {
+        ResponseEntityBase response;
         try {
             commonService.checkExcelFormat(file);
-            return MessageResponse.getResponseMessage(adminService.importBookingsFromExcel(file.getInputStream()), HttpStatus.OK);
+            response = adminService.importBookingsFromExcel(file.getInputStream());
         } catch (IOException e) {
-            return MessageResponse.getResponseMessage("Failed to store data from file excel.", HttpStatus.BAD_REQUEST);
+            response = new ResponseEntityBase(HttpStatus.BAD_REQUEST.value(), "Failed to store data from file excel.", null);
         }
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(response);
     }
 
     @GetMapping("/get-bookings")
-    public ResponseEntity<BookingResponse> getBookings(@RequestParam(defaultValue = "0") int page,
+    public ResponseEntity<ResponseEntityBase> getBookings(@RequestParam(defaultValue = "0") int page,
                                                        @RequestParam(defaultValue = "3") int size,
                                                        @RequestParam(defaultValue = "bookingId,asc") String[] sorts) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllBookings(page, size, sorts));

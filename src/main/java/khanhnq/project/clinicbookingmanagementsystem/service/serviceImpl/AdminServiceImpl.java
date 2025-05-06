@@ -35,6 +35,7 @@ import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import org.springframework.http.HttpStatus;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -57,7 +58,8 @@ public class AdminServiceImpl implements AdminService {
     private final BruteForceProtectionService bruteForceProtectionService;
 
     @Override
-    public String resetPassword(String email) throws MessagingException {
+    public ResponseEntityBase resetPassword(String email) throws MessagingException {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         checkAccess();
         User user = userRepository.findUserByEmail(email);
         if (Objects.nonNull(user)) {
@@ -75,14 +77,16 @@ public class AdminServiceImpl implements AdminService {
             user.setPassword(passwordEncoder.encode(user.getPassword()));
             mailSender.send(message);
             userRepository.save(user);
-            return MessageConstants.RESET_PASSWORD_SUCCESS;
+            response.setData(MessageConstants.RESET_PASSWORD_SUCCESS);
+            return response;
         } else {
             throw new ResourceNotFoundException("Email", email);
         }
     }
 
     @Override
-    public String unlockAccount(String username) {
+    public ResponseEntityBase unlockAccount(String username) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         checkAccess();
         User user = userRepository.findUserByUsername(username);
         if (Objects.isNull(user)) {
@@ -93,11 +97,13 @@ public class AdminServiceImpl implements AdminService {
             user.setStatus(EUserStatus.ACTIVE);
             userRepository.save(user);
         }
-        return MessageConstants.UNLOCK_ACCOUNT_SUCCESSFULLY;
+        response.setData(MessageConstants.UNLOCK_ACCOUNT_SUCCESSFULLY);
+        return response;
     }
 
     @Override
-    public UserResponse getAllUsers(int page, int size, String[] sorts) {
+    public ResponseEntityBase getAllUsers(int page, int size, String[] sorts) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         checkAccess();
         Page<User> userPage = userRepository.getAllUsers(commonServiceImpl.pagingSort(page, size, sorts));
         List<UserDTO> users = userPage.getContent().stream()
@@ -106,16 +112,19 @@ public class AdminServiceImpl implements AdminService {
                     userDTO.setUserAddress(commonServiceImpl.getAddress(user));
                     return userDTO;
                 }).toList();
-        return UserResponse.builder()
-                .totalItems(userPage.getTotalElements())
-                .totalPages(userPage.getTotalPages())
-                .currentPage(userPage.getNumber())
-                .users(users)
-                .build();
+        UserResponse userResponse = UserResponse.builder()
+                    .totalItems(userPage.getTotalElements())
+                    .totalPages(userPage.getTotalPages())
+                    .currentPage(userPage.getNumber())
+                    .users(users)
+                    .build();
+        response.setData(userResponse);
+        return response;
     }
 
     @Override
-    public DoctorResponse getAllDoctors(int page, int size, String[] sorts) {
+    public ResponseEntityBase getAllDoctors(int page, int size, String[] sorts) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         checkAccess();
         Page<User> doctorPage = userRepository.getAllDoctors(commonServiceImpl.pagingSort(page, size, sorts));
 //        List<DoctorDTO> doctors = doctorPage.getContent().stream()
@@ -127,40 +136,46 @@ public class AdminServiceImpl implements AdminService {
 //                    doctorDTO.setFiles(commonServiceImpl.getAllFiles(user.getUserId()));
 //                    return doctorDTO;
 //                }).toList();
-        return DoctorResponse.builder()
-                .totalItems(doctorPage.getTotalElements())
-                .totalPages(doctorPage.getTotalPages())
-                .currentPage(doctorPage.getNumber())
+//        return DoctorResponse.builder()
+//                .totalItems(doctorPage.getTotalElements())
+//                .totalPages(doctorPage.getTotalPages())
+//                .currentPage(doctorPage.getNumber())
 //                .doctors(doctors)
-                .build();
+//                .build();
+        return response;
     }
 
     @Override
-    public String addService(ServiceRequest serviceRequest) {
+    public ResponseEntityBase addService(ServiceRequest serviceRequest) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
 //        checkAccess();
 //        ServiceCategory serviceCategory = serviceCategoryRepository.findById(serviceRequest.getServiceCategoryId()).orElse(null);
 //        Services services = ServicesMapper.SERVICES_MAPPER.mapToServices(serviceRequest);
 //        services.setStatus(EServiceStatus.ACTIVE);
 //        services.setServiceCategory(serviceCategory);
 //        servicesRepository.save(services);
-        return MessageConstants.ADD_SERVICE_SUCCESS;
+        response.setData(MessageConstants.ADD_SERVICE_SUCCESS);
+        return response;
     }
 
     @Override
-    public ServicesDTO getServiceById(Long serviceId) {
+    public ResponseEntityBase getServiceById(Long serviceId) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         Services services = servicesRepository.findById(serviceId).orElse(null);
-        return ServicesDTO.builder()
+//        return ServicesDTO.builder()
 //                .serviceId(Objects.requireNonNull(services).getServiceId())
 //                .serviceName(services.getServiceName())
 //                .price(services.getPrice())
 //                .description(services.getDescription())
 //                .status(services.getStatus().name())
 //                .serviceCategoryName(services.serviceCategoryName())
-                .build();
+//                .build();
+        return response;
     }
 
     @Override
-    public String updateService(ServiceRequest serviceRequest, Long serviceId) {
+    public ResponseEntityBase updateService(ServiceRequest serviceRequest, Long serviceId) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
 //        checkAccess();
 //        Services service = servicesRepository.findById(serviceId).orElse(null);
 //        ServiceCategory serviceCategory = serviceCategoryRepository.findById(serviceRequest.getServiceCategoryId()).orElse(null);
@@ -169,7 +184,8 @@ public class AdminServiceImpl implements AdminService {
 //        service.setPrice(serviceRequest.getPrice());
 //        service.setDescription(serviceRequest.getDescription());
 //        servicesRepository.save(service);
-        return MessageConstants.UPDATE_SERVICE_SUCCESS;
+//        return MessageConstants.UPDATE_SERVICE_SUCCESS;
+        return response;
     }
 
     @Override
@@ -197,9 +213,12 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public List<SpecializationDTO> getAllSpecializations() {
-        return specializationRepository.findAll().stream()
+    public ResponseEntityBase getAllSpecializations() {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        List<SpecializationDTO> specializations = specializationRepository.findAll().stream()
                 .map(SpecializationMapper.SPECIALIZATION_MAPPER::mapToSpecializationDTO).toList();
+        response.setData(specializations);
+        return response;
     }
 
     @Override
@@ -214,7 +233,8 @@ public class AdminServiceImpl implements AdminService {
 
 
     @Override
-    public ServicesResponse getAllServices(int page, int size, String[] sorts) {
+    public ResponseEntityBase getAllServices(int page, int size, String[] sorts) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         Page<Services> servicesPage = servicesRepository.findAll(commonServiceImpl.pagingSort(page, size, sorts));
         List<ServicesDTO> servicesResponses = servicesPage.getContent().stream()
                 .map(services -> {
@@ -222,12 +242,14 @@ public class AdminServiceImpl implements AdminService {
 //                    servicesResponse.setServiceCategoryName(services.serviceCategoryName());
                     return servicesResponse;
                 }).toList();
-        return ServicesResponse.builder()
+        ServicesResponse servicesResponse = ServicesResponse.builder()
                 .totalItems(servicesPage.getTotalElements())
                 .totalPages(servicesPage.getTotalPages())
                 .currentPage(servicesPage.getNumber())
                 .services(servicesResponses)
                 .build();
+        response.setData(servicesResponse);
+        return response;
     }
 
     @Override
@@ -376,8 +398,9 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public String importBookingsFromExcel(InputStream inputStream) {
+    public ResponseEntityBase importBookingsFromExcel(InputStream inputStream) {
         try {
+            ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
             checkAccess();
             List<BookingExcelResponse> bookingExcelResponses = new ArrayList<>();
             Sheet sheet = new XSSFWorkbook(inputStream).getSheet("bookings");
@@ -439,17 +462,21 @@ public class AdminServiceImpl implements AdminService {
                 responseMessage.append("Successfully imported "+bookingImportResponse.getValidBookings().size()+" rows from excel file. " +
                         "Rows "+rowsErrorMessage+" were imported unsuccessfully.Please check your booking information again.");
             }
-            return responseMessage.toString();
+            response.setData(responseMessage.toString());
+            return response;
         } catch (IOException e) {
             throw new BusinessException(MessageConstants.FAILED_IMPORT_DATA_EXCEL);
         }
     }
 
     @Override
-    public BookingResponse getAllBookings(int page, int size, String[] sorts) {
+    public ResponseEntityBase getAllBookings(int page, int size, String[] sorts) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         checkAccess();
         Page<Booking> bookingPage = bookingRepository.getBookingsWithNullUser(commonServiceImpl.pagingSort(page, size, sorts));
-        return commonServiceImpl.getAllBookings(bookingPage);
+        BookingResponse bookingResponse = commonServiceImpl.getAllBookings(bookingPage);
+        response.setData(bookingResponse);
+        return response;
     }
 
     public String randomPassword() {
@@ -462,7 +489,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     public void checkAccess() {
-        User currentUser = authService.getCurrentUser();
+        User currentUser = (User) authService.getCurrentUser().getData();
         if (Objects.isNull(currentUser)) {
             throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
         }

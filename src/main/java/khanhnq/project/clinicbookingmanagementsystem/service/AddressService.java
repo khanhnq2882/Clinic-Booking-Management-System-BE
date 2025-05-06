@@ -1,12 +1,9 @@
 package khanhnq.project.clinicbookingmanagementsystem.service;
 
-import khanhnq.project.clinicbookingmanagementsystem.model.response.CityResponse;
-import khanhnq.project.clinicbookingmanagementsystem.model.response.DistrictResponse;
-import khanhnq.project.clinicbookingmanagementsystem.model.response.WardResponse;
-import java.util.List;
+import khanhnq.project.clinicbookingmanagementsystem.model.response.ResponseEntityBase;
 
 public interface AddressService {
-    List<CityResponse> getCities();
-    List<DistrictResponse> getDistricts(Long cityId);
-    List<WardResponse> getWards(Long districtId);
+    ResponseEntityBase getCities();
+    ResponseEntityBase getDistricts(Long cityId);
+    ResponseEntityBase getWards(Long districtId);
 }

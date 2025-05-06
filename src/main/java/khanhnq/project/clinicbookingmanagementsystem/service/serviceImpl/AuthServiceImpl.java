@@ -11,6 +11,7 @@ import khanhnq.project.clinicbookingmanagementsystem.entity.Role;
 import khanhnq.project.clinicbookingmanagementsystem.entity.User;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EUserStatus;
 import khanhnq.project.clinicbookingmanagementsystem.exception.*;
+import khanhnq.project.clinicbookingmanagementsystem.model.response.ResponseEntityBase;
 import khanhnq.project.clinicbookingmanagementsystem.repository.DoctorRepository;
 import khanhnq.project.clinicbookingmanagementsystem.repository.RoleRepository;
 import khanhnq.project.clinicbookingmanagementsystem.repository.UserRepository;
@@ -18,13 +19,13 @@ import khanhnq.project.clinicbookingmanagementsystem.model.request.AccountSystem
 import khanhnq.project.clinicbookingmanagementsystem.model.request.ChangePasswordRequest;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.LoginRequest;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.RegisterRequest;
-import khanhnq.project.clinicbookingmanagementsystem.model.response.JwtResponse;
 import khanhnq.project.clinicbookingmanagementsystem.model.response.UserInfoResponse;
 import khanhnq.project.clinicbookingmanagementsystem.security.jwt.JwtUtils;
 import khanhnq.project.clinicbookingmanagementsystem.security.services.BruteForceProtectionService;
 import khanhnq.project.clinicbookingmanagementsystem.security.services.UserDetailsImpl;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import lombok.AllArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -50,7 +51,8 @@ public class AuthServiceImpl implements AuthService {
     private DoctorRepository doctorRepository;
 
     @Override
-    public String register(RegisterRequest registerRequest) {
+    public ResponseEntityBase register(RegisterRequest registerRequest) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         checkAccountExist(registerRequest.getUsername(), registerRequest.getEmail());
         User user = User.builder()
                 .userCode(createUserCode(userRepository.getUsers(), "US"))
@@ -79,12 +81,14 @@ public class AuthServiceImpl implements AuthService {
             user.setRoles(roles);
         }
         userRepository.save(user);
-        return MessageConstants.REGISTER_SUCCESS;
+        response.setData(MessageConstants.REGISTER_SUCCESS);
+        return response;
     }
 
     @Override
-    public String newSystemAccount(AccountSystemRequest accountSystemRequest) throws MessagingException {
-        User currentUser = getCurrentUser();
+    public ResponseEntityBase newSystemAccount(AccountSystemRequest accountSystemRequest) throws MessagingException {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        User currentUser = (User) getCurrentUser().getData();
         if (Objects.isNull(currentUser)) {
             throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
         }
@@ -132,29 +136,37 @@ public class AuthServiceImpl implements AuthService {
         doctor.setUser(user);
         doctorRepository.save(doctor);
         newAccountEmail(accountSystemRequest.getEmail(), accountSystemRequest.getUsername(), password);
-        return MessageConstants.ADD_NEW_SYSTEM_ACCOUNT_SUCCESS;
+        response.setData(MessageConstants.ADD_NEW_SYSTEM_ACCOUNT_SUCCESS);
+        return response;
     }
 
     @Override
-    public JwtResponse login(LoginRequest loginRequest) {
+    public ResponseEntityBase login(LoginRequest loginRequest) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
         SecurityContextHolder.getContext().setAuthentication(authentication);
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        return new JwtResponse(jwtUtils.generateTokenFromUsername(userDetails.getUsername()));
+        String jwtResponse = jwtUtils.generateTokenFromUsername(userDetails.getUsername());
+        response.setData(jwtResponse);
+        return response;
     }
 
     @Override
-    public String logout(HttpServletRequest request) {
+    public ResponseEntityBase logout(HttpServletRequest request) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         if (request.getHeader("Authorization") == null || !request.getHeader("Authorization").startsWith("Bearer ")) {
-            return MessageConstants.LOGOUT_FAILED;
+            response.setStatusCode(401);
+            response.setErrorMessage(MessageConstants.LOGOUT_FAILED);
         }
         SecurityContextHolder.clearContext();
-        return MessageConstants.LOGOUT_SUCCESS;
+        response.setData(MessageConstants.LOGOUT_SUCCESS);
+        return response;
     }
 
     @Override
-    public User getCurrentUser() {
+    public ResponseEntityBase getCurrentUser() {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
             return null;
@@ -162,12 +174,15 @@ public class AuthServiceImpl implements AuthService {
         if (!authentication.isAuthenticated() || authentication.getName() == null) {
             return null;
         }
-        return userRepository.findUserByUsername(authentication.getName());
+        User user = userRepository.findUserByUsername(authentication.getName());
+        response.setData(user);
+        return response;
     }
 
     @Override
-    public String changePassword(ChangePasswordRequest changePasswordRequest) {
-        User currentUser = getCurrentUser();
+    public ResponseEntityBase changePassword(ChangePasswordRequest changePasswordRequest) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        User currentUser = (User) getCurrentUser().getData();
         String username = currentUser.getUsername();
         if (currentUser != null && currentUser.getStatus().equals(EUserStatus.BANNED)) {
             throw new UnauthorizedException("Account with username '" +username+ "' is permanent lock. Please contact to admin.");
@@ -185,7 +200,8 @@ public class AuthServiceImpl implements AuthService {
             currentUser.setUpdatedBy(username);
             userRepository.save(currentUser);
             bruteForceProtectionService.passwordChangeSucceeded(username);
-            return MessageConstants.CHANGE_PASSWORD_SUCCESS;
+            response.setData(MessageConstants.CHANGE_PASSWORD_SUCCESS);
+            return response;
         } else {
             bruteForceProtectionService.passwordChangeFailed(username);
             throw new UnauthorizedException(MessageConstants.INCORRECT_CURRENT_PASSWORD);
@@ -193,18 +209,27 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public String forgotPassword(String email) throws MessagingException{
-        return resetPasswordEmail(email);
+    public ResponseEntityBase forgotPassword(String email) throws MessagingException{
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        response.setData(resetPasswordEmail(email));
+        return response;
     }
 
     @Override
-    public UserInfoResponse getUserByUsername(String username) {
-        return getUser(userRepository.findUserByUsername(username));
+    public ResponseEntityBase getUserByUsername(String username) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        UserInfoResponse userInfoResponse = getUser(userRepository.findUserByUsername(username));
+        response.setData(userInfoResponse);
+        return response;
     }
 
     @Override
-    public UserInfoResponse getUserInfo() {
-        return getUser(getCurrentUser());
+    public ResponseEntityBase getUserInfo() {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        User user = (User) getCurrentUser().getData();
+        UserInfoResponse userInfoResponse = getUser(user);
+        response.setData(userInfoResponse);
+        return response;
     }
 
     public UserInfoResponse getUser(User user) {

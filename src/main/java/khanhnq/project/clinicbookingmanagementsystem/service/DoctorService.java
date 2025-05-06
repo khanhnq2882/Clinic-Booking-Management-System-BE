@@ -3,15 +3,15 @@ package khanhnq.project.clinicbookingmanagementsystem.service;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.DoctorInformationRequest;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.RegisterWorkScheduleRequest;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.UserProfileRequest;
-import khanhnq.project.clinicbookingmanagementsystem.model.response.BookingResponse;
+import khanhnq.project.clinicbookingmanagementsystem.model.response.ResponseEntityBase;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface DoctorService {
-    String updateProfile(UserProfileRequest userProfileRequest, MultipartFile avatar);
-    String updateDoctorInformation(DoctorInformationRequest doctorInformationRequest, MultipartFile specialtyDegree);
-    String registerWorkSchedules(RegisterWorkScheduleRequest registerWorkScheduleRequest);
-    String confirmedBooking (Long bookingId);
-    String cancelledBooking (Long bookingId);
-    String completedBooking (Long bookingId);
-    BookingResponse getAllBookings(int page, int size, String[] sorts);
+    ResponseEntityBase updateProfile(UserProfileRequest userProfileRequest, MultipartFile avatar);
+    ResponseEntityBase updateDoctorInformation(DoctorInformationRequest doctorInformationRequest, MultipartFile specialtyDegree);
+    ResponseEntityBase registerWorkSchedules(RegisterWorkScheduleRequest registerWorkScheduleRequest);
+    ResponseEntityBase confirmedBooking (Long bookingId);
+    ResponseEntityBase cancelledBooking (Long bookingId);
+    ResponseEntityBase completedBooking (Long bookingId);
+    ResponseEntityBase getAllBookings(int page, int size, String[] sorts);
 }
