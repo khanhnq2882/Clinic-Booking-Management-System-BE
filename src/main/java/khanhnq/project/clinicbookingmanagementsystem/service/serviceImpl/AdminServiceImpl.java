@@ -599,11 +599,11 @@ public class AdminServiceImpl implements AdminService {
             bookingRepository.getBookingsByDoctor(doctor.getUserId()).forEach(booking -> {
                 LocalTime startTime = booking.getWorkSchedule().getStartTime();
                 LocalTime endTime = booking.getWorkSchedule().getEndTime();
-                if (bookingExcelResponse.getBookingExcelDTO().getAppointmentDate().equals(booking.getAppointmentDate())
-                        && bookingExcelResponse.getBookingExcelDTO().getStartTime().equals(startTime)
-                        && bookingExcelResponse.getBookingExcelDTO().getEndTime().equals(endTime)) {
-                    invalidBookings.add(bookingExcelResponse);
-                }
+//                if (bookingExcelResponse.getBookingExcelDTO().getAppointmentDate().equals(booking.getAppointmentDate())
+//                        && bookingExcelResponse.getBookingExcelDTO().getStartTime().equals(startTime)
+//                        && bookingExcelResponse.getBookingExcelDTO().getEndTime().equals(endTime)) {
+//                    invalidBookings.add(bookingExcelResponse);
+//                }
             });
         }
         bookingImportResponse.setInvalidBookings(invalidBookings);

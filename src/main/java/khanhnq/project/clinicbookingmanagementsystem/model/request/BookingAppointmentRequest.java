@@ -21,7 +21,6 @@ public class BookingAppointmentRequest {
     @NotNull(message = "Last name can't be empty.")
     @Length(max = 20, message = "Last name has a maximum of 20 characters.")
     private String lastName;
-
     private Date dateOfBirth;
     private int gender;
 
@@ -31,10 +30,7 @@ public class BookingAppointmentRequest {
     @NotNull(message = "Specific address can't be empty.")
     @Length(max = 50, message = "Specific address has a maximum of 50 characters.")
     private String specificAddress;
-
-
     private Long wardId;
-    private Date appointmentDate;
     private Long workScheduleId;
 
     @NotNull(message = "Describe symptoms can't be empty.")

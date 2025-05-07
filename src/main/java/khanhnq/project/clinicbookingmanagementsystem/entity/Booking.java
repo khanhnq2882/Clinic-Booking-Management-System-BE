@@ -46,11 +46,6 @@ public class Booking extends BaseEntity{
     @JoinColumn(name = "address_id")
     private Address address;
 
-    @Column(nullable = false)
-    @DateTimeFormat(pattern = "dd-MM-yyyy")
-    @Temporal(TemporalType.DATE)
-    private Date appointmentDate;
-
     @ManyToOne
     @JoinColumn(name = "work_schedule_id")
     private WorkSchedule workSchedule;

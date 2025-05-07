@@ -1,7 +1,7 @@
 package khanhnq.project.clinicbookingmanagementsystem.repository;
 
 import khanhnq.project.clinicbookingmanagementsystem.entity.Doctor;
-import khanhnq.project.clinicbookingmanagementsystem.model.dto.DoctorInfoDTO;
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.DoctorInfo;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -27,8 +27,12 @@ public interface DoctorRepository extends JpaRepository<Doctor, Long> {
             "left join file as f on u.user_id = f.user_id\n" +
             "left join day_of_week as dow on d.doctor_id = dow.doctor_id\n" +
             "left join work_schedule as ws on dow.day_of_week_id = ws.day_of_week_id\n" +
-            "where d.specialization_id = :specializationId and u.status = 'ACTIVE'", nativeQuery = true)
-    List<DoctorInfoDTO> getDoctorsBySpecialization(@Param("specializationId") Long specializationId);
+            "where u.status = 'ACTIVE' and d.specialization_id = :specializationId and ws.work_schedule_id not in (" +
+            "select ws.work_schedule_id from work_schedule as ws " +
+            "inner join booking as b " +
+            "on ws.work_schedule_id = b.work_schedule_id where b.status not in ('CANCELLED'))"
+            , nativeQuery = true)
+    List<DoctorInfo> getDoctorsBySpecialization(@Param("specializationId") Long specializationId);
 
     @Query(value = "select d.doctor_id as doctorId, u.user_code as userCode, u.first_name as firstName, u.last_name as lastName, \n" +
             "s.specialization_name as specializationName, d.education_level as educationLevel, d.biography as biography, \n" +
@@ -43,7 +47,11 @@ public interface DoctorRepository extends JpaRepository<Doctor, Long> {
             "left join file as f on u.user_id = f.user_id\n" +
             "left join day_of_week as dow on d.doctor_id = dow.doctor_id\n" +
             "left join work_schedule as ws on dow.day_of_week_id = ws.day_of_week_id\n" +
-            "where u.status = 'ACTIVE' and d.doctor_id = :doctorId", nativeQuery = true)
-    List<DoctorInfoDTO> getDoctorDetails(@Param("doctorId") Long doctorId);
+            "where u.status = 'ACTIVE' and d.doctor_id = :doctorId and ws.work_schedule_id not in (" +
+            "select ws.work_schedule_id from work_schedule as ws " +
+            "inner join booking as b " +
+            "on ws.work_schedule_id = b.work_schedule_id where b.status not in ('CANCELLED'))"
+            , nativeQuery = true)
+    List<DoctorInfo> getDoctorDetails(@Param("doctorId") Long doctorId);
 
 }

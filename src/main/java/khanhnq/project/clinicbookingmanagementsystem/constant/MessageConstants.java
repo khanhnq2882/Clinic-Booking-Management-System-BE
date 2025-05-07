@@ -35,4 +35,7 @@ public class MessageConstants {
     public static final String INVALID_SERVICE_STATUS = "The service status must be one of the values ACTIVE, INACTIVE , SUSPENDED.";
     public static final String UNLOCK_ACCOUNT_SUCCESSFULLY = "Unlock account successfully.";
     public static final String ACCOUNT_TEMPORARY_LOCK = "Account temporarily locked due to 5 incorrect password attempts. Try again in 5 minutes.";
+    public static final String CANCELLATION_APPOINTMENT_TIME_ERROR = "You can only cancel within 1 hour of booking or 24 hours before the appointment time.";
+    public static final String CANCEL_APPOINTMENT_SUCCESS = "Your appointment has been successfully cancelled.";
+    public static final String SOMETHING_WENT_WRONG = "Something went wrong.";
 }

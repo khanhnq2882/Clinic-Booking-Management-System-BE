@@ -10,5 +10,6 @@ public interface UserService {
     ResponseEntityBase getDoctorsBySpecialization(Long specializationId);
     ResponseEntityBase getDoctorDetails (Long doctorId);
     ResponseEntityBase bookingAppointment(BookingAppointmentRequest bookingAppointmentRequest);
+    ResponseEntityBase cancelAppointment(Long bookingId);
     ResponseEntityBase getAllBookings(int page, int size, String[] sorts);
 }

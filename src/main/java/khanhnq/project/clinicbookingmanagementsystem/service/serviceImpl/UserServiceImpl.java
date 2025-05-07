@@ -20,12 +20,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.DayOfWeek;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.temporal.TemporalAdjusters;
+import java.time.*;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -54,25 +51,25 @@ public class UserServiceImpl implements UserService {
     @Override
     public ResponseEntityBase getDoctorsBySpecialization(Long specializationId) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        List<DoctorInfoDTO> doctorInfoList = doctorRepository.getDoctorsBySpecialization(specializationId);
+        List<DoctorInfo> doctorInfoList = doctorRepository.getDoctorsBySpecialization(specializationId);
         Map<Long, DoctorDTO> doctorMap = new HashMap<>();
-        doctorInfoList.forEach(doctorInfoDTO -> {
-            Long doctorId = doctorInfoDTO.getDoctorId();
+        doctorInfoList.forEach(doctorInfo -> {
+            Long doctorId = doctorInfo.getDoctorId();
             DoctorDTO doctorDTO = doctorMap.getOrDefault(doctorId, new DoctorDTO());
             doctorDTO.setDoctorId(doctorId);
-            doctorDTO.setFirstName(doctorInfoDTO.getFirstName());
-            doctorDTO.setLastName(doctorInfoDTO.getLastName());
-            doctorDTO.setSpecializationName(doctorInfoDTO.getSpecializationName());
-            doctorDTO.setEducationLevel(doctorInfoDTO.getEducationLevel());
-            doctorDTO.setBiography(doctorInfoDTO.getBiography());
-            if (doctorInfoDTO.getFileType().equals("avatar")) {
-                String fileUrl = ServletUriComponentsBuilder.fromCurrentContextPath().path("/admin/files/").path(doctorInfoDTO.getFileId().toString()).toUriString();
-                FileResponse fileResponse = new FileResponse(doctorInfoDTO.getFileType(), doctorInfoDTO.getFileName(), fileUrl);
+            doctorDTO.setFirstName(doctorInfo.getFirstName());
+            doctorDTO.setLastName(doctorInfo.getLastName());
+            doctorDTO.setSpecializationName(doctorInfo.getSpecializationName());
+            doctorDTO.setEducationLevel(doctorInfo.getEducationLevel());
+            doctorDTO.setBiography(doctorInfo.getBiography());
+            if (doctorInfo.getFileType().equals("avatar")) {
+                String fileUrl = ServletUriComponentsBuilder.fromCurrentContextPath().path("/admin/files/").path(doctorInfo.getFileId().toString()).toUriString();
+                FileResponse fileResponse = new FileResponse(doctorInfo.getFileType(), doctorInfo.getFileName(), fileUrl);
                 doctorDTO.setFile(fileResponse);
             }
-            if (doctorInfoDTO.getWorkingDay() != null) {
+            if (doctorInfo.getWorkingDay() != null) {
                 Set<DayOfWeekDTO> daysOfWeek = doctorDTO.getDaysOfWeek();
-                getDayOfWeekDetails(doctorInfoDTO, daysOfWeek);
+                getDayOfWeekDetails(doctorInfo, daysOfWeek);
             }
             doctorMap.put(doctorId, doctorDTO);
         });
@@ -83,40 +80,37 @@ public class UserServiceImpl implements UserService {
     @Override
     public ResponseEntityBase getDoctorDetails(Long doctorId) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        List<DoctorInfoDTO> doctorDetails = doctorRepository.getDoctorDetails(doctorId);
+        List<DoctorInfo> doctorDetails = doctorRepository.getDoctorDetails(doctorId);
         Map<Long, DoctorDetailsDTO> doctorMap = new HashMap<>();
-        doctorDetails.forEach(doctorInfoDTO -> {
+        doctorDetails.forEach(doctorInfo -> {
             DoctorDetailsDTO doctorDetailsDTO = doctorMap.getOrDefault(doctorId, new DoctorDetailsDTO());
             doctorDetailsDTO.setDoctorId(doctorId);
-            doctorDetailsDTO.setUserCode(doctorInfoDTO.getUserCode());
-            doctorDetailsDTO.setFirstName(doctorInfoDTO.getFirstName());
-            doctorDetailsDTO.setLastName(doctorInfoDTO.getLastName());
-            doctorDetailsDTO.setSpecializationName(doctorInfoDTO.getSpecializationName());
-            doctorDetailsDTO.setBiography(doctorInfoDTO.getBiography());
-            doctorDetailsDTO.setCareerDescription(doctorInfoDTO.getCareerDescription());
-            doctorDetailsDTO.setEducationLevel(doctorInfoDTO.getEducationLevel());
-            if (doctorInfoDTO.getPosition() != null ||
-                    doctorInfoDTO.getWorkSpecializationName() != null ||
-                    doctorInfoDTO.getWorkPlace() != null ||
-                    doctorInfoDTO.getYearOfStartWork() != null ||
-                    doctorInfoDTO.getYearOfEndWork() != null ||
-                    doctorInfoDTO.getDescription() != null) {
+            doctorDetailsDTO.setUserCode(doctorInfo.getUserCode());
+            doctorDetailsDTO.setFirstName(doctorInfo.getFirstName());
+            doctorDetailsDTO.setLastName(doctorInfo.getLastName());
+            doctorDetailsDTO.setSpecializationName(doctorInfo.getSpecializationName());
+            doctorDetailsDTO.setBiography(doctorInfo.getBiography());
+            doctorDetailsDTO.setCareerDescription(doctorInfo.getCareerDescription());
+            doctorDetailsDTO.setEducationLevel(doctorInfo.getEducationLevel());
+            if (doctorInfo.getPosition() != null || doctorInfo.getWorkSpecializationName() != null ||
+                    doctorInfo.getWorkPlace() != null || doctorInfo.getYearOfStartWork() != null ||
+                    doctorInfo.getYearOfEndWork() != null || doctorInfo.getDescription() != null) {
                 WorkExperienceDTO workExperienceDTO = WorkExperienceDTO.builder()
-                        .position(doctorInfoDTO.getPosition())
-                        .workSpecializationName(doctorInfoDTO.getWorkSpecializationName())
-                        .workPlace(doctorInfoDTO.getWorkPlace())
-                        .yearOfStartWork(doctorInfoDTO.getYearOfStartWork())
-                        .yearOfEndWork(doctorInfoDTO.getYearOfEndWork())
-                        .description(doctorInfoDTO.getDescription())
+                        .position(doctorInfo.getPosition())
+                        .workSpecializationName(doctorInfo.getWorkSpecializationName())
+                        .workPlace(doctorInfo.getWorkPlace())
+                        .yearOfStartWork(doctorInfo.getYearOfStartWork())
+                        .yearOfEndWork(doctorInfo.getYearOfEndWork())
+                        .description(doctorInfo.getDescription())
                         .build();
                 doctorDetailsDTO.getWorkExperiences().add(workExperienceDTO);
             }
-            String fileUrl = ServletUriComponentsBuilder.fromCurrentContextPath().path("/admin/files/").path(doctorInfoDTO.getFileId().toString()).toUriString();
-            FileResponse fileResponse = new FileResponse(doctorInfoDTO.getFileType(), doctorInfoDTO.getFileName(), fileUrl);
+            String fileUrl = ServletUriComponentsBuilder.fromCurrentContextPath().path("/admin/files/").path(doctorInfo.getFileId().toString()).toUriString();
+            FileResponse fileResponse = new FileResponse(doctorInfo.getFileType(), doctorInfo.getFileName(), fileUrl);
             doctorDetailsDTO.getFiles().add(fileResponse);
-            if (doctorInfoDTO.getWorkingDay() != null) {
+            if (doctorInfo.getWorkingDay() != null) {
                 Set<DayOfWeekDTO> daysOfWeek = doctorDetailsDTO.getDaysOfWeek();
-                getDayOfWeekDetails(doctorInfoDTO, daysOfWeek);
+                getDayOfWeekDetails(doctorInfo, daysOfWeek);
             }
             doctorMap.put(doctorId, doctorDetailsDTO);
         });
@@ -128,27 +122,17 @@ public class UserServiceImpl implements UserService {
     public ResponseEntityBase bookingAppointment(BookingAppointmentRequest bookingAppointmentRequest) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         User currentUser = (User) authService.getCurrentUser().getData();
-        Date appointmentDate = bookingAppointmentRequest.getAppointmentDate();
-        LocalDate workingDayLocalDate = appointmentDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-        LocalDate nowLocalDate = new Date().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-        LocalDate startOfWeek = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
-        LocalDate endOfWeek = LocalDate.now().with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
-        if (workingDayLocalDate.isBefore(nowLocalDate) ||
-                workingDayLocalDate.isBefore(startOfWeek) ||
-                workingDayLocalDate.isAfter(endOfWeek)) {
-            throw new SystemException(MessageConstants.INVALID_APPOINTMENT_DATE);
-        }
         Long workScheduleId = bookingAppointmentRequest.getWorkScheduleId();
         WorkSchedule workSchedule = workScheduleRepository.findById(workScheduleId).orElseThrow(()
                 -> new ResourceNotFoundException("Work schedule id", workScheduleId.toString()));
-        bookingRepository.getBookingsWithoutCancelledStatus().forEach(booking -> {
-            if (workScheduleId.equals(booking.getWorkSchedule().getWorkScheduleId())) {
-                String formatAppointmentDate = new SimpleDateFormat("dd-MM-yyyy").format(appointmentDate);
-                String workScheduleTime = workSchedule.getStartTime() +"-"+ workSchedule.getEndTime();
-                throw new SystemException("You cannot booking an appointment at time " + workScheduleTime
-                        + " on day "+formatAppointmentDate+" because someone has already booked.");
-            }
-        });
+        List<BookingInfo> bookingInfos = bookingRepository.getBookingsByWorkScheduleId(bookingAppointmentRequest.getWorkScheduleId());
+        if (bookingInfos.size() > 0) {
+            BookingInfo bookingInfo = bookingInfos.get(0);
+            String formatAppointmentDate = new SimpleDateFormat("dd-MM-yyyy").format(bookingInfo.getWorkingDay());
+            String workScheduleTime = bookingInfo.getStartTime() + "-" + bookingInfo.getEndTime();
+            throw new SystemException("You cannot booking an appointment at time " + workScheduleTime
+                    + " on day " + formatAppointmentDate + " because someone has already booked.");
+        }
         Ward ward = wardRepository.findById(bookingAppointmentRequest.getWardId()).orElseThrow(
                 () -> new ResourceNotFoundException("Ward id", bookingAppointmentRequest.getWardId().toString()));
         Address address = Address.builder().specificAddress(bookingAppointmentRequest.getSpecificAddress()).ward(ward).build();
@@ -166,6 +150,45 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public ResponseEntityBase cancelAppointment(Long bookingId) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        User currentUser = (User) authService.getCurrentUser().getData();
+        Optional<Booking> bookingOptional = bookingRepository.findById(bookingId);
+        if (bookingOptional.isEmpty()) {
+            throw new ResourceNotFoundException("Booking id", bookingId.toString());
+        }
+        Booking booking = bookingOptional.get();
+        WorkSchedule workSchedule = booking.getWorkSchedule();
+        if (workSchedule != null && workScheduleRepository.findById(workSchedule.getWorkScheduleId()).isEmpty()) {
+            throw new ResourceNotFoundException("Work schedule id", workSchedule.getWorkScheduleId().toString());
+        }
+        String bookingStatus = booking.getStatus().toString();
+        if (bookingStatus.equals("CONFIRMED") || bookingStatus.equals("COMPLETED") || bookingStatus.equals("CANCELLED")) {
+            throw new SystemException("Your appointment has been " + bookingStatus.toLowerCase() + " and cannot be cancelled.");
+        }
+        BookingInfo bookingInfo = bookingRepository.getBookingInfoByBookingId(bookingId);
+        if (bookingInfo != null) {
+            try {
+                Date workingDayDateFormat = new SimpleDateFormat("yyyy-MM-dd").parse(bookingInfo.getWorkingDay().toString().substring(0, 10));
+                LocalDate workingDay = workingDayDateFormat.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+                LocalDateTime workingDayDateTime = LocalDateTime.of(workingDay, bookingInfo.getStartTime());
+                if (LocalDateTime.now().isAfter(workingDayDateTime.minusHours(24)) &&
+                        Duration.between(bookingInfo.getCreatedAt(), LocalDateTime.now()).toMinutes() > 60) {
+                    throw new SystemException(MessageConstants.CANCELLATION_APPOINTMENT_TIME_ERROR);
+                }
+            } catch (ParseException exception) {
+                throw new SystemException(MessageConstants.SOMETHING_WENT_WRONG);
+            }
+        }
+        booking.setStatus(EBookingStatus.CANCELLED);
+        booking.setUpdatedAt(LocalDateTime.now());
+        booking.setUpdatedBy(currentUser.getUsername());
+        bookingRepository.save(booking);
+        response.setData(MessageConstants.CANCEL_APPOINTMENT_SUCCESS);
+        return response;
+    }
+
+    @Override
     public ResponseEntityBase getAllBookings(int page, int size, String[] sorts) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         User currentUser = (User) authService.getCurrentUser().getData();
@@ -174,14 +197,14 @@ public class UserServiceImpl implements UserService {
         return response;
     }
 
-    private void getDayOfWeekDetails(DoctorInfoDTO doctorInfoDTO, Set<DayOfWeekDTO> daysOfWeek) {
+    private void getDayOfWeekDetails(DoctorInfo doctorInfo, Set<DayOfWeekDTO> daysOfWeek) {
         DayOfWeekDTO existingDay = daysOfWeek.stream()
-                .filter(d -> d.getWorkingDay().equals(doctorInfoDTO.getWorkingDay()))
+                .filter(d -> d.getWorkingDay().equals(doctorInfo.getWorkingDay()))
                 .findFirst()
                 .orElse(null);
         WorkScheduleDTO workScheduleDTO = new WorkScheduleDTO();
-        workScheduleDTO.setStartTime(doctorInfoDTO.getStartTime());
-        workScheduleDTO.setEndTime(doctorInfoDTO.getEndTime());
+        workScheduleDTO.setStartTime(doctorInfo.getStartTime());
+        workScheduleDTO.setEndTime(doctorInfo.getEndTime());
         if (existingDay != null) {
             existingDay.getWorkSchedules().add(workScheduleDTO);
             Set<WorkScheduleDTO> sorted = existingDay.getWorkSchedules().stream()
@@ -190,7 +213,7 @@ public class UserServiceImpl implements UserService {
             existingDay.setWorkSchedules(sorted);
         } else {
             DayOfWeekDTO newDay = new DayOfWeekDTO();
-            newDay.setWorkingDay(doctorInfoDTO.getWorkingDay());
+            newDay.setWorkingDay(doctorInfo.getWorkingDay());
             Set<WorkScheduleDTO> sorted = Stream.of(workScheduleDTO)
                     .collect(Collectors.toCollection(LinkedHashSet::new));
             newDay.setWorkSchedules(sorted);

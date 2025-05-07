@@ -3,7 +3,7 @@ package khanhnq.project.clinicbookingmanagementsystem.model.dto;
 import java.time.LocalTime;
 import java.util.Date;
 
-public interface DoctorInfoDTO {
+public interface DoctorInfo {
     Long getDoctorId();
     String getUserCode();
     String getFirstName();
