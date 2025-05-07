@@ -38,4 +38,6 @@ public class MessageConstants {
     public static final String CANCELLATION_APPOINTMENT_TIME_ERROR = "You can only cancel within 1 hour of booking or 24 hours before the appointment time.";
     public static final String CANCEL_APPOINTMENT_SUCCESS = "Your appointment has been successfully cancelled.";
     public static final String SOMETHING_WENT_WRONG = "Something went wrong.";
+    public static final String ALL_WORK_SCHEDULES_INVALID = "All registered appointments are invalid because another doctor has already registered.";
+    public static final String UPDATE_BOOKED_APPOINTMENT_SUCCESS = "Booking appointment updated successfully.";
 }

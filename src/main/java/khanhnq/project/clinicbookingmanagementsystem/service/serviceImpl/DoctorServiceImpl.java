@@ -129,9 +129,6 @@ public class DoctorServiceImpl implements DoctorService {
         List<Doctor> doctors = doctorRepository.getDoctorsBySpecializationId(specializationId)
                 .stream().filter(dt -> !dt.equals(doctor)).toList();
         List<WorkScheduleDTO> invalidWorkSchedules = invalidWorkSchedules(doctors, registerWorkSchedule);
-        newDayOfWeek.setDayOfWeek(dayOfWeek);
-        newDayOfWeek.setWorkingDay(workingDay);
-        newDayOfWeek.setDoctor(doctor);
         List<WorkSchedule> validWorkSchedules = newWorkSchedules.stream()
                 .filter(workScheduleDTO -> !invalidWorkSchedules.contains(workScheduleDTO))
                 .map(workScheduleDTO -> {
@@ -141,14 +138,21 @@ public class DoctorServiceImpl implements DoctorService {
                     workSchedule.setCreatedAt(LocalDateTime.now());
                     return workSchedule;
                 }).toList();
-        newDayOfWeek.setNumberOfShiftsPerDay(validWorkSchedules.size());
-        newDayOfWeek.setWorkSchedules(validWorkSchedules);
-        newDayOfWeek.setCreatedBy(currentUser.getUsername());
-        newDayOfWeek.setCreatedAt(LocalDateTime.now());
-        doctor.getDaysOfWeeks().add(newDayOfWeek);
-        doctor.setDaysOfWeeks(doctor.getDaysOfWeeks());
-        doctorRepository.save(doctor);
-        response.setData(workSchedulesMessage(invalidWorkSchedules, workingDay));
+        if (validWorkSchedules.size() == 0) {
+            throw new SystemException(MessageConstants.ALL_WORK_SCHEDULES_INVALID);
+        } else {
+            newDayOfWeek.setDayOfWeek(dayOfWeek);
+            newDayOfWeek.setWorkingDay(workingDay);
+            newDayOfWeek.setDoctor(doctor);
+            newDayOfWeek.setNumberOfShiftsPerDay(validWorkSchedules.size());
+            newDayOfWeek.setWorkSchedules(validWorkSchedules);
+            newDayOfWeek.setCreatedBy(currentUser.getUsername());
+            newDayOfWeek.setCreatedAt(LocalDateTime.now());
+            doctor.getDaysOfWeeks().add(newDayOfWeek);
+            doctor.setDaysOfWeeks(doctor.getDaysOfWeeks());
+            doctorRepository.save(doctor);
+            response.setData(workSchedulesMessage(invalidWorkSchedules, workingDay));
+        }
         return response;
     }
 
@@ -182,7 +186,7 @@ public class DoctorServiceImpl implements DoctorService {
     @Override
     public ResponseEntityBase getAllBookings(int page, int size, String[] sorts) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        User currentUser = (User) authService.getCurrentUser().getData();
+        User currentUser = authService.getCurrentUser();
         Pageable pageable = commonServiceImpl.pagingSort(page, size, sorts);
         Page<Booking> bookingPage = bookingRepository.getAllBookings(currentUser.getUserId() , pageable);
         response.setData(commonServiceImpl.getAllBookings(bookingPage));
@@ -190,7 +194,7 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     public User checkAccess() {
-        User currentUser = (User) authService.getCurrentUser().getData();
+        User currentUser = authService.getCurrentUser();
         if (Objects.isNull(currentUser)) {
             throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
         }

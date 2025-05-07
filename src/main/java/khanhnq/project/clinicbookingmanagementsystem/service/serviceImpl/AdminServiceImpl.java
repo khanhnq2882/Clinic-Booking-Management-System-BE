@@ -489,7 +489,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     public void checkAccess() {
-        User currentUser = (User) authService.getCurrentUser().getData();
+        User currentUser = authService.getCurrentUser();
         if (Objects.isNull(currentUser)) {
             throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
         }

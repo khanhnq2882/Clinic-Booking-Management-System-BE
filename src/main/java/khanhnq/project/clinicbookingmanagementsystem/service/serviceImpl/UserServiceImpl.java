@@ -1,6 +1,8 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
 import khanhnq.project.clinicbookingmanagementsystem.constant.MessageConstants;
+import khanhnq.project.clinicbookingmanagementsystem.exception.ForbiddenException;
+import khanhnq.project.clinicbookingmanagementsystem.exception.UnauthorizedException;
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EBookingStatus;
@@ -41,7 +43,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public ResponseEntityBase updateProfile(UserProfileRequest profileRequest, MultipartFile avatar) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        User currentUser = (User) authService.getCurrentUser().getData();
+        User currentUser = checkAccess();
         commonServiceImpl.updateProfile(profileRequest, currentUser, avatar);
         userRepository.save(currentUser);
         response.setData(MessageConstants.UPDATE_PROFILE_SUCCESS);
@@ -121,21 +123,10 @@ public class UserServiceImpl implements UserService {
     @Override
     public ResponseEntityBase bookingAppointment(BookingAppointmentRequest bookingAppointmentRequest) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        User currentUser = (User) authService.getCurrentUser().getData();
+        User currentUser = checkAccess();
         Long workScheduleId = bookingAppointmentRequest.getWorkScheduleId();
-        WorkSchedule workSchedule = workScheduleRepository.findById(workScheduleId).orElseThrow(()
-                -> new ResourceNotFoundException("Work schedule id", workScheduleId.toString()));
-        List<BookingInfo> bookingInfos = bookingRepository.getBookingsByWorkScheduleId(bookingAppointmentRequest.getWorkScheduleId());
-        if (bookingInfos.size() > 0) {
-            BookingInfo bookingInfo = bookingInfos.get(0);
-            String formatAppointmentDate = new SimpleDateFormat("dd-MM-yyyy").format(bookingInfo.getWorkingDay());
-            String workScheduleTime = bookingInfo.getStartTime() + "-" + bookingInfo.getEndTime();
-            throw new SystemException("You cannot booking an appointment at time " + workScheduleTime
-                    + " on day " + formatAppointmentDate + " because someone has already booked.");
-        }
-        Ward ward = wardRepository.findById(bookingAppointmentRequest.getWardId()).orElseThrow(
-                () -> new ResourceNotFoundException("Ward id", bookingAppointmentRequest.getWardId().toString()));
-        Address address = Address.builder().specificAddress(bookingAppointmentRequest.getSpecificAddress()).ward(ward).build();
+        WorkSchedule workSchedule = validateWorkSchedule(workScheduleId);
+        Address address = createAddress(bookingAppointmentRequest.getWardId(), bookingAppointmentRequest.getSpecificAddress());
         Booking bookingAppointment = BookingMapper.BOOKING_MAPPER.mapToBooking(bookingAppointmentRequest);
         bookingAppointment.setAddress(address);
         bookingAppointment.setBookingCode(commonServiceImpl.bookingCode());
@@ -150,21 +141,52 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public ResponseEntityBase cancelAppointment(Long bookingId) {
-        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        User currentUser = (User) authService.getCurrentUser().getData();
+    public ResponseEntityBase updateBookedAppointment(Long bookingId, BookingAppointmentRequest bookingAppointmentRequest) {
+        User currentUser = checkAccess();
         Optional<Booking> bookingOptional = bookingRepository.findById(bookingId);
         if (bookingOptional.isEmpty()) {
             throw new ResourceNotFoundException("Booking id", bookingId.toString());
         }
         Booking booking = bookingOptional.get();
+        String bookingStatus = booking.getStatus().toString();
+        if (!bookingStatus.equals("PENDING")) {
+            throw new SystemException("Your appointment has been " + bookingStatus + " and cannot be updated. Contact to admin.");
+        }
+        Long workScheduleId = bookingAppointmentRequest.getWorkScheduleId();
+        WorkSchedule workSchedule = validateWorkSchedule(workScheduleId);
+        Address address = createAddress(bookingAppointmentRequest.getWardId(), bookingAppointmentRequest.getSpecificAddress());
+        BookingMapper.BOOKING_MAPPER.updateBooking(booking, bookingAppointmentRequest);
+        booking.setAddress(address);
+        booking.setWorkSchedule(workSchedule);
+        booking.setStatus(EBookingStatus.PENDING);
+        booking.setUser(currentUser);
+        booking.setUpdatedBy(currentUser.getUsername());
+        booking.setUpdatedAt(LocalDateTime.now());
+        bookingRepository.save(booking);
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        response.setData(MessageConstants.UPDATE_BOOKED_APPOINTMENT_SUCCESS);
+        return response;
+    }
+
+    @Override
+    public ResponseEntityBase cancelAppointment(Long bookingId) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        User currentUser = checkAccess();
+        Optional<Booking> bookingOptional = bookingRepository.findById(bookingId);
+        if (bookingOptional.isEmpty()) {
+            throw new ResourceNotFoundException("Booking id", bookingId.toString());
+        }
+        Booking booking = bookingOptional.get();
+        if (!booking.getUser().getUserId().equals(currentUser.getUserId())) {
+            throw new ForbiddenException(MessageConstants.FORBIDDEN_ACCESS);
+        }
         WorkSchedule workSchedule = booking.getWorkSchedule();
         if (workSchedule != null && workScheduleRepository.findById(workSchedule.getWorkScheduleId()).isEmpty()) {
             throw new ResourceNotFoundException("Work schedule id", workSchedule.getWorkScheduleId().toString());
         }
         String bookingStatus = booking.getStatus().toString();
         if (bookingStatus.equals("CONFIRMED") || bookingStatus.equals("COMPLETED") || bookingStatus.equals("CANCELLED")) {
-            throw new SystemException("Your appointment has been " + bookingStatus.toLowerCase() + " and cannot be cancelled.");
+            throw new SystemException("Your appointment has been " + bookingStatus + " and cannot be cancelled.");
         }
         BookingInfo bookingInfo = bookingRepository.getBookingInfoByBookingId(bookingId);
         if (bookingInfo != null) {
@@ -191,10 +213,21 @@ public class UserServiceImpl implements UserService {
     @Override
     public ResponseEntityBase getAllBookings(int page, int size, String[] sorts) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        User currentUser = (User) authService.getCurrentUser().getData();
+        User currentUser = checkAccess();
         Page<Booking> bookingPage = bookingRepository.getBookingsWithUserId(currentUser.getUserId(), commonServiceImpl.pagingSort(page, size, sorts));
         response.setData(commonServiceImpl.getAllBookings(bookingPage));
         return response;
+    }
+
+    public User checkAccess() {
+        User currentUser = authService.getCurrentUser();
+        if (Objects.isNull(currentUser)) {
+            throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
+        }
+        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_USER"))) {
+            throw new ForbiddenException(MessageConstants.FORBIDDEN_ACCESS);
+        }
+        return currentUser;
     }
 
     private void getDayOfWeekDetails(DoctorInfo doctorInfo, Set<DayOfWeekDTO> daysOfWeek) {
@@ -220,4 +253,25 @@ public class UserServiceImpl implements UserService {
             daysOfWeek.add(newDay);
         }
     }
+
+    private WorkSchedule validateWorkSchedule(Long workScheduleId) {
+        WorkSchedule workSchedule = workScheduleRepository.findById(workScheduleId).orElseThrow(()
+                -> new ResourceNotFoundException("Work schedule id", workScheduleId.toString()));
+        List<BookingInfo> bookingInfos = bookingRepository.getBookingsByWorkScheduleId(workScheduleId);
+        if (bookingInfos.size() > 0) {
+            BookingInfo bookingInfo = bookingInfos.get(0);
+            String formatAppointmentDate = new SimpleDateFormat("dd-MM-yyyy").format(bookingInfo.getWorkingDay());
+            String workScheduleTime = bookingInfo.getStartTime() + "-" + bookingInfo.getEndTime();
+            throw new SystemException("You cannot booking an appointment at time " + workScheduleTime
+                    + " on day " + formatAppointmentDate + " because someone has already booked.");
+        }
+        return workSchedule;
+    }
+
+    private Address createAddress(Long wardId, String specificAddress) {
+        Ward ward = wardRepository.findById(wardId).orElseThrow(
+                () -> new ResourceNotFoundException("Ward id", wardId.toString()));
+        return Address.builder().specificAddress(specificAddress).ward(ward).build();
+    }
+
 }

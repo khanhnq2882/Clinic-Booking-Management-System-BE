@@ -40,6 +40,12 @@ public class UserController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(userService.bookingAppointment(bookingAppointmentRequest));
     }
 
+    @PostMapping("/update-booked-appointment/{bookingId}")
+    public ResponseEntity<ResponseEntityBase> updateBookedAppointment(@PathVariable("bookingId") Long bookingId,
+                                                                      @RequestBody BookingAppointmentRequest bookingAppointmentRequest) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(userService.updateBookedAppointment(bookingId, bookingAppointmentRequest));
+    }
+
     @PostMapping("/cancel-appointment/{bookingId}")
     public ResponseEntity<ResponseEntityBase> cancelAppointment(@PathVariable Long bookingId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(userService.cancelAppointment(bookingId));

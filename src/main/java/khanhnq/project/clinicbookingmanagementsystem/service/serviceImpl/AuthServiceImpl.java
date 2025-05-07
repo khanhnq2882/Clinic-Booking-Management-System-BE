@@ -88,7 +88,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public ResponseEntityBase newSystemAccount(AccountSystemRequest accountSystemRequest) throws MessagingException {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        User currentUser = (User) getCurrentUser().getData();
+        User currentUser = getCurrentUser();
         if (Objects.isNull(currentUser)) {
             throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
         }
@@ -165,8 +165,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public ResponseEntityBase getCurrentUser() {
-        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+    public User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
             return null;
@@ -175,14 +174,13 @@ public class AuthServiceImpl implements AuthService {
             return null;
         }
         User user = userRepository.findUserByUsername(authentication.getName());
-        response.setData(user);
-        return response;
+        return user;
     }
 
     @Override
     public ResponseEntityBase changePassword(ChangePasswordRequest changePasswordRequest) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        User currentUser = (User) getCurrentUser().getData();
+        User currentUser = getCurrentUser();
         String username = currentUser.getUsername();
         if (currentUser != null && currentUser.getStatus().equals(EUserStatus.BANNED)) {
             throw new UnauthorizedException("Account with username '" +username+ "' is permanent lock. Please contact to admin.");
@@ -226,7 +224,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public ResponseEntityBase getUserInfo() {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        User user = (User) getCurrentUser().getData();
+        User user = getCurrentUser();
         UserInfoResponse userInfoResponse = getUser(user);
         response.setData(userInfoResponse);
         return response;
