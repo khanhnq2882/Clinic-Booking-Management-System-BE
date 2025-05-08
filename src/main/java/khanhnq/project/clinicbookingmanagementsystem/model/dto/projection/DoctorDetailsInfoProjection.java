@@ -1,9 +1,9 @@
-package khanhnq.project.clinicbookingmanagementsystem.model.dto;
+package khanhnq.project.clinicbookingmanagementsystem.model.dto.projection;
 
 import java.time.LocalTime;
 import java.util.Date;
 
-public interface DoctorInfo {
+public interface DoctorDetailsInfoProjection {
     Long getDoctorId();
     String getUserCode();
     String getFirstName();

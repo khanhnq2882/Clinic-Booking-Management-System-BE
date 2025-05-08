@@ -32,17 +32,19 @@ public class AdminController {
     private final ServicesRepository serviceRepository;
 
     @PostMapping("/reset-password/{email}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ResponseEntityBase> resetPassword(@PathVariable("email") String email) throws MessagingException {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.resetPassword(email));
     }
 
     @PostMapping("/unlock-account/{username}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ResponseEntityBase> unlockAccount(@PathVariable("username") String username){
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.unlockAccount(username));
     }
 
     @GetMapping("/get-all-users")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ResponseEntityBase> getAllUsers(@RequestParam(defaultValue = "0") int page,
                                                     @RequestParam(defaultValue = "3") int size,
                                                     @RequestParam(defaultValue = "userId,asc") String[] sorts) {
@@ -50,6 +52,7 @@ public class AdminController {
     }
 
     @GetMapping("/files/{fileId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<byte[]> getFile(@PathVariable Long fileId) {
         File file = commonService.getFileById(fileId);
         return ResponseEntity.ok()
@@ -58,18 +61,21 @@ public class AdminController {
     }
 
     @GetMapping("/get-all-doctors")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ResponseEntityBase> getAllDoctors(@RequestParam(defaultValue = "0") int page,
                                                         @RequestParam(defaultValue = "3") int size,
-                                                        @RequestParam(defaultValue = "userId,asc") String[] sorts) {
+                                                        @RequestParam(defaultValue = "doctorId,asc") String[] sorts) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllDoctors(page, size, sorts));
     }
 
     @GetMapping("/get-all-specializations")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ResponseEntityBase> getAllSpecializations() {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllSpecializations());
     }
 
     @GetMapping("/get-all-services")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ResponseEntityBase> getAllServices(@RequestParam(defaultValue = "0") int page,
                                                            @RequestParam(defaultValue = "3") int size,
                                                            @RequestParam(defaultValue = "serviceId,asc") String[] sort) {
@@ -77,21 +83,25 @@ public class AdminController {
     }
 
     @PostMapping("/add-service")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ResponseEntityBase> addService(@RequestBody ServiceRequest serviceRequest) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.addService(serviceRequest));
     }
 
     @GetMapping("/get-service/{serviceId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ResponseEntityBase> getService(@PathVariable("serviceId") Long serviceId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getServiceById(serviceId));
     }
 
     @PostMapping("/update-service/{serviceId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ResponseEntityBase> updateService(@PathVariable("serviceId") Long serviceId ,@RequestBody ServiceRequest serviceRequest) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.updateService(serviceRequest, serviceId));
     }
 
     @GetMapping("/export-users-to-excel")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<InputStreamResource> exportUsersToExcel() {
         String fileName = "Users.xlsx";
         InputStreamResource file = new InputStreamResource(adminService.exportUsersToExcel(adminService.getUsers()));
@@ -102,6 +112,7 @@ public class AdminController {
     }
 
     @GetMapping("/export-services-to-excel")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<InputStreamResource> exportServicesToExcel() {
         String currentDateTime = new SimpleDateFormat("yyyy-MM-dd_HH:mm:ss").format(new Date());
         String fileName = "services_"+ currentDateTime + ".xlsx";
@@ -113,6 +124,7 @@ public class AdminController {
     }
 
     @PostMapping("/import-services-from-excel")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ResponseEntityBase> importServicesFromExcel (@RequestParam("file") MultipartFile file){
         ResponseEntityBase response;
         try {
@@ -127,6 +139,7 @@ public class AdminController {
     }
 
     @GetMapping("/export-bookings-to-excel")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<InputStreamResource> exportBookingsToExcel () {
         String fileName = "bookings.xlsx";
         InputStreamResource file = new InputStreamResource(adminService.exportBookingsToExcel(adminService.getBookings()));
@@ -137,6 +150,7 @@ public class AdminController {
     }
 
     @PostMapping("/import-bookings-from-excel")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ResponseEntityBase> importBookingsFromExcel (@RequestParam("file") MultipartFile file) {
         ResponseEntityBase response;
         try {
@@ -149,6 +163,7 @@ public class AdminController {
     }
 
     @GetMapping("/get-bookings")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ResponseEntityBase> getBookings(@RequestParam(defaultValue = "0") int page,
                                                        @RequestParam(defaultValue = "3") int size,
                                                        @RequestParam(defaultValue = "bookingId,asc") String[] sorts) {

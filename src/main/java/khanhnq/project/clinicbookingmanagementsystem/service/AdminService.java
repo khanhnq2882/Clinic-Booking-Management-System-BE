@@ -2,7 +2,7 @@ package khanhnq.project.clinicbookingmanagementsystem.service;
 
 import jakarta.mail.MessagingException;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Services;
-import khanhnq.project.clinicbookingmanagementsystem.model.dto.BookingDTO;
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.projection.BookingDetailsInfoProjection;
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.ServicesDTO;
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.UserDTO;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.ServiceRequest;
@@ -23,10 +23,10 @@ public interface AdminService {
     ResponseEntityBase getServiceById (Long serviceId);
     ResponseEntityBase updateService(ServiceRequest serviceRequest, Long serviceId);
     List<UserDTO> getUsers();
-    List<BookingDTO> getBookings();
+    List<BookingDetailsInfoProjection> getBookings();
     ByteArrayInputStream exportUsersToExcel (List<UserDTO> users);
     ByteArrayInputStream exportServicesToExcel(List<ServicesDTO> services);
-    ByteArrayInputStream exportBookingsToExcel (List<BookingDTO> bookings);
+    ByteArrayInputStream exportBookingsToExcel (List<BookingDetailsInfoProjection> bookings);
     List<Services> importServicesFromExcel (InputStream inputStream);
     ResponseEntityBase importBookingsFromExcel (InputStream inputStream);
     ResponseEntityBase getAllBookings(int page, int size, String[] sorts);

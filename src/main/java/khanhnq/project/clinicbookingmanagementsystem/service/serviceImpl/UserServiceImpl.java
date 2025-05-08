@@ -9,6 +9,10 @@ import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EBookingStatus
 import khanhnq.project.clinicbookingmanagementsystem.exception.SystemException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceNotFoundException;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.BookingMapper;
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.projection.BookingDetailsInfoProjection;
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.projection.BookingTimeInfoProjection;
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.projection.DoctorDetailsInfoProjection;
+import khanhnq.project.clinicbookingmanagementsystem.model.response.BookingResponse;
 import khanhnq.project.clinicbookingmanagementsystem.model.response.FileResponse;
 import khanhnq.project.clinicbookingmanagementsystem.model.response.ResponseEntityBase;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
@@ -18,6 +22,7 @@ import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import khanhnq.project.clinicbookingmanagementsystem.service.UserService;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -53,25 +58,25 @@ public class UserServiceImpl implements UserService {
     @Override
     public ResponseEntityBase getDoctorsBySpecialization(Long specializationId) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        List<DoctorInfo> doctorInfoList = doctorRepository.getDoctorsBySpecialization(specializationId);
+        List<DoctorDetailsInfoProjection> doctorDetailsInfoProjectionList = doctorRepository.getDoctorsBySpecialization(specializationId);
         Map<Long, DoctorDTO> doctorMap = new HashMap<>();
-        doctorInfoList.forEach(doctorInfo -> {
-            Long doctorId = doctorInfo.getDoctorId();
+        doctorDetailsInfoProjectionList.forEach(doctorDetailsInfoProjection -> {
+            Long doctorId = doctorDetailsInfoProjection.getDoctorId();
             DoctorDTO doctorDTO = doctorMap.getOrDefault(doctorId, new DoctorDTO());
             doctorDTO.setDoctorId(doctorId);
-            doctorDTO.setFirstName(doctorInfo.getFirstName());
-            doctorDTO.setLastName(doctorInfo.getLastName());
-            doctorDTO.setSpecializationName(doctorInfo.getSpecializationName());
-            doctorDTO.setEducationLevel(doctorInfo.getEducationLevel());
-            doctorDTO.setBiography(doctorInfo.getBiography());
-            if (doctorInfo.getFileType().equals("avatar")) {
-                String fileUrl = ServletUriComponentsBuilder.fromCurrentContextPath().path("/admin/files/").path(doctorInfo.getFileId().toString()).toUriString();
-                FileResponse fileResponse = new FileResponse(doctorInfo.getFileType(), doctorInfo.getFileName(), fileUrl);
+            doctorDTO.setFirstName(doctorDetailsInfoProjection.getFirstName());
+            doctorDTO.setLastName(doctorDetailsInfoProjection.getLastName());
+            doctorDTO.setSpecializationName(doctorDetailsInfoProjection.getSpecializationName());
+            doctorDTO.setEducationLevel(doctorDetailsInfoProjection.getEducationLevel());
+            doctorDTO.setBiography(doctorDetailsInfoProjection.getBiography());
+            if (doctorDetailsInfoProjection.getFileType().equals("avatar")) {
+                String fileUrl = ServletUriComponentsBuilder.fromCurrentContextPath().path("/admin/files/").path(doctorDetailsInfoProjection.getFileId().toString()).toUriString();
+                FileResponse fileResponse = new FileResponse(doctorDetailsInfoProjection.getFileType(), doctorDetailsInfoProjection.getFileName(), fileUrl);
                 doctorDTO.setFile(fileResponse);
             }
-            if (doctorInfo.getWorkingDay() != null) {
+            if (doctorDetailsInfoProjection.getWorkingDay() != null) {
                 Set<DayOfWeekDTO> daysOfWeek = doctorDTO.getDaysOfWeek();
-                getDayOfWeekDetails(doctorInfo, daysOfWeek);
+                getDayOfWeekDetails(doctorDetailsInfoProjection, daysOfWeek);
             }
             doctorMap.put(doctorId, doctorDTO);
         });
@@ -82,37 +87,37 @@ public class UserServiceImpl implements UserService {
     @Override
     public ResponseEntityBase getDoctorDetails(Long doctorId) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        List<DoctorInfo> doctorDetails = doctorRepository.getDoctorDetails(doctorId);
+        List<DoctorDetailsInfoProjection> doctorDetails = doctorRepository.getDoctorDetails(doctorId);
         Map<Long, DoctorDetailsDTO> doctorMap = new HashMap<>();
-        doctorDetails.forEach(doctorInfo -> {
+        doctorDetails.forEach(doctorDetailsInfoProjection -> {
             DoctorDetailsDTO doctorDetailsDTO = doctorMap.getOrDefault(doctorId, new DoctorDetailsDTO());
             doctorDetailsDTO.setDoctorId(doctorId);
-            doctorDetailsDTO.setUserCode(doctorInfo.getUserCode());
-            doctorDetailsDTO.setFirstName(doctorInfo.getFirstName());
-            doctorDetailsDTO.setLastName(doctorInfo.getLastName());
-            doctorDetailsDTO.setSpecializationName(doctorInfo.getSpecializationName());
-            doctorDetailsDTO.setBiography(doctorInfo.getBiography());
-            doctorDetailsDTO.setCareerDescription(doctorInfo.getCareerDescription());
-            doctorDetailsDTO.setEducationLevel(doctorInfo.getEducationLevel());
-            if (doctorInfo.getPosition() != null || doctorInfo.getWorkSpecializationName() != null ||
-                    doctorInfo.getWorkPlace() != null || doctorInfo.getYearOfStartWork() != null ||
-                    doctorInfo.getYearOfEndWork() != null || doctorInfo.getDescription() != null) {
+            doctorDetailsDTO.setUserCode(doctorDetailsInfoProjection.getUserCode());
+            doctorDetailsDTO.setFirstName(doctorDetailsInfoProjection.getFirstName());
+            doctorDetailsDTO.setLastName(doctorDetailsInfoProjection.getLastName());
+            doctorDetailsDTO.setSpecializationName(doctorDetailsInfoProjection.getSpecializationName());
+            doctorDetailsDTO.setBiography(doctorDetailsInfoProjection.getBiography());
+            doctorDetailsDTO.setCareerDescription(doctorDetailsInfoProjection.getCareerDescription());
+            doctorDetailsDTO.setEducationLevel(doctorDetailsInfoProjection.getEducationLevel());
+            if (doctorDetailsInfoProjection.getPosition() != null || doctorDetailsInfoProjection.getWorkSpecializationName() != null ||
+                    doctorDetailsInfoProjection.getWorkPlace() != null || doctorDetailsInfoProjection.getYearOfStartWork() != null ||
+                    doctorDetailsInfoProjection.getYearOfEndWork() != null || doctorDetailsInfoProjection.getDescription() != null) {
                 WorkExperienceDTO workExperienceDTO = WorkExperienceDTO.builder()
-                        .position(doctorInfo.getPosition())
-                        .workSpecializationName(doctorInfo.getWorkSpecializationName())
-                        .workPlace(doctorInfo.getWorkPlace())
-                        .yearOfStartWork(doctorInfo.getYearOfStartWork())
-                        .yearOfEndWork(doctorInfo.getYearOfEndWork())
-                        .description(doctorInfo.getDescription())
+                        .position(doctorDetailsInfoProjection.getPosition())
+                        .workSpecializationName(doctorDetailsInfoProjection.getWorkSpecializationName())
+                        .workPlace(doctorDetailsInfoProjection.getWorkPlace())
+                        .yearOfStartWork(doctorDetailsInfoProjection.getYearOfStartWork())
+                        .yearOfEndWork(doctorDetailsInfoProjection.getYearOfEndWork())
+                        .description(doctorDetailsInfoProjection.getDescription())
                         .build();
                 doctorDetailsDTO.getWorkExperiences().add(workExperienceDTO);
             }
-            String fileUrl = ServletUriComponentsBuilder.fromCurrentContextPath().path("/admin/files/").path(doctorInfo.getFileId().toString()).toUriString();
-            FileResponse fileResponse = new FileResponse(doctorInfo.getFileType(), doctorInfo.getFileName(), fileUrl);
+            String fileUrl = ServletUriComponentsBuilder.fromCurrentContextPath().path("/admin/files/").path(doctorDetailsInfoProjection.getFileId().toString()).toUriString();
+            FileResponse fileResponse = new FileResponse(doctorDetailsInfoProjection.getFileType(), doctorDetailsInfoProjection.getFileName(), fileUrl);
             doctorDetailsDTO.getFiles().add(fileResponse);
-            if (doctorInfo.getWorkingDay() != null) {
+            if (doctorDetailsInfoProjection.getWorkingDay() != null) {
                 Set<DayOfWeekDTO> daysOfWeek = doctorDetailsDTO.getDaysOfWeek();
-                getDayOfWeekDetails(doctorInfo, daysOfWeek);
+                getDayOfWeekDetails(doctorDetailsInfoProjection, daysOfWeek);
             }
             doctorMap.put(doctorId, doctorDetailsDTO);
         });
@@ -141,7 +146,25 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public ResponseEntityBase bookingAppointmentWithoutAccount(BookingAppointmentRequest bookingAppointmentRequest) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        Long workScheduleId = bookingAppointmentRequest.getWorkScheduleId();
+        WorkSchedule workSchedule = validateWorkSchedule(workScheduleId);
+        Address address = createAddress(bookingAppointmentRequest.getWardId(), bookingAppointmentRequest.getSpecificAddress());
+        Booking bookingAppointment = BookingMapper.BOOKING_MAPPER.mapToBooking(bookingAppointmentRequest);
+        bookingAppointment.setAddress(address);
+        bookingAppointment.setBookingCode(commonServiceImpl.bookingCode());
+        bookingAppointment.setWorkSchedule(workSchedule);
+        bookingAppointment.setStatus(EBookingStatus.PENDING);
+        bookingAppointment.setCreatedAt(LocalDateTime.now());
+        bookingRepository.save(bookingAppointment);
+        response.setData(MessageConstants.BOOKING_SUCCESS);
+        return response;
+    }
+
+    @Override
     public ResponseEntityBase updateBookedAppointment(Long bookingId, BookingAppointmentRequest bookingAppointmentRequest) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         User currentUser = checkAccess();
         Optional<Booking> bookingOptional = bookingRepository.findById(bookingId);
         if (bookingOptional.isEmpty()) {
@@ -163,7 +186,6 @@ public class UserServiceImpl implements UserService {
         booking.setUpdatedBy(currentUser.getUsername());
         booking.setUpdatedAt(LocalDateTime.now());
         bookingRepository.save(booking);
-        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         response.setData(MessageConstants.UPDATE_BOOKED_APPOINTMENT_SUCCESS);
         return response;
     }
@@ -188,14 +210,14 @@ public class UserServiceImpl implements UserService {
         if (bookingStatus.equals("CONFIRMED") || bookingStatus.equals("COMPLETED") || bookingStatus.equals("CANCELLED")) {
             throw new SystemException("Your appointment has been " + bookingStatus + " and cannot be cancelled.");
         }
-        BookingInfo bookingInfo = bookingRepository.getBookingInfoByBookingId(bookingId);
-        if (bookingInfo != null) {
+        BookingTimeInfoProjection bookingTimeInfoProjection = bookingRepository.getBookingInfoByBookingId(bookingId);
+        if (bookingTimeInfoProjection != null) {
             try {
-                Date workingDayDateFormat = new SimpleDateFormat("yyyy-MM-dd").parse(bookingInfo.getWorkingDay().toString().substring(0, 10));
+                Date workingDayDateFormat = new SimpleDateFormat("yyyy-MM-dd").parse(bookingTimeInfoProjection.getWorkingDay().toString().substring(0, 10));
                 LocalDate workingDay = workingDayDateFormat.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-                LocalDateTime workingDayDateTime = LocalDateTime.of(workingDay, bookingInfo.getStartTime());
+                LocalDateTime workingDayDateTime = LocalDateTime.of(workingDay, bookingTimeInfoProjection.getStartTime());
                 if (LocalDateTime.now().isAfter(workingDayDateTime.minusHours(24)) &&
-                        Duration.between(bookingInfo.getCreatedAt(), LocalDateTime.now()).toMinutes() > 60) {
+                        Duration.between(bookingTimeInfoProjection.getCreatedAt(), LocalDateTime.now()).toMinutes() > 60) {
                     throw new SystemException(MessageConstants.CANCELLATION_APPOINTMENT_TIME_ERROR);
                 }
             } catch (ParseException exception) {
@@ -214,8 +236,15 @@ public class UserServiceImpl implements UserService {
     public ResponseEntityBase getAllBookings(int page, int size, String[] sorts) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         User currentUser = checkAccess();
-        Page<Booking> bookingPage = bookingRepository.getBookingsWithUserId(currentUser.getUserId(), commonServiceImpl.pagingSort(page, size, sorts));
-        response.setData(commonServiceImpl.getAllBookings(bookingPage));
+        Pageable pageable = commonServiceImpl.pagingSort(page, size, sorts);
+        Page<BookingDetailsInfoProjection> bookingDetailsPage = bookingRepository.getBookingDetailsByUserId(currentUser.getUserId(), pageable);
+        BookingResponse bookingResponse = BookingResponse.builder()
+                .totalItems(bookingDetailsPage.getTotalElements())
+                .totalPages(bookingDetailsPage.getTotalPages())
+                .currentPage(bookingDetailsPage.getNumber())
+                .bookings(bookingDetailsPage.getContent())
+                .build();
+        response.setData(bookingResponse);
         return response;
     }
 
@@ -230,14 +259,14 @@ public class UserServiceImpl implements UserService {
         return currentUser;
     }
 
-    private void getDayOfWeekDetails(DoctorInfo doctorInfo, Set<DayOfWeekDTO> daysOfWeek) {
+    private void getDayOfWeekDetails(DoctorDetailsInfoProjection doctorDetailsInfoProjection, Set<DayOfWeekDTO> daysOfWeek) {
         DayOfWeekDTO existingDay = daysOfWeek.stream()
-                .filter(d -> d.getWorkingDay().equals(doctorInfo.getWorkingDay()))
+                .filter(d -> d.getWorkingDay().equals(doctorDetailsInfoProjection.getWorkingDay()))
                 .findFirst()
                 .orElse(null);
         WorkScheduleDTO workScheduleDTO = new WorkScheduleDTO();
-        workScheduleDTO.setStartTime(doctorInfo.getStartTime());
-        workScheduleDTO.setEndTime(doctorInfo.getEndTime());
+        workScheduleDTO.setStartTime(doctorDetailsInfoProjection.getStartTime());
+        workScheduleDTO.setEndTime(doctorDetailsInfoProjection.getEndTime());
         if (existingDay != null) {
             existingDay.getWorkSchedules().add(workScheduleDTO);
             Set<WorkScheduleDTO> sorted = existingDay.getWorkSchedules().stream()
@@ -246,7 +275,7 @@ public class UserServiceImpl implements UserService {
             existingDay.setWorkSchedules(sorted);
         } else {
             DayOfWeekDTO newDay = new DayOfWeekDTO();
-            newDay.setWorkingDay(doctorInfo.getWorkingDay());
+            newDay.setWorkingDay(doctorDetailsInfoProjection.getWorkingDay());
             Set<WorkScheduleDTO> sorted = Stream.of(workScheduleDTO)
                     .collect(Collectors.toCollection(LinkedHashSet::new));
             newDay.setWorkSchedules(sorted);
@@ -257,11 +286,11 @@ public class UserServiceImpl implements UserService {
     private WorkSchedule validateWorkSchedule(Long workScheduleId) {
         WorkSchedule workSchedule = workScheduleRepository.findById(workScheduleId).orElseThrow(()
                 -> new ResourceNotFoundException("Work schedule id", workScheduleId.toString()));
-        List<BookingInfo> bookingInfos = bookingRepository.getBookingsByWorkScheduleId(workScheduleId);
-        if (bookingInfos.size() > 0) {
-            BookingInfo bookingInfo = bookingInfos.get(0);
-            String formatAppointmentDate = new SimpleDateFormat("dd-MM-yyyy").format(bookingInfo.getWorkingDay());
-            String workScheduleTime = bookingInfo.getStartTime() + "-" + bookingInfo.getEndTime();
+        List<BookingTimeInfoProjection> bookingTimeInfoProjections = bookingRepository.getBookingsByWorkScheduleId(workScheduleId);
+        if (bookingTimeInfoProjections.size() > 0) {
+            BookingTimeInfoProjection bookingTimeInfoProjection = bookingTimeInfoProjections.get(0);
+            String formatAppointmentDate = new SimpleDateFormat("dd-MM-yyyy").format(bookingTimeInfoProjection.getWorkingDay());
+            String workScheduleTime = bookingTimeInfoProjection.getStartTime() + "-" + bookingTimeInfoProjection.getEndTime();
             throw new SystemException("You cannot booking an appointment at time " + workScheduleTime
                     + " on day " + formatAppointmentDate + " because someone has already booked.");
         }

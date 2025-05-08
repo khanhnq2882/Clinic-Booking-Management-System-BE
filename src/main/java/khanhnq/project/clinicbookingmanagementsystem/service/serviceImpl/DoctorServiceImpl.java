@@ -2,16 +2,18 @@ package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
 import khanhnq.project.clinicbookingmanagementsystem.constant.MessageConstants;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EEducationLevel;
+import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ERole;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceNotFoundException;
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.projection.BookingDetailsInfoProjection;
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.SpecializationDTO;
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.WorkScheduleDTO;
 import khanhnq.project.clinicbookingmanagementsystem.exception.SystemException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ForbiddenException;
-import khanhnq.project.clinicbookingmanagementsystem.exception.UnauthorizedException;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.WorkExperienceMapper;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.WorkScheduleMapper;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.RegisterWorkScheduleRequest;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
+import khanhnq.project.clinicbookingmanagementsystem.model.response.BookingResponse;
 import khanhnq.project.clinicbookingmanagementsystem.model.response.ResponseEntityBase;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.DoctorInformationRequest;
@@ -46,7 +48,7 @@ public class DoctorServiceImpl implements DoctorService {
     @Override
     public ResponseEntityBase updateProfile(UserProfileRequest userProfileRequest, MultipartFile avatar) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        User currentUser = checkAccess();
+        User currentUser = authService.getCurrentUser();
         commonServiceImpl.updateProfile(userProfileRequest, currentUser, avatar);
         userRepository.save(currentUser);
         response.setData(MessageConstants.UPDATE_PROFILE_SUCCESS);
@@ -56,7 +58,7 @@ public class DoctorServiceImpl implements DoctorService {
     @Override
     public ResponseEntityBase updateDoctorInformation(DoctorInformationRequest doctorInformationRequest, MultipartFile specialtyDegree) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        User currentUser = checkAccess();
+        User currentUser = authService.getCurrentUser();
         Optional<Specialization> specializationOptional =
                 specializationRepository.findById(doctorInformationRequest.getSpecializationId());
         if (specializationOptional.isEmpty()) {
@@ -97,7 +99,7 @@ public class DoctorServiceImpl implements DoctorService {
     @Override
     public ResponseEntityBase registerWorkSchedules(RegisterWorkScheduleRequest registerWorkSchedule) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        User currentUser = checkAccess();
+        User currentUser = authService.getCurrentUser();
         Doctor doctor = doctorRepository.findDoctorByUserId(currentUser.getUserId());
         if (Objects.isNull(doctor.getSpecialization())) {
             throw new SystemException(MessageConstants.SPECIALIZATION_NOT_FOUND);
@@ -159,7 +161,11 @@ public class DoctorServiceImpl implements DoctorService {
     @Override
     public ResponseEntityBase confirmedBooking(Long bookingId) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        checkAccess();
+        Booking booking = validateChangeBookingStatus(bookingId);
+        String bookingStatus = booking.getStatus().toString();
+        if (!bookingStatus.equals("PENDING")) {
+            throw new SystemException("Your appointment has been " + bookingStatus + " and cannot be confirmed.");
+        }
         bookingRepository.confirmedBooking(bookingId);
         response.setData(MessageConstants.CONFIRM_BOOKING_SUCCESS);
         return response;
@@ -168,7 +174,11 @@ public class DoctorServiceImpl implements DoctorService {
     @Override
     public ResponseEntityBase cancelledBooking(Long bookingId) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        checkAccess();
+        Booking booking = validateChangeBookingStatus(bookingId);
+        String bookingStatus = booking.getStatus().toString();
+        if (!bookingStatus.equals("PENDING") && !bookingStatus.equals("CONFIRMED")) {
+            throw new SystemException("Your appointment has been " + bookingStatus + " and cannot be cancelled.");
+        }
         bookingRepository.cancelledBooking(bookingId);
         response.setData(MessageConstants.CANCELED_BOOKING_SUCCESS);
         return response;
@@ -177,7 +187,11 @@ public class DoctorServiceImpl implements DoctorService {
     @Override
     public ResponseEntityBase completedBooking(Long bookingId) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        checkAccess();
+        Booking booking = validateChangeBookingStatus(bookingId);
+        String bookingStatus = booking.getStatus().toString();
+        if (!bookingStatus.equals("CONFIRMED") && !bookingStatus.equals("CANCELLED")) {
+            throw new SystemException("Your appointment has been " + bookingStatus + " and cannot be cancelled.");
+        }
         bookingRepository.completedBooking(bookingId);
         response.setData(MessageConstants.COMPLETED_BOOKING_SUCCESS);
         return response;
@@ -187,21 +201,36 @@ public class DoctorServiceImpl implements DoctorService {
     public ResponseEntityBase getAllBookings(int page, int size, String[] sorts) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         User currentUser = authService.getCurrentUser();
-        Pageable pageable = commonServiceImpl.pagingSort(page, size, sorts);
-        Page<Booking> bookingPage = bookingRepository.getAllBookings(currentUser.getUserId() , pageable);
-        response.setData(commonServiceImpl.getAllBookings(bookingPage));
+        Doctor doctor = doctorRepository.findDoctorByUserId(currentUser.getUserId());
+        if (Objects.nonNull(doctor)) {
+            Pageable pageable = commonServiceImpl.pagingSort(page, size, sorts);
+            Page<BookingDetailsInfoProjection> bookingDetailsPage = bookingRepository.getBookingDetailsByDoctorId(doctor.getDoctorId(), pageable);
+            BookingResponse bookingResponse = BookingResponse.builder()
+                    .totalItems(bookingDetailsPage.getTotalElements())
+                    .totalPages(bookingDetailsPage.getTotalPages())
+                    .currentPage(bookingDetailsPage.getNumber())
+                    .bookings(bookingDetailsPage.getContent())
+                    .build();
+            response.setData(bookingResponse);
+        }
         return response;
     }
 
-    public User checkAccess() {
+    public Booking validateChangeBookingStatus(Long bookingId) {
         User currentUser = authService.getCurrentUser();
-        if (Objects.isNull(currentUser)) {
-            throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
+        boolean checkAdmin = currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().equals(ERole.ROLE_ADMIN));
+        Optional<Booking> bookingOptional = bookingRepository.findById(bookingId);
+        if (bookingOptional.isEmpty()) {
+            throw new ResourceNotFoundException("Booking id", bookingId.toString());
         }
-        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_DOCTOR"))) {
-            throw new ForbiddenException(MessageConstants.FORBIDDEN_ACCESS);
+        long doctorId = bookingRepository.getDoctorIdByBookingId(bookingId);
+        Doctor doctor = doctorRepository.findDoctorByUserId(currentUser.getUserId());
+        if (doctor != null) {
+            if (checkAdmin || !doctor.getDoctorId().equals(doctorId)) {
+                throw new ForbiddenException(MessageConstants.FORBIDDEN_CHANGE_BOOKING_STATUS);
+            }
         }
-        return currentUser;
+        return bookingOptional.get();
     }
 
     public boolean checkSpecializationExist(List<SpecializationDTO> specializations, SpecializationDTO specializationDTO) {

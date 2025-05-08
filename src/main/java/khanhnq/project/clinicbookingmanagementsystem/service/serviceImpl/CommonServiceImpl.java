@@ -1,12 +1,12 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
 import khanhnq.project.clinicbookingmanagementsystem.constant.MessageConstants;
-import khanhnq.project.clinicbookingmanagementsystem.model.dto.BookingDTO;
+import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceNotFoundException;
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.projection.BookingDetailsInfoProjection;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.exception.SystemException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.FileUploadFailedException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceAlreadyExistException;
-import khanhnq.project.clinicbookingmanagementsystem.mapper.BookingMapper;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.UserMapper;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.UserProfileRequest;
@@ -229,7 +229,9 @@ public class CommonServiceImpl {
     }
 
     public AddressResponse getAddress(Booking booking) {
-        Address address = addressRepository.findById(booking.getAddress().getAddressId()).orElse(null);
+        Long addressId = booking.getAddress().getAddressId();
+        Address address = addressRepository.findById(addressId).orElseThrow(
+                () -> new ResourceNotFoundException("Address id", addressId.toString()));
         return AddressResponse.builder()
                 .addressId(Objects.requireNonNull(address).getAddressId())
                 .specificAddress(address.getSpecificAddress())
@@ -264,7 +266,12 @@ public class CommonServiceImpl {
     }
 
     public void updateProfile (UserProfileRequest profileRequest, User currentUser, MultipartFile avatar) {
-        userRepository.findAll().stream().filter(user -> Objects.nonNull(user.getPhoneNumber())).toList().forEach(user -> {
+        List<User> users = userRepository.findAll()
+                .stream()
+                .filter(user -> Objects.nonNull(user.getPhoneNumber()) &&
+                        !user.getUserId().equals(currentUser.getUserId()))
+                .toList();
+        users.forEach(user -> {
             if (profileRequest.getPhoneNumber().equals(user.getPhoneNumber()))
                 throw new ResourceAlreadyExistException("Phone number", profileRequest.getPhoneNumber());
         });
@@ -294,19 +301,12 @@ public class CommonServiceImpl {
         }
     }
 
-    public BookingResponse getAllBookings(Page<Booking> bookingPage) {
-        List<BookingDTO> bookings = bookingPage.getContent().stream()
-                .map(booking -> {
-                    BookingDTO bookingDTO = BookingMapper.BOOKING_MAPPER.mapToBookingDTO(booking);
-                    bookingDTO.setUserAddress(getAddress(booking));
-                    bookingDTO.setStartTime(booking.getWorkSchedule().getStartTime());
-                    bookingDTO.setEndTime(booking.getWorkSchedule().getEndTime());
-                    return bookingDTO;
-                }).toList();
+    public BookingResponse getAllBookings(Page<BookingDetailsInfoProjection> bookingDetailsPage) {
+        List<BookingDetailsInfoProjection> bookings = bookingDetailsPage.getContent();
         return BookingResponse.builder()
-                .totalItems(bookingPage.getTotalElements())
-                .totalPages(bookingPage.getTotalPages())
-                .currentPage(bookingPage.getNumber())
+                .totalItems(bookingDetailsPage.getTotalElements())
+                .totalPages(bookingDetailsPage.getTotalPages())
+                .currentPage(bookingDetailsPage.getNumber())
                 .bookings(bookings)
                 .build();
     }

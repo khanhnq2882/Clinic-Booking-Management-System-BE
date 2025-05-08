@@ -1,6 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.model.response;
 
-import khanhnq.project.clinicbookingmanagementsystem.model.dto.DoctorDetailsDTO;
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.DoctorInfoDTO;
 import lombok.*;
 import java.util.List;
 
@@ -11,7 +11,7 @@ import java.util.List;
 @Builder
 public class DoctorResponse {
     private long totalItems;
-    private List<DoctorDetailsDTO> doctors;
+    private List<DoctorInfoDTO> doctors;
     private long totalPages;
     private long currentPage;
 }

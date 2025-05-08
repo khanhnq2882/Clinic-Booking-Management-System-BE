@@ -11,12 +11,13 @@ import khanhnq.project.clinicbookingmanagementsystem.mapper.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EServiceStatus;
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.*;
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.projection.BookingDetailsInfoProjection;
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.projection.DoctorInfoProjection;
 import khanhnq.project.clinicbookingmanagementsystem.model.response.*;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.ServiceRequest;
 import khanhnq.project.clinicbookingmanagementsystem.security.services.BruteForceProtectionService;
 import khanhnq.project.clinicbookingmanagementsystem.service.AdminService;
-import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import lombok.AllArgsConstructor;
 import org.apache.commons.compress.utils.Lists;
 import org.apache.poi.ss.usermodel.*;
@@ -30,8 +31,9 @@ import java.security.SecureRandom;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
-import java.time.LocalTime;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -40,17 +42,19 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @Service
 @AllArgsConstructor
 public class AdminServiceImpl implements AdminService {
 
     private final UserRepository userRepository;
-    private final AuthService authService;
     private final SpecializationRepository specializationRepository;
     private final ServicesRepository servicesRepository;
     private final BookingRepository bookingRepository;
     private final WorkScheduleRepository workScheduleRepository;
+    private final DoctorRepository doctorRepository;
+    private final FileRepository fileRepository;
     private final CommonServiceImpl commonServiceImpl;
     private final Workbook workbook = new XSSFWorkbook();
     private final JavaMailSender mailSender;
@@ -60,7 +64,6 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public ResponseEntityBase resetPassword(String email) throws MessagingException {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        checkAccess();
         User user = userRepository.findUserByEmail(email);
         if (Objects.nonNull(user)) {
             MimeMessage message = mailSender.createMimeMessage();
@@ -87,7 +90,6 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public ResponseEntityBase unlockAccount(String username) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        checkAccess();
         User user = userRepository.findUserByUsername(username);
         if (Objects.isNull(user)) {
             throw new UsernameNotFoundException("Account with username '" +username+ "' is not found.");
@@ -104,12 +106,29 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public ResponseEntityBase getAllUsers(int page, int size, String[] sorts) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        checkAccess();
         Page<User> userPage = userRepository.getAllUsers(commonServiceImpl.pagingSort(page, size, sorts));
         List<UserDTO> users = userPage.getContent().stream()
                 .map(user -> {
                     UserDTO userDTO = UserMapper.USER_MAPPER.mapToUserDTO(user);
-                    userDTO.setUserAddress(commonServiceImpl.getAddress(user));
+                    if (user.getAddress() != null) {
+                        userDTO.setUserAddress(commonServiceImpl.getAddress(user));
+                    }
+                    String gender = user.getGender() == 1 ? "Male" : "Female";
+                    userDTO.setGender(gender);
+                    if (userDTO.getDateOfBirth() != null) {
+                        DateTimeFormatter dobFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+                        LocalDate dob = LocalDate.parse(user.getDateOfBirth().toString());
+                        userDTO.setDateOfBirth(dob.format(dobFormatter));
+                    }
+                    DateTimeFormatter createdAtFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
+                    LocalDateTime createdAt = LocalDateTime.parse(user.getCreatedAt().toString());
+                    userDTO.setCreatedAt(createdAt.format(createdAtFormatter));
+                    File file = fileRepository.getFileByType(user.getUserId(), "avatar");
+                    if (file != null) {
+                        String fileUrl = ServletUriComponentsBuilder.fromCurrentContextPath().path("/admin/files/").path(file.getFileId().toString()).toUriString();
+                        FileResponse fileResponse = new FileResponse(file.getFileType(), file.getFileName(), fileUrl);
+                        userDTO.setAvatar(fileResponse);
+                    }
                     return userDTO;
                 }).toList();
         UserResponse userResponse = UserResponse.builder()
@@ -125,30 +144,26 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public ResponseEntityBase getAllDoctors(int page, int size, String[] sorts) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        checkAccess();
-        Page<User> doctorPage = userRepository.getAllDoctors(commonServiceImpl.pagingSort(page, size, sorts));
-//        List<DoctorDTO> doctors = doctorPage.getContent().stream()
-//                .map(user -> {
-//                    DoctorDTO doctorDTO = UserMapper.USER_MAPPER.mapToDoctorResponse(user);
-////                    if (user.getSpecialization() != null)
-////                        doctorDTO.setSpecializationName(user.specializationName());
-//                    doctorDTO.setDoctorAddress(commonServiceImpl.getAddress(user));
-//                    doctorDTO.setFiles(commonServiceImpl.getAllFiles(user.getUserId()));
-//                    return doctorDTO;
-//                }).toList();
-//        return DoctorResponse.builder()
-//                .totalItems(doctorPage.getTotalElements())
-//                .totalPages(doctorPage.getTotalPages())
-//                .currentPage(doctorPage.getNumber())
-//                .doctors(doctors)
-//                .build();
+        Page<DoctorInfoProjection> doctorPage = doctorRepository.getDoctorsInfo(commonServiceImpl.pagingSort(page, size, sorts));
+        List<DoctorInfoDTO> doctors = doctorPage.getContent().stream().map(doctorInfoProjection -> {
+            DoctorInfoDTO doctorInfoDTO = DoctorMapper.DOCTOR_MAPPER.mapToDoctorInfo(doctorInfoProjection);
+            String avatar = doctorInfoProjection.getFileType();
+            String fileName = doctorInfoProjection.getFileName();
+            if (avatar != null && fileName != null) {
+                String fileUrl =
+                        ServletUriComponentsBuilder.fromCurrentContextPath().path("/admin/files/").path(doctorInfoProjection.getFileId().toString()).toUriString();
+                FileResponse fileResponse = new FileResponse(avatar, fileName, fileUrl);
+                doctorInfoDTO.setAvatar(fileResponse);
+            }
+            return doctorInfoDTO;
+        }).toList();
+        response.setData(doctors);
         return response;
     }
 
     @Override
     public ResponseEntityBase addService(ServiceRequest serviceRequest) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-//        checkAccess();
 //        ServiceCategory serviceCategory = serviceCategoryRepository.findById(serviceRequest.getServiceCategoryId()).orElse(null);
 //        Services services = ServicesMapper.SERVICES_MAPPER.mapToServices(serviceRequest);
 //        services.setStatus(EServiceStatus.ACTIVE);
@@ -176,7 +191,6 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public ResponseEntityBase updateService(ServiceRequest serviceRequest, Long serviceId) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-//        checkAccess();
 //        Services service = servicesRepository.findById(serviceId).orElse(null);
 //        ServiceCategory serviceCategory = serviceCategoryRepository.findById(serviceRequest.getServiceCategoryId()).orElse(null);
 //        Objects.requireNonNull(service).setServiceCategory(serviceCategory);
@@ -199,17 +213,10 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public List<BookingDTO> getBookings() {
+    public List<BookingDetailsInfoProjection> getBookings() {
         List<Booking> bookings = bookingRepository.findAll().stream()
                 .filter(booking -> Objects.isNull(booking.getUser())).toList();
-        return bookings.stream()
-                .map(booking -> {
-                    BookingDTO bookingDTO = BookingMapper.BOOKING_MAPPER.mapToBookingDTO(booking);
-                    bookingDTO.setUserAddress(commonServiceImpl.getAddress(booking));
-                    bookingDTO.setStartTime(booking.getWorkSchedule().getStartTime());
-                    bookingDTO.setEndTime(booking.getWorkSchedule().getEndTime());
-                    return bookingDTO;
-                }).toList();
+        return null;
     }
 
     @Override
@@ -255,7 +262,6 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public ByteArrayInputStream exportUsersToExcel(List<UserDTO> users) {
         try {
-            checkAccess();
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             Sheet sheet = workbook.createSheet("Users");
             String[] headers = {"User Code", "Email", "Full Name", "Date Of Birth",
@@ -271,7 +277,7 @@ public class AdminServiceImpl implements AdminService {
                 commonServiceImpl.createCell(workbook, currentRow, 1, user.getEmail());
                 commonServiceImpl.createCell(workbook, currentRow, 2, Objects.isNull(user.getFirstName()) && Objects.isNull(user.getLastName()) ? " " : fullName);
                 commonServiceImpl.createCell(workbook, currentRow, 3, Objects.isNull(user.getDateOfBirth()) ? " " : user.getDateOfBirth());
-                commonServiceImpl.createCell(workbook, currentRow, 4, user.getGender() == 1 ? "Male" : "Female");
+//                commonServiceImpl.createCell(workbook, currentRow, 4, user.getGender() == 1 ? "Male" : "Female");
                 commonServiceImpl.createCell(workbook, currentRow, 5, Objects.isNull(user.getPhoneNumber()) ? " " : user.getPhoneNumber());
                 commonServiceImpl.createCell(workbook, currentRow, 6, Objects.isNull(user.getUserAddress().getSpecificAddress()) ? " " : address);
                 commonServiceImpl.createCell(workbook, currentRow, 7, user.getStatus());
@@ -286,7 +292,6 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public ByteArrayInputStream exportServicesToExcel(List<ServicesDTO> services) {
         try {
-            checkAccess();
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             Sheet sheet = workbook.createSheet("Services");
             String[] headers = {"Service Name", "Price", "Description", "Service Category", "Status"};
@@ -308,29 +313,28 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public ByteArrayInputStream exportBookingsToExcel(List<BookingDTO> bookings) {
+    public ByteArrayInputStream exportBookingsToExcel(List<BookingDetailsInfoProjection> bookings) {
         try {
-            checkAccess();
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             Sheet sheet = workbook.createSheet("Bookings");
             String[] headers = {"Full Name", "Date Of Birth", "Gender", "Phone Number", "Address",
                     "Appointment Date", "Start Time", "End Time", "Specialization", "Describe Symptoms"};
             commonServiceImpl.createHeader(workbook, sheet, headers);
             int firstRow = 1;
-            for (BookingDTO booking : bookings) {
+            for (BookingDetailsInfoProjection booking : bookings) {
                 Row currentRow = sheet.createRow(firstRow++);
                 String fullName = booking.getFirstName() + " " + booking.getLastName();
-                AddressResponse userAddress = booking.getUserAddress();
-                String address = userAddress.getSpecificAddress() + ", " + userAddress.getWardName() + ", " + userAddress.getDistrictName() + ", " + userAddress.getCityName();
+//                AddressResponse userAddress = booking.getUserAddress();
+//                String address = userAddress.getSpecificAddress() + ", " + userAddress.getWardName() + ", " + userAddress.getDistrictName() + ", " + userAddress.getCityName();
                 commonServiceImpl.createCell(workbook, currentRow, 0, (Objects.isNull(booking.getFirstName()) && Objects.isNull(booking.getLastName())) ? " " : fullName);
                 commonServiceImpl.createCell(workbook, currentRow, 1, Objects.isNull(booking.getDateOfBirth()) ? " " : booking.getDateOfBirth());
-                commonServiceImpl.createCell(workbook, currentRow, 2, booking.getGender() == 1 ? "Male" : "Female");
+//                commonServiceImpl.createCell(workbook, currentRow, 2, booking.getGender() == 1 ? "Male" : "Female");
                 commonServiceImpl.createCell(workbook, currentRow, 3, Objects.isNull(booking.getPhoneNumber()) ? " " : booking.getPhoneNumber());
-                commonServiceImpl.createCell(workbook, currentRow, 4, Objects.isNull(booking.getUserAddress().getSpecificAddress()) ? " " : address);
-                commonServiceImpl.createCell(workbook, currentRow, 5, Objects.isNull(booking.getAppointmentDate()) ? " " : booking.getAppointmentDate());
+//                commonServiceImpl.createCell(workbook, currentRow, 4, Objects.isNull(booking.getUserAddress().getSpecificAddress()) ? " " : address);
+//                commonServiceImpl.createCell(workbook, currentRow, 5, Objects.isNull(booking.getAppointmentDate()) ? " " : booking.getAppointmentDate());
                 commonServiceImpl.createCell(workbook, currentRow, 6, Objects.isNull(booking.getStartTime()) ? " " : booking.getStartTime());
                 commonServiceImpl.createCell(workbook, currentRow, 7, Objects.isNull(booking.getEndTime()) ? " " : booking.getEndTime());
-                commonServiceImpl.createCell(workbook, currentRow, 8, Objects.isNull(booking.getSpecialization()) ? " " : booking.getSpecialization());
+//                commonServiceImpl.createCell(workbook, currentRow, 8, Objects.isNull(booking.getSpecialization()) ? " " : booking.getSpecialization());
                 commonServiceImpl.createCell(workbook, currentRow, 9, Objects.isNull(booking.getDescribeSymptoms()) ? " " : booking.getDescribeSymptoms());
             }
             workbook.write(outputStream);
@@ -343,7 +347,6 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public List<Services> importServicesFromExcel(InputStream inputStream) {
         try {
-            checkAccess();
             List<Services> services = new ArrayList<>();
             Sheet sheet = new XSSFWorkbook(inputStream).getSheet("Services");
             if (sheet == null) {
@@ -401,7 +404,6 @@ public class AdminServiceImpl implements AdminService {
     public ResponseEntityBase importBookingsFromExcel(InputStream inputStream) {
         try {
             ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-            checkAccess();
             List<BookingExcelResponse> bookingExcelResponses = new ArrayList<>();
             Sheet sheet = new XSSFWorkbook(inputStream).getSheet("bookings");
             if (sheet == null) {
@@ -472,10 +474,9 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public ResponseEntityBase getAllBookings(int page, int size, String[] sorts) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        checkAccess();
         Page<Booking> bookingPage = bookingRepository.getBookingsWithNullUser(commonServiceImpl.pagingSort(page, size, sorts));
-        BookingResponse bookingResponse = commonServiceImpl.getAllBookings(bookingPage);
-        response.setData(bookingResponse);
+//        BookingResponse bookingResponse = commonServiceImpl.getAllBookings(bookingPage);
+//        response.setData(bookingResponse);
         return response;
     }
 
@@ -486,16 +487,6 @@ public class AdminServiceImpl implements AdminService {
                 .map(i -> random.nextInt(chars.length()))
                 .mapToObj(randomIndex -> String.valueOf(chars.charAt(randomIndex)))
                 .collect(Collectors.joining());
-    }
-
-    public void checkAccess() {
-        User currentUser = authService.getCurrentUser();
-        if (Objects.isNull(currentUser)) {
-            throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
-        }
-        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_ADMIN"))) {
-            throw new ForbiddenException(MessageConstants.FORBIDDEN_ACCESS);
-        }
     }
 
     public Map<Integer, String> serviceCategoryHeaderCellIndex (Row row) {
@@ -596,15 +587,15 @@ public class AdminServiceImpl implements AdminService {
                 invalidBookings.add(bookingExcelResponse);
                 continue;
             }
-            bookingRepository.getBookingsByDoctor(doctor.getUserId()).forEach(booking -> {
-                LocalTime startTime = booking.getWorkSchedule().getStartTime();
-                LocalTime endTime = booking.getWorkSchedule().getEndTime();
+//            bookingRepository.getBookingsByDoctor(doctor.getUserId()).forEach(booking -> {
+//                LocalTime startTime = booking.getWorkSchedule().getStartTime();
+//                LocalTime endTime = booking.getWorkSchedule().getEndTime();
 //                if (bookingExcelResponse.getBookingExcelDTO().getAppointmentDate().equals(booking.getAppointmentDate())
 //                        && bookingExcelResponse.getBookingExcelDTO().getStartTime().equals(startTime)
 //                        && bookingExcelResponse.getBookingExcelDTO().getEndTime().equals(endTime)) {
 //                    invalidBookings.add(bookingExcelResponse);
 //                }
-            });
+//            });
         }
         bookingImportResponse.setInvalidBookings(invalidBookings);
         if (invalidBookings.size() > 0) {

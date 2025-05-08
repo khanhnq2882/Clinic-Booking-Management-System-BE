@@ -2,7 +2,8 @@ package khanhnq.project.clinicbookingmanagementsystem.repository;
 
 import jakarta.transaction.Transactional;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Booking;
-import khanhnq.project.clinicbookingmanagementsystem.model.dto.BookingInfo;
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.projection.BookingDetailsInfoProjection;
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.projection.BookingTimeInfoProjection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -14,10 +15,6 @@ import java.util.List;
 
 @Repository
 public interface BookingRepository extends JpaRepository<Booking, Long> {
-
-    @Query(value = "SELECT b FROM Booking AS b INNER JOIN b.workSchedule AS ws INNER JOIN ws.daysOfWeek AS d INNER JOIN d.doctor AS dt WHERE dt.doctorId = :doctorId")
-    List<Booking> getBookingsByDoctor (@Param("doctorId") Long doctorId);
-
     @Modifying
     @Transactional
     @Query(value = "UPDATE booking SET status = 'CONFIRMED' WHERE booking_id = :bookingId", nativeQuery = true)
@@ -33,25 +30,15 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     @Query(value = "UPDATE booking SET status = 'COMPLETED' WHERE booking_id = :bookingId", nativeQuery = true)
     void completedBooking (@Param("bookingId") Long bookingId);
 
-    @Query(value = "SELECT b FROM Booking AS b " +
-            "INNER JOIN b.workSchedule AS ws " +
-            "INNER JOIN ws.daysOfWeek AS d " +
-            "INNER JOIN d.doctor AS dt " +
-            "WHERE dt.doctorId = :doctorId")
-    Page<Booking> getAllBookings(@Param("doctorId") Long doctorId, Pageable pageable);
-
     @Query(value = "SELECT b FROM Booking AS b WHERE b.user.userId IS NULL")
     Page<Booking> getBookingsWithNullUser (Pageable pageable);
-
-    @Query(value = "SELECT b FROM Booking AS b WHERE b.user.userId = :userId")
-    Page<Booking> getBookingsWithUserId (@Param("userId") Long userId, Pageable pageable);
 
     @Query(value = "select b.booking_id as bookingId, dof.working_day as workingDay, ws.start_time as startTime, ws.end_time as endTime \n" +
             "from booking as b\n" +
             "inner join work_schedule as ws on b.work_schedule_id = ws.work_schedule_id\n" +
             "inner join day_of_week as dof on ws.day_of_week_id = dof.day_of_week_id\n" +
             "where b.work_schedule_id = :workScheduleId and b.status not in ('CANCELLED')", nativeQuery = true)
-    List<BookingInfo> getBookingsByWorkScheduleId(@Param("workScheduleId") Long workScheduleId);
+    List<BookingTimeInfoProjection> getBookingsByWorkScheduleId(@Param("workScheduleId") Long workScheduleId);
 
     @Query(value = "select b.booking_id as bookingId, b.created_at as createdAt, dof.working_day as workingDay, " +
             "ws.start_time as startTime, ws.end_time as endTime \n" +
@@ -59,6 +46,104 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             "inner join work_schedule as ws on b.work_schedule_id = ws.work_schedule_id\n" +
             "inner join day_of_week as dof on ws.day_of_week_id = dof.day_of_week_id\n" +
             "where b.booking_id = :bookingId", nativeQuery = true)
-    BookingInfo getBookingInfoByBookingId(@Param("bookingId") Long bookingId);
+    BookingTimeInfoProjection getBookingInfoByBookingId(@Param("bookingId") Long bookingId);
+
+    @Modifying
+    @Transactional
+    @Query(value = "delete from booking where user_id is null " +
+            "and status not in ('CONFIRMED') and created_at < current_timestamp() - interval ?1 hour", nativeQuery = true)
+    void deleteUnconfirmedBookingAfter24Hours(int hours);
+
+    @Modifying
+    @Transactional
+    @Query(value = "delete from booking where created_at < current_timestamp() - interval ?1 day", nativeQuery = true)
+    void deleteOlderThanDays(int days);
+
+    @Query(
+            value = "select \n" +
+                    "    b.booking_id as bookingId, \n" +
+                    "    b.booking_code as bookingCode, \n" +
+                    "    s.specialization_name as specializationName, \n" +
+                    "    b.first_name as firstName, \n" +
+                    "    b.last_name as lastName, \n" +
+                    "    DATE_FORMAT(b.date_of_birth, '%d-%m-%Y') as dateOfBirth, \n" +
+                    "    CASE \n" +
+                    "        WHEN b.gender = 1 THEN 'Male'\n" +
+                    "        WHEN b.gender = 0 THEN 'Female'\n" +
+                    "        ELSE 'Other'\n" +
+                    "    END AS gender,\n" +
+                    "    b.phone_number as phoneNumber, \n" +
+                    "    concat(a.specific_address, ', ', w.ward_name, ', ', d.district_name, ', ', c.city_name) as userAddress,\n" +
+                    "    b.describe_symptoms as describeSymptoms, \n" +
+                    "    DATE_FORMAT(dow.working_day, '%d-%m-%Y') as workingDay, \n" +
+                    "    TIME_FORMAT(ws.start_time, '%H:%i') as startTime, \n" +
+                    "    TIME_FORMAT(ws.end_time, '%H:%i') as endTime, \n" +
+                    "    b.status as status, \n" +
+                    "    DATE_FORMAT(b.created_at, '%d-%m-%Y %H:%i:%s') as createdAt\n" +
+                    "from booking as b\n" +
+                    "inner join address as a on b.address_id = a.address_id\n" +
+                    "inner join ward as w on a.ward_id = w.ward_id\n" +
+                    "inner join district as d on w.district_id = d.district_id\n" +
+                    "inner join city as c on d.city_id = c.city_id\n" +
+                    "inner join work_schedule as ws on b.work_schedule_id = ws.work_schedule_id\n" +
+                    "inner join day_of_week as dow on ws.day_of_week_id = dow.day_of_week_id\n" +
+                    "inner join doctor as dt on dow.doctor_id = dt.doctor_id\n" +
+                    "inner join user as u on dt.user_id = u.user_id\n" +
+                    "inner join specialization as s on dt.specialization_id = s.specialization_id\n" +
+                    "where b.user_id = :userId order by b.created_at desc",
+            countQuery = "SELECT COUNT(*) FROM booking WHERE user_id = :userId",
+            nativeQuery = true
+    )
+    Page<BookingDetailsInfoProjection> getBookingDetailsByUserId(@Param("userId") Long userId, Pageable pageable);
+
+    @Query(
+            value = "select \n" +
+                    "    b.booking_id as bookingId, \n" +
+                    "    b.booking_code as bookingCode, \n" +
+                    "    s.specialization_name as specializationName, \n" +
+                    "    b.first_name as firstName, \n" +
+                    "    b.last_name as lastName, \n" +
+                    "    DATE_FORMAT(b.date_of_birth, '%d-%m-%Y') as dateOfBirth, \n" +
+                    "    CASE \n" +
+                    "        WHEN b.gender = 1 THEN 'Male'\n" +
+                    "        WHEN b.gender = 0 THEN 'Female'\n" +
+                    "        ELSE 'Other'\n" +
+                    "    END AS gender,\n" +
+                    "    b.phone_number as phoneNumber, \n" +
+                    "    concat(a.specific_address, ', ', w.ward_name, ', ', d.district_name, ', ', c.city_name) as userAddress,\n" +
+                    "    b.describe_symptoms as describeSymptoms, \n" +
+                    "    DATE_FORMAT(dow.working_day, '%d-%m-%Y') as workingDay, \n" +
+                    "    TIME_FORMAT(ws.start_time, '%H:%i') as startTime, \n" +
+                    "    TIME_FORMAT(ws.end_time, '%H:%i') as endTime, \n" +
+                    "    b.status as status, \n" +
+                    "    DATE_FORMAT(b.created_at, '%d-%m-%Y %H:%i:%s') as createdAt\n" +
+                    "from booking as b\n" +
+                    "inner join address as a on b.address_id = a.address_id\n" +
+                    "inner join ward as w on a.ward_id = w.ward_id\n" +
+                    "inner join district as d on w.district_id = d.district_id\n" +
+                    "inner join city as c on d.city_id = c.city_id\n" +
+                    "inner join work_schedule as ws on b.work_schedule_id = ws.work_schedule_id\n" +
+                    "inner join day_of_week as dow on ws.day_of_week_id = dow.day_of_week_id\n" +
+                    "inner join doctor as dt on dow.doctor_id = dt.doctor_id\n" +
+                    "inner join user as u on dt.user_id = u.user_id\n" +
+                    "inner join specialization as s on dt.specialization_id = s.specialization_id\n" +
+                    "where dt.doctor_id = :doctorId order by dow.working_day asc",
+            countQuery = "select count(*)\n" +
+                    "from booking as b\n" +
+                    "inner join work_schedule as ws on b.work_schedule_id = ws.work_schedule_id\n" +
+                    "inner join day_of_week as dow on ws.day_of_week_id = dow.day_of_week_id\n" +
+                    "inner join doctor as dt on dow.doctor_id = dt.doctor_id\n" +
+                    "where dt.doctor_id = :doctorId",
+            nativeQuery = true
+    )
+    Page<BookingDetailsInfoProjection> getBookingDetailsByDoctorId(@Param("doctorId") Long doctorId, Pageable pageable);
+
+    @Query(value = "select dt.doctor_id\n" +
+            "from booking as b\n" +
+            "inner join work_schedule as ws on b.work_schedule_id = ws.work_schedule_id\n" +
+            "inner join day_of_week as dow on ws.day_of_week_id = dow.day_of_week_id\n" +
+            "inner join doctor as dt on dow.doctor_id = dt.doctor_id\n" +
+            "where b.booking_id = :bookingId", nativeQuery = true)
+    long getDoctorIdByBookingId(@Param("bookingId") Long bookingId);
 
 }

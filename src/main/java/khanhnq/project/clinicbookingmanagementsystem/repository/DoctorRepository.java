@@ -1,7 +1,10 @@
 package khanhnq.project.clinicbookingmanagementsystem.repository;
 
 import khanhnq.project.clinicbookingmanagementsystem.entity.Doctor;
-import khanhnq.project.clinicbookingmanagementsystem.model.dto.DoctorInfo;
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.projection.DoctorDetailsInfoProjection;
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.projection.DoctorInfoProjection;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -32,7 +35,7 @@ public interface DoctorRepository extends JpaRepository<Doctor, Long> {
             "inner join booking as b " +
             "on ws.work_schedule_id = b.work_schedule_id where b.status not in ('CANCELLED'))"
             , nativeQuery = true)
-    List<DoctorInfo> getDoctorsBySpecialization(@Param("specializationId") Long specializationId);
+    List<DoctorDetailsInfoProjection> getDoctorsBySpecialization(@Param("specializationId") Long specializationId);
 
     @Query(value = "select d.doctor_id as doctorId, u.user_code as userCode, u.first_name as firstName, u.last_name as lastName, \n" +
             "s.specialization_name as specializationName, d.education_level as educationLevel, d.biography as biography, \n" +
@@ -52,6 +55,29 @@ public interface DoctorRepository extends JpaRepository<Doctor, Long> {
             "inner join booking as b " +
             "on ws.work_schedule_id = b.work_schedule_id where b.status not in ('CANCELLED'))"
             , nativeQuery = true)
-    List<DoctorInfo> getDoctorDetails(@Param("doctorId") Long doctorId);
+    List<DoctorDetailsInfoProjection> getDoctorDetails(@Param("doctorId") Long doctorId);
+
+    @Query(value = "select \n" +
+            "    d.doctor_id as doctorId, \n" +
+            "    u.user_code as userCode, \n" +
+            "    u.first_name as firstName, \n" +
+            "    u.last_name as lastName, \n" +
+            "    u.email as email, \n" +
+            "    u.phone_number as phoneNumber, \n" +
+            "    d.education_level as educationLevel, \n" +
+            "    s.specialization_name as specializationName, \n" +
+            "    u.status as status, \n" +
+            "    f.file_id as fileId, \n" +
+            "    f.file_type as fileType, \n" +
+            "    f.file_name as fileName, \n" +
+            "    DATE_FORMAT(d.created_at, '%d-%m-%Y %H:%i:%s') as createdAt\n" +
+            "from doctor as d\n" +
+            "inner join user as u on d.user_id = u.user_id\n" +
+            "inner join specialization as s on d.specialization_id = s.specialization_id\n" +
+            "inner join file as f on u.user_id = f.user_id\n" +
+            "where f.file_type = 'avatar'"
+            , countQuery = "SELECT COUNT(*) FROM doctor"
+            , nativeQuery = true)
+    Page<DoctorInfoProjection> getDoctorsInfo(Pageable pageable);
 
 }
