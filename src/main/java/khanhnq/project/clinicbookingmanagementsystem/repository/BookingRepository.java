@@ -138,6 +138,43 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     )
     Page<BookingDetailsInfoProjection> getBookingDetailsByDoctorId(@Param("doctorId") Long doctorId, Pageable pageable);
 
+    @Query(
+            value = "select \n" +
+                    "    b.booking_id as bookingId, \n" +
+                    "    b.booking_code as bookingCode, \n" +
+                    "    s.specialization_name as specializationName, \n" +
+                    "    b.first_name as firstName, \n" +
+                    "    b.last_name as lastName, \n" +
+                    "    DATE_FORMAT(b.date_of_birth, '%d-%m-%Y') as dateOfBirth, \n" +
+                    "    CASE \n" +
+                    "        WHEN b.gender = 1 THEN 'Male'\n" +
+                    "        WHEN b.gender = 0 THEN 'Female'\n" +
+                    "        ELSE 'Other'\n" +
+                    "    END AS gender,\n" +
+                    "    b.phone_number as phoneNumber, \n" +
+                    "    concat(a.specific_address, ', ', w.ward_name, ', ', d.district_name, ', ', c.city_name) as userAddress,\n" +
+                    "    b.describe_symptoms as describeSymptoms, \n" +
+                    "    DATE_FORMAT(dow.working_day, '%d-%m-%Y') as workingDay, \n" +
+                    "    TIME_FORMAT(ws.start_time, '%H:%i') as startTime, \n" +
+                    "    TIME_FORMAT(ws.end_time, '%H:%i') as endTime, \n" +
+                    "    b.status as status, \n" +
+                    "    DATE_FORMAT(b.created_at, '%d-%m-%Y %H:%i:%s') as createdAt\n" +
+                    "from booking as b\n" +
+                    "inner join address as a on b.address_id = a.address_id\n" +
+                    "inner join ward as w on a.ward_id = w.ward_id\n" +
+                    "inner join district as d on w.district_id = d.district_id\n" +
+                    "inner join city as c on d.city_id = c.city_id\n" +
+                    "inner join work_schedule as ws on b.work_schedule_id = ws.work_schedule_id\n" +
+                    "inner join day_of_week as dow on ws.day_of_week_id = dow.day_of_week_id\n" +
+                    "inner join doctor as dt on dow.doctor_id = dt.doctor_id\n" +
+                    "inner join user as u on dt.user_id = u.user_id\n" +
+                    "inner join specialization as s on dt.specialization_id = s.specialization_id\n" +
+                    "order by b.created_at desc",
+            countQuery = "SELECT COUNT(*) FROM booking",
+            nativeQuery = true
+    )
+    Page<BookingDetailsInfoProjection> getAllBookings(Pageable pageable);
+
     @Query(value = "select dt.doctor_id\n" +
             "from booking as b\n" +
             "inner join work_schedule as ws on b.work_schedule_id = ws.work_schedule_id\n" +

@@ -6,13 +6,16 @@ import jakarta.mail.internet.MimeMessage;
 import jakarta.servlet.http.HttpServletRequest;
 import khanhnq.project.clinicbookingmanagementsystem.constant.MessageConstants;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Doctor;
+import khanhnq.project.clinicbookingmanagementsystem.entity.RefreshToken;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ERole;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Role;
 import khanhnq.project.clinicbookingmanagementsystem.entity.User;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EUserStatus;
 import khanhnq.project.clinicbookingmanagementsystem.exception.*;
+import khanhnq.project.clinicbookingmanagementsystem.model.response.RefreshTokenResponse;
 import khanhnq.project.clinicbookingmanagementsystem.model.response.ResponseEntityBase;
 import khanhnq.project.clinicbookingmanagementsystem.repository.DoctorRepository;
+import khanhnq.project.clinicbookingmanagementsystem.repository.RefreshTokenRepository;
 import khanhnq.project.clinicbookingmanagementsystem.repository.RoleRepository;
 import khanhnq.project.clinicbookingmanagementsystem.repository.UserRepository;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.AccountSystemRequest;
@@ -24,7 +27,7 @@ import khanhnq.project.clinicbookingmanagementsystem.security.jwt.JwtUtils;
 import khanhnq.project.clinicbookingmanagementsystem.security.services.BruteForceProtectionService;
 import khanhnq.project.clinicbookingmanagementsystem.security.services.UserDetailsImpl;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
-import lombok.AllArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -33,22 +36,48 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.security.SecureRandom;
+import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 @Service
-@AllArgsConstructor
 public class AuthServiceImpl implements AuthService {
     private UserRepository userRepository;
     private RoleRepository roleRepository;
+    private DoctorRepository doctorRepository;
+    private RefreshTokenRepository refreshTokenRepository;
     private PasswordEncoder passwordEncoder;
     private AuthenticationManager authenticationManager;
     private JwtUtils jwtUtils;
     private final JavaMailSender mailSender;
     private final BruteForceProtectionService bruteForceProtectionService;
-    private DoctorRepository doctorRepository;
+
+    @Value("${khanhnq.cbms.jwtRefreshExpirationMs}")
+    private Long refreshTokenDurationMs;
+
+    public AuthServiceImpl(UserRepository userRepository,
+                           RoleRepository roleRepository,
+                           DoctorRepository doctorRepository,
+                           RefreshTokenRepository refreshTokenRepository,
+                           PasswordEncoder passwordEncoder,
+                           AuthenticationManager authenticationManager,
+                           JwtUtils jwtUtils, JavaMailSender mailSender,
+                           BruteForceProtectionService bruteForceProtectionService) {
+        this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
+        this.doctorRepository = doctorRepository;
+        this.refreshTokenRepository = refreshTokenRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.authenticationManager = authenticationManager;
+        this.jwtUtils = jwtUtils;
+        this.mailSender = mailSender;
+        this.bruteForceProtectionService = bruteForceProtectionService;
+    }
 
     @Override
     public ResponseEntityBase register(RegisterRequest registerRequest) {
@@ -141,14 +170,55 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public ResponseEntityBase login(LoginRequest loginRequest) {
+    public ResponseEntityBase login(LoginRequest loginRequest) throws UnknownHostException {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
         SecurityContextHolder.getContext().setAuthentication(authentication);
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        String jwtResponse = jwtUtils.generateTokenFromUsername(userDetails.getUsername());
-        response.setData(jwtResponse);
+        String accessToken = jwtUtils.generateTokenFromUsername(userDetails.getUsername());
+        if (!loginRequest.isRememberMe()) {
+            response.setData(accessToken);
+        } else {
+            User user = userRepository.findById(userDetails.getUserId()).get();
+            RefreshToken existRefreshToken = refreshTokenRepository.findRefreshTokenByUserId(userDetails.getUserId());
+            RefreshToken refreshToken = Objects.isNull(existRefreshToken) ? new RefreshToken() : existRefreshToken;
+            refreshToken.setToken(UUID.randomUUID().toString());
+            refreshToken.setExpiryDate(Instant.now().plusMillis(refreshTokenDurationMs));
+            refreshToken.setDeviceInfo(InetAddress.getLocalHost().getHostName());
+            refreshToken.setUser(user);
+            refreshToken.setCreatedAt(LocalDateTime.now());
+            refreshToken.setCreatedBy(loginRequest.getUsername());
+            refreshTokenRepository.save(refreshToken);
+            RefreshTokenResponse refreshTokenResponse = RefreshTokenResponse.builder()
+                    .refreshToken(refreshToken.getToken())
+                    .accessToken(accessToken)
+                    .tokenType("Bearer")
+                    .build();
+            response.setData(refreshTokenResponse);
+        }
+        return response;
+    }
+
+    @Override
+    public ResponseEntityBase refreshToken(String token) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        RefreshToken refreshToken = refreshTokenRepository.findRefreshTokenByToken(token);
+        if (Objects.nonNull(refreshToken)) {
+            if (refreshToken.getExpiryDate().compareTo(Instant.now()) < 0) {
+                refreshTokenRepository.delete(refreshToken);
+                throw new ForbiddenException(MessageConstants.REFRESH_TOKEN_EXPIRED);
+            }
+            String accessToken = jwtUtils.generateTokenFromUsername(refreshToken.getUser().getUsername());
+            RefreshTokenResponse refreshTokenResponse = RefreshTokenResponse.builder()
+                    .refreshToken(refreshToken.getToken())
+                    .accessToken(accessToken)
+                    .tokenType("Bearer")
+                    .build();
+            response.setData(refreshTokenResponse);
+        } else {
+            throw new ResourceNotFoundException("Refresh token", token);
+        }
         return response;
     }
 

@@ -14,6 +14,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import java.net.UnknownHostException;
 
 @RestController
 @AllArgsConstructor
@@ -34,8 +35,13 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<ResponseEntityBase> login(@RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<ResponseEntityBase> login(@RequestBody LoginRequest loginRequest) throws UnknownHostException {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(authService.login(loginRequest));
+    }
+
+    @PostMapping("/refresh-token/{token}")
+    public ResponseEntity<ResponseEntityBase> refreshToken(@PathVariable("token") String token) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(authService.refreshToken(token));
     }
 
     @PostMapping("/change-password")

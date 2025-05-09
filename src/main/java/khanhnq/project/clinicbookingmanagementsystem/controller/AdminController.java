@@ -68,14 +68,22 @@ public class AdminController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllDoctors(page, size, sorts));
     }
 
-    @GetMapping("/get-all-specializations")
+    @GetMapping("/get-bookings")
     @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResponseEntityBase> getBookings(@RequestParam(defaultValue = "0") int page,
+                                                          @RequestParam(defaultValue = "3") int size,
+                                                          @RequestParam(defaultValue = "bookingId,asc") String[] sorts) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllBookings(page, size, sorts));
+    }
+
+    @GetMapping("/get-all-specializations")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('DOCTOR') or hasRole('USER')")
     public ResponseEntity<ResponseEntityBase> getAllSpecializations() {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllSpecializations());
     }
 
     @GetMapping("/get-all-services")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('DOCTOR') or hasRole('USER')")
     public ResponseEntity<ResponseEntityBase> getAllServices(@RequestParam(defaultValue = "0") int page,
                                                            @RequestParam(defaultValue = "3") int size,
                                                            @RequestParam(defaultValue = "serviceId,asc") String[] sort) {
@@ -162,12 +170,5 @@ public class AdminController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(response);
     }
 
-    @GetMapping("/get-bookings")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ResponseEntityBase> getBookings(@RequestParam(defaultValue = "0") int page,
-                                                       @RequestParam(defaultValue = "3") int size,
-                                                       @RequestParam(defaultValue = "bookingId,asc") String[] sorts) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllBookings(page, size, sorts));
-    }
 
 }

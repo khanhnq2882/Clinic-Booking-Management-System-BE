@@ -41,4 +41,5 @@ public class MessageConstants {
     public static final String ALL_WORK_SCHEDULES_INVALID = "All registered appointments are invalid because another doctor has already registered.";
     public static final String UPDATE_BOOKED_APPOINTMENT_SUCCESS = "Booking appointment updated successfully.";
     public static final String FORBIDDEN_CHANGE_BOOKING_STATUS = "No permission to change booking status.";
+    public static final String REFRESH_TOKEN_EXPIRED = "Refresh token was expired. Please make a new login request";
 }

@@ -37,6 +37,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -474,9 +475,15 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public ResponseEntityBase getAllBookings(int page, int size, String[] sorts) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        Page<Booking> bookingPage = bookingRepository.getBookingsWithNullUser(commonServiceImpl.pagingSort(page, size, sorts));
-//        BookingResponse bookingResponse = commonServiceImpl.getAllBookings(bookingPage);
-//        response.setData(bookingResponse);
+        Pageable pageable = commonServiceImpl.pagingSort(page, size, sorts);
+        Page<BookingDetailsInfoProjection> bookingsPage = bookingRepository.getAllBookings(pageable);
+        BookingResponse bookingResponse = BookingResponse.builder()
+                .totalItems(bookingsPage.getTotalElements())
+                .totalPages(bookingsPage.getTotalPages())
+                .currentPage(bookingsPage.getNumber())
+                .bookings(bookingsPage.getContent())
+                .build();
+        response.setData(bookingResponse);
         return response;
     }
 

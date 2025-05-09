@@ -8,15 +8,17 @@ import khanhnq.project.clinicbookingmanagementsystem.model.request.ChangePasswor
 import khanhnq.project.clinicbookingmanagementsystem.model.request.LoginRequest;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.RegisterRequest;
 import khanhnq.project.clinicbookingmanagementsystem.model.response.ResponseEntityBase;
+import java.net.UnknownHostException;
 
 public interface AuthService {
     ResponseEntityBase register(RegisterRequest registerRequest);
     ResponseEntityBase newSystemAccount(AccountSystemRequest accountSystemRequest) throws MessagingException;
-    ResponseEntityBase login(LoginRequest loginRequest);
+    ResponseEntityBase login(LoginRequest loginRequest) throws UnknownHostException;
+    ResponseEntityBase refreshToken(String token);
     ResponseEntityBase logout(HttpServletRequest request);
-    User getCurrentUser();
     ResponseEntityBase changePassword(ChangePasswordRequest changePasswordRequest);
     ResponseEntityBase forgotPassword(String email) throws MessagingException;
     ResponseEntityBase getUserByUsername (String username);
     ResponseEntityBase getUserInfo();
+    User getCurrentUser();
 }
