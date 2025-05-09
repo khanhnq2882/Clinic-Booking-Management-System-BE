@@ -1,6 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.model.response;
 
-import khanhnq.project.clinicbookingmanagementsystem.model.dto.projection.BookingDetailsInfoProjection;
+import khanhnq.project.clinicbookingmanagementsystem.model.projection.BookingDetailsInfoProjection;
 import lombok.*;
 import java.util.List;
 

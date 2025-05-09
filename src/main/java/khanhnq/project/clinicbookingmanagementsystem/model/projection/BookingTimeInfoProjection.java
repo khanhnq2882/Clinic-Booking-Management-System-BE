@@ -1,4 +1,4 @@
-package khanhnq.project.clinicbookingmanagementsystem.model.dto.projection;
+package khanhnq.project.clinicbookingmanagementsystem.model.projection;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;

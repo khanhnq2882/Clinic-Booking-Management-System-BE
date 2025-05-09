@@ -2,7 +2,7 @@ package khanhnq.project.clinicbookingmanagementsystem.service;
 
 import jakarta.mail.MessagingException;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Services;
-import khanhnq.project.clinicbookingmanagementsystem.model.dto.projection.BookingDetailsInfoProjection;
+import khanhnq.project.clinicbookingmanagementsystem.model.projection.BookingDetailsInfoProjection;
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.ServicesDTO;
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.UserDTO;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.ServiceRequest;

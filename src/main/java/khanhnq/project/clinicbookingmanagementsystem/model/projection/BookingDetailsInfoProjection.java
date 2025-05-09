@@ -1,4 +1,4 @@
-package khanhnq.project.clinicbookingmanagementsystem.model.dto.projection;
+package khanhnq.project.clinicbookingmanagementsystem.model.projection;
 
 public interface BookingDetailsInfoProjection {
     Long getBookingId();

@@ -9,9 +9,9 @@ import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EBookingStatus
 import khanhnq.project.clinicbookingmanagementsystem.exception.SystemException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceNotFoundException;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.BookingMapper;
-import khanhnq.project.clinicbookingmanagementsystem.model.dto.projection.BookingDetailsInfoProjection;
-import khanhnq.project.clinicbookingmanagementsystem.model.dto.projection.BookingTimeInfoProjection;
-import khanhnq.project.clinicbookingmanagementsystem.model.dto.projection.DoctorDetailsInfoProjection;
+import khanhnq.project.clinicbookingmanagementsystem.model.projection.BookingDetailsInfoProjection;
+import khanhnq.project.clinicbookingmanagementsystem.model.projection.BookingTimeInfoProjection;
+import khanhnq.project.clinicbookingmanagementsystem.model.projection.DoctorDetailsInfoProjection;
 import khanhnq.project.clinicbookingmanagementsystem.model.response.BookingResponse;
 import khanhnq.project.clinicbookingmanagementsystem.model.response.FileResponse;
 import khanhnq.project.clinicbookingmanagementsystem.model.response.ResponseEntityBase;

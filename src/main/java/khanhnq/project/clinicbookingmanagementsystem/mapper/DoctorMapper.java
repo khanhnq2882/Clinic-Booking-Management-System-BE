@@ -1,7 +1,7 @@
 package khanhnq.project.clinicbookingmanagementsystem.mapper;
 
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.DoctorInfoDTO;
-import khanhnq.project.clinicbookingmanagementsystem.model.dto.projection.DoctorInfoProjection;
+import khanhnq.project.clinicbookingmanagementsystem.model.projection.DoctorInfoProjection;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 

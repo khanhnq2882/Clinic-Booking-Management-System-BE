@@ -4,7 +4,7 @@ import khanhnq.project.clinicbookingmanagementsystem.constant.MessageConstants;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EEducationLevel;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ERole;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceNotFoundException;
-import khanhnq.project.clinicbookingmanagementsystem.model.dto.projection.BookingDetailsInfoProjection;
+import khanhnq.project.clinicbookingmanagementsystem.model.projection.BookingDetailsInfoProjection;
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.SpecializationDTO;
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.WorkScheduleDTO;
 import khanhnq.project.clinicbookingmanagementsystem.exception.SystemException;

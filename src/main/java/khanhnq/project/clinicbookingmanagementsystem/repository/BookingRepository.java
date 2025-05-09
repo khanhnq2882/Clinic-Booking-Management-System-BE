@@ -2,8 +2,8 @@ package khanhnq.project.clinicbookingmanagementsystem.repository;
 
 import jakarta.transaction.Transactional;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Booking;
-import khanhnq.project.clinicbookingmanagementsystem.model.dto.projection.BookingDetailsInfoProjection;
-import khanhnq.project.clinicbookingmanagementsystem.model.dto.projection.BookingTimeInfoProjection;
+import khanhnq.project.clinicbookingmanagementsystem.model.projection.BookingDetailsInfoProjection;
+import khanhnq.project.clinicbookingmanagementsystem.model.projection.BookingTimeInfoProjection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
