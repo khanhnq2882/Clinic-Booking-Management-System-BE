@@ -265,23 +265,39 @@ public class AdminServiceImpl implements AdminService {
         try {
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             Sheet sheet = workbook.createSheet("Users");
-            String[] headers = {"User Code", "Email", "Full Name", "Date Of Birth",
-                    "Gender", "Phone Number", "Address", "Status"};
+            String[] headers = {"User ID", "User Code", "Full Name", "Email", "Date Of Birth",
+                    "Gender", "Phone Number",  "Address", "Status", "Created At"};
             commonServiceImpl.createHeader(workbook, sheet, headers);
             int firstRow = 1;
             for (UserDTO user : users) {
                 Row currentRow = sheet.createRow(firstRow++);
-                String fullName = user.getFirstName() + " " + user.getLastName();
+                String fullName = Objects.isNull(user.getFirstName()) && Objects.isNull(user.getLastName()) ? "" : (user.getFirstName() + " " + user.getLastName());
                 AddressResponse userAddress = user.getUserAddress();
-                String address = userAddress.getSpecificAddress() + ", " + userAddress.getWardName() + ", " + userAddress.getDistrictName() + ", " + userAddress.getCityName();
-                commonServiceImpl.createCell(workbook, currentRow, 0, user.getUserCode());
-                commonServiceImpl.createCell(workbook, currentRow, 1, user.getEmail());
-                commonServiceImpl.createCell(workbook, currentRow, 2, Objects.isNull(user.getFirstName()) && Objects.isNull(user.getLastName()) ? " " : fullName);
-                commonServiceImpl.createCell(workbook, currentRow, 3, Objects.isNull(user.getDateOfBirth()) ? " " : user.getDateOfBirth());
-//                commonServiceImpl.createCell(workbook, currentRow, 4, user.getGender() == 1 ? "Male" : "Female");
-                commonServiceImpl.createCell(workbook, currentRow, 5, Objects.isNull(user.getPhoneNumber()) ? " " : user.getPhoneNumber());
-                commonServiceImpl.createCell(workbook, currentRow, 6, Objects.isNull(user.getUserAddress().getSpecificAddress()) ? " " : address);
-                commonServiceImpl.createCell(workbook, currentRow, 7, user.getStatus());
+                String address = "";
+                if (userAddress.getAddressId() != null) {
+                    address = userAddress.getSpecificAddress() + ", " + userAddress.getWardName() + ", " + userAddress.getDistrictName() + ", " + userAddress.getCityName();
+                }
+                String gender = user.getGender().equals("1") ? "Male" : "Female";
+                String dateOfBirth = "";
+                if (user.getDateOfBirth() != null) {
+                    DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("M/d/yy, h:mm a", Locale.ENGLISH);
+                    LocalDateTime dateTime = LocalDateTime.parse(user.getDateOfBirth().replaceAll("[\\u202F\\u00A0]", " "), inputFormatter);
+                    DateTimeFormatter outputFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+                    dateOfBirth = dateTime.format(outputFormatter);
+                }
+                DateTimeFormatter createdAtFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
+                LocalDateTime createdAt = LocalDateTime.parse(user.getCreatedAt().toString());
+                user.setCreatedAt(createdAt.format(createdAtFormatter));
+                commonServiceImpl.createCell(workbook, currentRow, 0, user.getUserId());
+                commonServiceImpl.createCell(workbook, currentRow, 1, user.getUserCode());
+                commonServiceImpl.createCell(workbook, currentRow, 2, fullName);
+                commonServiceImpl.createCell(workbook, currentRow, 3, user.getEmail());
+                commonServiceImpl.createCell(workbook, currentRow, 4, dateOfBirth);
+                commonServiceImpl.createCell(workbook, currentRow, 5, gender);
+                commonServiceImpl.createCell(workbook, currentRow, 6, Objects.isNull(user.getPhoneNumber()) ? "" : user.getPhoneNumber());
+                commonServiceImpl.createCell(workbook, currentRow, 7, address);
+                commonServiceImpl.createCell(workbook, currentRow, 8, user.getStatus());
+                commonServiceImpl.createCell(workbook, currentRow, 9, user.getCreatedAt());
             }
             workbook.write(outputStream);
             return new ByteArrayInputStream(outputStream.toByteArray());
@@ -619,10 +635,10 @@ public class AdminServiceImpl implements AdminService {
                 .map(bookingExcelResponse -> {
                     Booking booking = BookingMapper.BOOKING_MAPPER.mapExcelToBooking(bookingExcelResponse.getBookingExcelDTO());
                     LocalDate appointmentDate = bookingExcelResponse.getBookingExcelDTO().getAppointmentDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-                    WorkSchedule workSchedule = workScheduleRepository.getWorkScheduleByTime(
-                            bookingExcelResponse.getBookingExcelDTO().getSpecializationName(), appointmentDate.getDayOfWeek(),
-                            bookingExcelResponse.getBookingExcelDTO().getStartTime(), bookingExcelResponse.getBookingExcelDTO().getEndTime());
-                    booking.setWorkSchedule(workSchedule);
+//                    WorkSchedule workSchedule = workScheduleRepository.getWorkScheduleByTime(
+//                            bookingExcelResponse.getBookingExcelDTO().getSpecializationName(), appointmentDate.getDayOfWeek(),
+//                            bookingExcelResponse.getBookingExcelDTO().getStartTime(), bookingExcelResponse.getBookingExcelDTO().getEndTime());
+//                    booking.setWorkSchedule(workSchedule);
                     booking.setStatus(EBookingStatus.PENDING);
                     return booking;
                 }).toList();

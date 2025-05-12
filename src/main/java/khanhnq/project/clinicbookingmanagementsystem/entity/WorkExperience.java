@@ -29,6 +29,7 @@ public class WorkExperience extends BaseEntity {
 
     private Integer yearOfEndWork;
 
+    @Column(nullable = false)
     private String description;
 
     @ManyToOne

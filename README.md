@@ -35,7 +35,7 @@ hợp khiếu nại xảy ra và không lưu lịch sử bệnh án trên hệ t
 * ROLE USER
 - Cập nhật thông tin cá nhân trên hệ thống (họ tên, sđt, ngày sinh, địa chỉ, ...) - OK
 - Đặt, sửa và hủy lịch khám -> OK
-- Quản lý danh sách lịch khám
+- Quản lý danh sách lịch khám -> OK
 - Mua các gói dịch vụ
 - Xem lịch sử khám và bệnh án
 - Thanh toán online (VNPay, Momo,...)
@@ -43,9 +43,10 @@ hợp khiếu nại xảy ra và không lưu lịch sử bệnh án trên hệ t
 - Gửi yêu cầu hỗ trợ đến admin (Trường hợp hủy, hỏi đáp, ...)
 
 * ROLE DOCTOR
-- Cập nhật thông tin cá nhân trên hệ thống (họ tên, sđt, ngày sinh, địa chỉ, ...)
-- Cập nhật thông tin bác sĩ (chuyên khoa,các chứng chỉ, tiểu sử, kinh nghiệm,...)
-- Quản lý danh sách lịch khám
+- Cập nhật thông tin cá nhân trên hệ thống (họ tên, sđt, ngày sinh, địa chỉ, ...) -> OK
+- Cập nhật thông tin bác sĩ (chuyên khoa,các chứng chỉ, tiểu sử, kinh nghiệm,...) -> OK
+- Cập nhật lịch làm việc trong tuần -> OK
+- Quản lý danh sách lịch khám -> OK
 - Tạo hóa đơn bao gồm các gói dịch vụ người  bệnh sử dụng trong khi khám
 - Xem và cập nhật hồ sơ bệnh án của bệnh nhân sau mỗi lần khám
 - Gửi thông báo đến bệnh nhân (nếu lịch thay đổi hoặc có đề xuất khác).

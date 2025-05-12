@@ -1,5 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
+import jakarta.transaction.Transactional;
 import khanhnq.project.clinicbookingmanagementsystem.constant.MessageConstants;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EEducationLevel;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ERole;
@@ -97,6 +98,7 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
+    @Transactional
     public ResponseEntityBase registerWorkSchedules(RegisterWorkScheduleRequest registerWorkSchedule) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         User currentUser = authService.getCurrentUser();
@@ -114,40 +116,47 @@ public class DoctorServiceImpl implements DoctorService {
                 workingDayLocalDate.isAfter(endOfWeek)) {
             throw new SystemException(MessageConstants.INVALID_WORKING_DAY);
         }
-        DayOfWeek dayOfWeek = workingDay.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().getDayOfWeek();
-        if (Arrays.stream(DayOfWeek.values()).noneMatch(dayOfWeek::equals)) {
-            throw new SystemException(MessageConstants.INVALID_DAY_OF_WEEK);
-        }
         List<WorkScheduleDTO> newWorkSchedules = registerWorkSchedule.getWorkSchedules();
-        if (newWorkSchedules.size() != registerWorkSchedule.getNumberOfShiftsPerDay()) {
-            throw new SystemException(MessageConstants.INVALID_WORK_SCHEDULES);
-        }
-        DaysOfWeek oldDaysOfWeek = dayOfWeekRepository.getDayOfWeekByDay(doctor.getDoctorId(), dayOfWeek);
-        if (Objects.nonNull(oldDaysOfWeek)) {
-            dayOfWeekRepository.delete(oldDaysOfWeek);
-        }
-        DaysOfWeek newDayOfWeek = Objects.nonNull(oldDaysOfWeek) ? oldDaysOfWeek : new DaysOfWeek();
+        DaysOfWeek existDayOfWeek = dayOfWeekRepository.getDayOfWeekByWorkingDay(doctor.getDoctorId(), registerWorkSchedule.getWorkingDay());
+        DaysOfWeek newDayOfWeek = Objects.nonNull(existDayOfWeek) ? existDayOfWeek : new DaysOfWeek();
         Long specializationId = doctor.getSpecialization().getSpecializationId();
-        List<Doctor> doctors = doctorRepository.getDoctorsBySpecializationId(specializationId)
-                .stream().filter(dt -> !dt.equals(doctor)).toList();
-        List<WorkScheduleDTO> invalidWorkSchedules = invalidWorkSchedules(doctors, registerWorkSchedule);
-        List<WorkSchedule> validWorkSchedules = newWorkSchedules.stream()
+        List<Doctor> doctors = doctorRepository.getDoctorsBySpecializationId(specializationId).stream().filter(dt -> !dt.equals(doctor)).toList();
+        List<WorkScheduleDTO> invalidWorkSchedules = invalidWorkSchedules(doctors, registerWorkSchedule).stream().toList();
+        List<WorkScheduleDTO> filterValidWorkSchedules = newWorkSchedules
+                .stream()
                 .filter(workScheduleDTO -> !invalidWorkSchedules.contains(workScheduleDTO))
+                .toList();
+        List<WorkSchedule> workSchedulesNotInBooking = workScheduleRepository.getWorkSchedulesNotInBooking(
+                doctor.getDoctorId(), registerWorkSchedule.getWorkingDay());
+        if (workSchedulesNotInBooking.size() > 0) {
+            workScheduleRepository.deleteAll(workSchedulesNotInBooking);
+            List<WorkSchedule> workSchedulesInBooking = workScheduleRepository.getWorkSchedulesInBooking(
+                    doctor.getDoctorId(), registerWorkSchedule.getWorkingDay());
+            filterValidWorkSchedules = filterValidWorkSchedules.stream()
+                    .filter(workScheduleDTO -> workSchedulesInBooking.stream()
+                            .noneMatch(workSchedule ->
+                                    workScheduleDTO.getStartTime().equals(workSchedule.getStartTime()) &&
+                                            workScheduleDTO.getEndTime().equals(workSchedule.getEndTime())
+                            )
+                    ).toList();
+        }
+        List<WorkSchedule> validWorkSchedules = filterValidWorkSchedules
+                .stream()
                 .map(workScheduleDTO -> {
-                    WorkSchedule workSchedule = WorkScheduleMapper.WORK_SCHEDULE_MAPPER.mapToWorkSchedule(workScheduleDTO);
-                    workSchedule.setDaysOfWeek(newDayOfWeek);
-                    workSchedule.setCreatedBy(currentUser.getUsername());
-                    workSchedule.setCreatedAt(LocalDateTime.now());
-                    return workSchedule;
-                }).toList();
+                        WorkSchedule workSchedule = WorkScheduleMapper.WORK_SCHEDULE_MAPPER.mapToWorkSchedule(workScheduleDTO);
+                        workSchedule.setDaysOfWeek(newDayOfWeek);
+                        workSchedule.setCreatedBy(currentUser.getUsername());
+                        workSchedule.setCreatedAt(LocalDateTime.now());
+                        return workSchedule;
+                    })
+                .toList();
         if (validWorkSchedules.size() == 0) {
             throw new SystemException(MessageConstants.ALL_WORK_SCHEDULES_INVALID);
         } else {
-            newDayOfWeek.setDayOfWeek(dayOfWeek);
             newDayOfWeek.setWorkingDay(workingDay);
             newDayOfWeek.setDoctor(doctor);
-            newDayOfWeek.setNumberOfShiftsPerDay(validWorkSchedules.size());
-            newDayOfWeek.setWorkSchedules(validWorkSchedules);
+            newDayOfWeek.getWorkSchedules().addAll(validWorkSchedules);
+            newDayOfWeek.setWorkSchedules(newDayOfWeek.getWorkSchedules());
             newDayOfWeek.setCreatedBy(currentUser.getUsername());
             newDayOfWeek.setCreatedAt(LocalDateTime.now());
             doctor.getDaysOfWeeks().add(newDayOfWeek);
@@ -204,7 +213,8 @@ public class DoctorServiceImpl implements DoctorService {
         Doctor doctor = doctorRepository.findDoctorByUserId(currentUser.getUserId());
         if (Objects.nonNull(doctor)) {
             Pageable pageable = commonServiceImpl.pagingSort(page, size, sorts);
-            Page<BookingDetailsInfoProjection> bookingDetailsPage = bookingRepository.getBookingDetailsByDoctorId(doctor.getDoctorId(), pageable);
+            Page<BookingDetailsInfoProjection> bookingDetailsPage =
+                    bookingRepository.getBookingDetailsByDoctorId(doctor.getDoctorId(), pageable);
             BookingResponse bookingResponse = BookingResponse.builder()
                     .totalItems(bookingDetailsPage.getTotalElements())
                     .totalPages(bookingDetailsPage.getTotalPages())
@@ -244,10 +254,8 @@ public class DoctorServiceImpl implements DoctorService {
         return isExist;
     }
 
-    public List<WorkScheduleDTO> invalidWorkSchedules(List<Doctor> doctors, RegisterWorkScheduleRequest registerWorkSchedule) {
-        List<WorkScheduleDTO> invalidWorkSchedules = new ArrayList<>();
-        DayOfWeek dayOfWeek =
-                registerWorkSchedule.getWorkingDay().toInstant().atZone(ZoneId.systemDefault()).toLocalDate().getDayOfWeek();
+    public Set<WorkScheduleDTO> invalidWorkSchedules(List<Doctor> doctors, RegisterWorkScheduleRequest registerWorkSchedule) {
+        Set<WorkScheduleDTO> invalidWorkSchedules = new HashSet<>();
         if (doctors.size() == 0) {
             List<WorkScheduleDTO> workSchedules = registerWorkSchedule.getWorkSchedules().stream()
                     .filter(newSchedule -> !isValidDuration(newSchedule.getStartTime(), newSchedule.getEndTime()))
@@ -255,17 +263,17 @@ public class DoctorServiceImpl implements DoctorService {
             invalidWorkSchedules.addAll(workSchedules);
         } else {
             doctors.forEach(doctor -> {
-                DaysOfWeek daysOfWeek = dayOfWeekRepository.getDayOfWeekByDay(doctor.getDoctorId(), dayOfWeek);
-                List<WorkScheduleDTO> existWorkSchedules = workScheduleRepository.getWorkSchedulesByDayOfWeek(daysOfWeek)
-                        .stream().map(WorkScheduleMapper.WORK_SCHEDULE_MAPPER::mapToWorkScheduleDTO).toList();
-                List<WorkScheduleDTO> workSchedules = registerWorkSchedule.getWorkSchedules().stream()
+                List<WorkSchedule> existWorkSchedules =
+                        workScheduleRepository.getWorkSchedulesByWorkingDay(doctor.getDoctorId(), registerWorkSchedule.getWorkingDay());
+                List<WorkScheduleDTO> workScheduleDTOS = existWorkSchedules.stream().map(WorkScheduleMapper.WORK_SCHEDULE_MAPPER::mapToWorkScheduleDTO).toList();
+                List<WorkScheduleDTO> filterWorkSchedules = registerWorkSchedule.getWorkSchedules().stream()
                         .filter(newSchedule -> !isValidDuration(newSchedule.getStartTime(), newSchedule.getEndTime()) ||
-                                existWorkSchedules.stream().anyMatch(existSchedule ->
+                                workScheduleDTOS.stream().anyMatch(existSchedule ->
                                         isTimeOverlap(newSchedule.getStartTime(), newSchedule.getEndTime(),
                                                 existSchedule.getStartTime(), existSchedule.getEndTime())
                                 )
                         ).toList();
-                invalidWorkSchedules.addAll(workSchedules);
+                invalidWorkSchedules.addAll(filterWorkSchedules);
             });
         }
         return invalidWorkSchedules;
