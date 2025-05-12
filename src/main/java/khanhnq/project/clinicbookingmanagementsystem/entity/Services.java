@@ -40,6 +40,4 @@ public class Services extends BaseEntity{
 
     @OneToMany(mappedBy = "service", cascade = CascadeType.ALL)
     private List<TestPackage> testPackages;
-
-
 }

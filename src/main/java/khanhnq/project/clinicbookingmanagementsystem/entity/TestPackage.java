@@ -3,7 +3,7 @@ package khanhnq.project.clinicbookingmanagementsystem.entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import khanhnq.project.clinicbookingmanagementsystem.entity.eav.TestPackageAttributeValue;
+import khanhnq.project.clinicbookingmanagementsystem.entity.eav.TestPackageAttribute;
 import lombok.*;
 import java.util.List;
 
@@ -37,8 +37,13 @@ public class TestPackage extends BaseEntity{
     private Services service;
 
     @OneToMany(mappedBy = "testPackage", cascade = CascadeType.ALL)
-    private List<TestPackageAttributeValue> testPackageAttributeValues;
-
-    @OneToMany(mappedBy = "testPackage", cascade = CascadeType.ALL)
     private List<LabResult> labResults;
+
+    @ManyToMany
+    @JoinTable(
+            name = "test_package_attribute_mapping",
+            joinColumns = @JoinColumn(name = "test_package_id"),
+            inverseJoinColumns = @JoinColumn(name = "attribute_id")
+    )
+    private List<TestPackageAttribute> attributes;
 }

@@ -2,7 +2,9 @@ package khanhnq.project.clinicbookingmanagementsystem.entity.eav;
 
 import jakarta.persistence.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.BaseEntity;
+import khanhnq.project.clinicbookingmanagementsystem.entity.TestPackage;
 import lombok.*;
+import java.util.List;
 
 @Entity
 @Getter
@@ -16,5 +18,12 @@ public class TestPackageAttribute extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long testPackageAttributeId;
 
-    private String testPackageName;
+    private String testName;
+    private String unit;
+    private String normalRange;
+    private String method;
+    private String deviceType;
+
+    @ManyToMany(mappedBy = "attributes")
+    private List<TestPackage> testPackages;
 }

@@ -20,6 +20,9 @@ public class Specialization extends BaseEntity{
     @Column(nullable = false)
     private String specializationName;
 
+    @Column(nullable = false)
+    private String specializationDescription;
+
     @OneToMany(mappedBy = "specialization", cascade = CascadeType.ALL)
     private Set<Services> services;
 
