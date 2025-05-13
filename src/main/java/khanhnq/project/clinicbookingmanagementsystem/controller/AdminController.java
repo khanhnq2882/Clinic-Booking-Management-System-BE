@@ -3,6 +3,7 @@ package khanhnq.project.clinicbookingmanagementsystem.controller;
 import jakarta.mail.MessagingException;
 import khanhnq.project.clinicbookingmanagementsystem.entity.File;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Services;
+import khanhnq.project.clinicbookingmanagementsystem.model.request.TestPackageRequest;
 import khanhnq.project.clinicbookingmanagementsystem.model.response.*;
 import khanhnq.project.clinicbookingmanagementsystem.repository.ServicesRepository;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.ServiceRequest;
@@ -106,6 +107,24 @@ public class AdminController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ResponseEntityBase> updateService(@PathVariable("serviceId") Long serviceId ,@RequestBody ServiceRequest serviceRequest) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.updateService(serviceRequest, serviceId));
+    }
+
+    @PostMapping("/add-test-package")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResponseEntityBase> addTestPackage(@RequestBody TestPackageRequest testPackageRequest) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.addTestPackage(testPackageRequest));
+    }
+
+    @PostMapping("/update-test-package/{testPackageId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResponseEntityBase> updateTestPackage(@PathVariable("testPackageId") Long testPackageId, @RequestBody TestPackageRequest testPackageRequest) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.updateTestPackage(testPackageId, testPackageRequest));
+    }
+
+    @PostMapping("/update-test-package-status/{testPackageId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResponseEntityBase> updateTestPackageStatus(@PathVariable("testPackageId") Long testPackageId, @RequestParam String status) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.updateTestPackageStatus(testPackageId, status));
     }
 
     @GetMapping("/export-users-to-excel")

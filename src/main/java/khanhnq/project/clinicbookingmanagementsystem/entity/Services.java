@@ -25,6 +25,9 @@ public class Services extends BaseEntity{
     @Column(nullable = false)
     private Double servicePrice;
 
+    @Column(nullable = false)
+    private Integer durationMinutes;
+
     @NotBlank
     @Size(max = 255)
     @Column(nullable = false)

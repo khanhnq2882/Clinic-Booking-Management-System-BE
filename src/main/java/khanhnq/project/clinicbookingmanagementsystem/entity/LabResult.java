@@ -18,10 +18,19 @@ public class LabResult extends BaseEntity{
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long labResultId;
 
+    @Column(nullable = false)
+    private LocalDateTime sampleCollectionTime;
+
+    @Column(nullable = false)
+    private LocalDateTime sampleReceptionTime;
+
+    @Column(nullable = false)
     private LocalDateTime testDate;
 
+    @Column(nullable = false)
     private LocalDateTime resultDeliveryDate;
 
+    @Column(nullable = false)
     private String note;
 
     @Enumerated(EnumType.STRING)
@@ -40,5 +49,9 @@ public class LabResult extends BaseEntity{
 
     @ManyToOne
     @JoinColumn(name = "user_id")
-    private User doctorPrescribed;
+    private User user;
+
+    @ManyToOne
+    @JoinColumn(name = "doctor_id")
+    private Doctor doctorPrescribed;
 }

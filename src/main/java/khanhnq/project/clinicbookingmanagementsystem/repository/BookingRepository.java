@@ -15,21 +15,6 @@ import java.util.List;
 
 @Repository
 public interface BookingRepository extends JpaRepository<Booking, Long> {
-    @Modifying
-    @Transactional
-    @Query(value = "UPDATE booking SET status = 'CONFIRMED' WHERE booking_id = :bookingId", nativeQuery = true)
-    void confirmedBooking (@Param("bookingId") Long bookingId);
-
-    @Modifying
-    @Transactional
-    @Query(value = "UPDATE booking SET status = 'CANCELLED' WHERE booking_id = :bookingId", nativeQuery = true)
-    void cancelledBooking (@Param("bookingId") Long bookingId);
-
-    @Modifying
-    @Transactional
-    @Query(value = "UPDATE booking SET status = 'COMPLETED' WHERE booking_id = :bookingId", nativeQuery = true)
-    void completedBooking (@Param("bookingId") Long bookingId);
-
     @Query(value = "select b.booking_id as bookingId, dof.working_day as workingDay, ws.start_time as startTime, ws.end_time as endTime \n" +
             "from booking as b\n" +
             "inner join work_schedule as ws on b.work_schedule_id = ws.work_schedule_id\n" +

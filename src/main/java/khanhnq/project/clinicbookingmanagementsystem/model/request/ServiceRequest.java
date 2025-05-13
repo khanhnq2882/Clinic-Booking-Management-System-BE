@@ -12,13 +12,13 @@ import org.hibernate.validator.constraints.Length;
 @NoArgsConstructor
 @Builder
 public class ServiceRequest {
-    private Long serviceCategoryId;
+    private Long specializationId;
 
     @NotNull(message = "Service name can't be empty.")
     @Length(max = 50, message = "Service name has a maximum of 50 characters.")
     private String serviceName;
 
-    private Double price;
+    private Double servicePrice;
 
     @NotNull(message = "Description can't be empty.")
     @Length(max = 255, message = "Description has a maximum of 255 characters.")

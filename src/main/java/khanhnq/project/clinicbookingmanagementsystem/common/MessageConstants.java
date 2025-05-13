@@ -1,4 +1,4 @@
-package khanhnq.project.clinicbookingmanagementsystem.constant;
+package khanhnq.project.clinicbookingmanagementsystem.common;
 
 public class MessageConstants {
     public static final String REGISTER_SUCCESS = "Successful account registration.";
@@ -42,4 +42,8 @@ public class MessageConstants {
     public static final String UPDATE_BOOKED_APPOINTMENT_SUCCESS = "Booking appointment updated successfully.";
     public static final String FORBIDDEN_CHANGE_BOOKING_STATUS = "No permission to change booking status.";
     public static final String REFRESH_TOKEN_EXPIRED = "Refresh token was expired. Please make a new login request";
+    public static final String ERROR_NAME_FIELD_IN_TEST_PACKAGE = "Each attribute in the test package must have a 'name' field and the value of 'name' cannot be empty.";
+    public static final String ADD_TEST_PACKAGE_SUCCESS = "Add test package successfully.";
+    public static final String UPDATE_TEST_PACKAGE_SUCCESS = "Update test package successfully.";
+    public static final String UPDATE_TEST_PACKAGE_STATUS_SUCCESS = "Update test package status successfully.";
 }

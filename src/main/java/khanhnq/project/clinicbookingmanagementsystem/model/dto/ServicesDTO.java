@@ -10,8 +10,8 @@ import lombok.*;
 public class ServicesDTO {
     private Long serviceId;
     private String serviceName;
-    private Double price;
+    private Double servicePrice;
     private String description;
     private String status;
-    private String serviceCategoryName;
+    private String specializationName;
 }

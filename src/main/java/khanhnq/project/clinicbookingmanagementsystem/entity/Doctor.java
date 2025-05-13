@@ -40,6 +40,9 @@ public class Doctor extends BaseEntity {
     @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL)
     private List<DaysOfWeek> daysOfWeeks = new ArrayList<>();
 
+    @OneToMany(mappedBy = "doctorPrescribed", cascade = CascadeType.ALL)
+    private List<LabResult> labResults;
+
     @OneToOne(cascade = CascadeType.PERSIST, fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id")
     private User user;

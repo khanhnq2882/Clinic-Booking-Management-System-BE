@@ -81,10 +81,10 @@ public class User extends BaseEntity{
     private Set<Booking> bookings = new HashSet<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-    private List<MedicalRecord> medicalRecords;
-
-    @OneToMany(mappedBy = "doctorPrescribed", cascade = CascadeType.ALL)
     private List<LabResult> labResults;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private List<MedicalRecord> medicalRecords;
 
     @Override
     public boolean equals(Object o) {

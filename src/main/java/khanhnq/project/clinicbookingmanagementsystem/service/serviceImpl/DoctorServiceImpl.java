@@ -1,7 +1,8 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
 import jakarta.transaction.Transactional;
-import khanhnq.project.clinicbookingmanagementsystem.constant.MessageConstants;
+import khanhnq.project.clinicbookingmanagementsystem.common.MessageConstants;
+import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EBookingStatus;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EEducationLevel;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ERole;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceNotFoundException;
@@ -170,12 +171,15 @@ public class DoctorServiceImpl implements DoctorService {
     @Override
     public ResponseEntityBase confirmedBooking(Long bookingId) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        User currentUser = authService.getCurrentUser();
         Booking booking = validateChangeBookingStatus(bookingId);
         String bookingStatus = booking.getStatus().toString();
         if (!bookingStatus.equals("PENDING")) {
             throw new SystemException("Your appointment has been " + bookingStatus + " and cannot be confirmed.");
         }
-        bookingRepository.confirmedBooking(bookingId);
+        booking.setStatus(EBookingStatus.CONFIRMED);
+        booking.setUpdatedBy(currentUser.getUsername());
+        bookingRepository.save(booking);
         response.setData(MessageConstants.CONFIRM_BOOKING_SUCCESS);
         return response;
     }
@@ -183,12 +187,15 @@ public class DoctorServiceImpl implements DoctorService {
     @Override
     public ResponseEntityBase cancelledBooking(Long bookingId) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        User currentUser = authService.getCurrentUser();
         Booking booking = validateChangeBookingStatus(bookingId);
         String bookingStatus = booking.getStatus().toString();
         if (!bookingStatus.equals("PENDING") && !bookingStatus.equals("CONFIRMED")) {
             throw new SystemException("Your appointment has been " + bookingStatus + " and cannot be cancelled.");
         }
-        bookingRepository.cancelledBooking(bookingId);
+        booking.setStatus(EBookingStatus.CANCELLED);
+        booking.setUpdatedBy(currentUser.getUsername());
+        bookingRepository.save(booking);
         response.setData(MessageConstants.CANCELED_BOOKING_SUCCESS);
         return response;
     }
@@ -196,12 +203,15 @@ public class DoctorServiceImpl implements DoctorService {
     @Override
     public ResponseEntityBase completedBooking(Long bookingId) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        User currentUser = authService.getCurrentUser();
         Booking booking = validateChangeBookingStatus(bookingId);
         String bookingStatus = booking.getStatus().toString();
         if (!bookingStatus.equals("CONFIRMED") && !bookingStatus.equals("CANCELLED")) {
             throw new SystemException("Your appointment has been " + bookingStatus + " and cannot be cancelled.");
         }
-        bookingRepository.completedBooking(bookingId);
+        booking.setStatus(EBookingStatus.COMPLETED);
+        booking.setUpdatedBy(currentUser.getUsername());
+        bookingRepository.save(booking);
         response.setData(MessageConstants.COMPLETED_BOOKING_SUCCESS);
         return response;
     }
@@ -228,15 +238,15 @@ public class DoctorServiceImpl implements DoctorService {
 
     public Booking validateChangeBookingStatus(Long bookingId) {
         User currentUser = authService.getCurrentUser();
-        boolean checkAdmin = currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().equals(ERole.ROLE_ADMIN));
+        boolean checkAdmin = currentUser.getRoles().stream().anyMatch(role -> role.getRoleName().equals(ERole.ROLE_ADMIN));
         Optional<Booking> bookingOptional = bookingRepository.findById(bookingId);
         if (bookingOptional.isEmpty()) {
             throw new ResourceNotFoundException("Booking id", bookingId.toString());
         }
         long doctorId = bookingRepository.getDoctorIdByBookingId(bookingId);
         Doctor doctor = doctorRepository.findDoctorByUserId(currentUser.getUserId());
-        if (doctor != null) {
-            if (checkAdmin || !doctor.getDoctorId().equals(doctorId)) {
+        if (!checkAdmin) {
+            if (doctor != null && !doctor.getDoctorId().equals(doctorId)) {
                 throw new ForbiddenException(MessageConstants.FORBIDDEN_CHANGE_BOOKING_STATUS);
             }
         }

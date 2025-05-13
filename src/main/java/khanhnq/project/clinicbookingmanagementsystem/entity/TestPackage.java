@@ -3,8 +3,9 @@ package khanhnq.project.clinicbookingmanagementsystem.entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import khanhnq.project.clinicbookingmanagementsystem.entity.eav.TestPackageAttribute;
+import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ETestPackageStatus;
 import lombok.*;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -18,6 +19,9 @@ public class TestPackage extends BaseEntity{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long testPackageId;
+
+    @Column(nullable = false)
+    private String testPackageName;
 
     @Column(nullable = false)
     private Double testPackagePrice;
@@ -36,14 +40,18 @@ public class TestPackage extends BaseEntity{
     @JoinColumn(name = "service_id")
     private Services service;
 
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private ETestPackageStatus status;
+
     @OneToMany(mappedBy = "testPackage", cascade = CascadeType.ALL)
     private List<LabResult> labResults;
 
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REMOVE})
     @JoinTable(
             name = "test_package_attribute_mapping",
             joinColumns = @JoinColumn(name = "test_package_id"),
-            inverseJoinColumns = @JoinColumn(name = "attribute_id")
+            inverseJoinColumns = @JoinColumn(name = "test_package_attribute_id")
     )
-    private List<TestPackageAttribute> attributes;
+    private List<TestPackageAttribute> testPackageAttributes = new ArrayList<>();
 }

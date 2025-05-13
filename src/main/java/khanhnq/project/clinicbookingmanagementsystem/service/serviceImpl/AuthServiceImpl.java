@@ -4,7 +4,7 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import jakarta.servlet.http.HttpServletRequest;
-import khanhnq.project.clinicbookingmanagementsystem.constant.MessageConstants;
+import khanhnq.project.clinicbookingmanagementsystem.common.MessageConstants;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Doctor;
 import khanhnq.project.clinicbookingmanagementsystem.entity.RefreshToken;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ERole;

@@ -6,6 +6,7 @@ import khanhnq.project.clinicbookingmanagementsystem.model.projection.BookingDet
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.ServicesDTO;
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.UserDTO;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.ServiceRequest;
+import khanhnq.project.clinicbookingmanagementsystem.model.request.TestPackageRequest;
 import khanhnq.project.clinicbookingmanagementsystem.model.response.*;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -30,4 +31,7 @@ public interface AdminService {
     List<Services> importServicesFromExcel (InputStream inputStream);
     ResponseEntityBase importBookingsFromExcel (InputStream inputStream);
     ResponseEntityBase getAllBookings(int page, int size, String[] sorts);
+    ResponseEntityBase addTestPackage(TestPackageRequest testPackageRequest);
+    ResponseEntityBase updateTestPackage(Long testPackageId, TestPackageRequest testPackageRequest);
+    ResponseEntityBase updateTestPackageStatus(Long testPackageId, String status);
 }

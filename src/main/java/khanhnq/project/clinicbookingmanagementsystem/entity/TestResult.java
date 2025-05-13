@@ -1,7 +1,6 @@
-package khanhnq.project.clinicbookingmanagementsystem.entity.eav;
+package khanhnq.project.clinicbookingmanagementsystem.entity;
 
 import jakarta.persistence.*;
-import khanhnq.project.clinicbookingmanagementsystem.entity.LabResult;
 import lombok.*;
 
 @Entity

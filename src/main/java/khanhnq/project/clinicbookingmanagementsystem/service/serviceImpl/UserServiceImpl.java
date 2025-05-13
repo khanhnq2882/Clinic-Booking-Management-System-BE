@@ -1,6 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
-import khanhnq.project.clinicbookingmanagementsystem.constant.MessageConstants;
+import khanhnq.project.clinicbookingmanagementsystem.common.MessageConstants;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ForbiddenException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.UnauthorizedException;
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.*;

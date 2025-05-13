@@ -3,21 +3,22 @@ package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
-import khanhnq.project.clinicbookingmanagementsystem.constant.MessageConstants;
-import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EBookingStatus;
-import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EUserStatus;
+import jakarta.transaction.Transactional;
+import khanhnq.project.clinicbookingmanagementsystem.common.MessageConstants;
+import khanhnq.project.clinicbookingmanagementsystem.entity.enums.*;
 import khanhnq.project.clinicbookingmanagementsystem.exception.*;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
-import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EServiceStatus;
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.*;
 import khanhnq.project.clinicbookingmanagementsystem.model.projection.BookingDetailsInfoProjection;
 import khanhnq.project.clinicbookingmanagementsystem.model.projection.DoctorInfoProjection;
+import khanhnq.project.clinicbookingmanagementsystem.model.request.TestPackageRequest;
 import khanhnq.project.clinicbookingmanagementsystem.model.response.*;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.ServiceRequest;
 import khanhnq.project.clinicbookingmanagementsystem.security.services.BruteForceProtectionService;
 import khanhnq.project.clinicbookingmanagementsystem.service.AdminService;
+import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import lombok.AllArgsConstructor;
 import org.apache.commons.compress.utils.Lists;
 import org.apache.poi.ss.usermodel.*;
@@ -53,14 +54,16 @@ public class AdminServiceImpl implements AdminService {
     private final SpecializationRepository specializationRepository;
     private final ServicesRepository servicesRepository;
     private final BookingRepository bookingRepository;
-    private final WorkScheduleRepository workScheduleRepository;
     private final DoctorRepository doctorRepository;
     private final FileRepository fileRepository;
+    private final TestPackageRepository testPackageRepository;
+    private final TestPackageAttributeRepository testPackageAttributeRepository;
     private final CommonServiceImpl commonServiceImpl;
     private final Workbook workbook = new XSSFWorkbook();
     private final JavaMailSender mailSender;
     private PasswordEncoder passwordEncoder;
     private final BruteForceProtectionService bruteForceProtectionService;
+    private final AuthService authService;
 
     @Override
     public ResponseEntityBase resetPassword(String email) throws MessagingException {
@@ -91,6 +94,7 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public ResponseEntityBase unlockAccount(String username) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        User currentUser = authService.getCurrentUser();
         User user = userRepository.findUserByUsername(username);
         if (Objects.isNull(user)) {
             throw new UsernameNotFoundException("Account with username '" +username+ "' is not found.");
@@ -98,6 +102,7 @@ public class AdminServiceImpl implements AdminService {
         if (user.getStatus() != null && user.getStatus().equals(EUserStatus.BANNED)) {
             bruteForceProtectionService.unlockAccount(username);
             user.setStatus(EUserStatus.ACTIVE);
+            user.setUpdatedBy(currentUser.getUsername());
             userRepository.save(user);
         }
         response.setData(MessageConstants.UNLOCK_ACCOUNT_SUCCESSFULLY);
@@ -165,11 +170,14 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public ResponseEntityBase addService(ServiceRequest serviceRequest) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-//        ServiceCategory serviceCategory = serviceCategoryRepository.findById(serviceRequest.getServiceCategoryId()).orElse(null);
-//        Services services = ServicesMapper.SERVICES_MAPPER.mapToServices(serviceRequest);
-//        services.setStatus(EServiceStatus.ACTIVE);
-//        services.setServiceCategory(serviceCategory);
-//        servicesRepository.save(services);
+        User currentUser = authService.getCurrentUser();
+        Specialization specialization = specializationRepository.findById(serviceRequest.getSpecializationId()).orElseThrow(() ->
+                new ResourceNotFoundException("Specialization ID" , serviceRequest.getSpecializationId().toString()));
+        Services services = ServicesMapper.SERVICES_MAPPER.mapToServices(serviceRequest);
+        services.setStatus(EServiceStatus.DRAFT);
+        services.setSpecialization(specialization);
+        services.setCreatedBy(currentUser.getUsername());
+        servicesRepository.save(services);
         response.setData(MessageConstants.ADD_SERVICE_SUCCESS);
         return response;
     }
@@ -177,30 +185,50 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public ResponseEntityBase getServiceById(Long serviceId) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        Services services = servicesRepository.findById(serviceId).orElse(null);
-//        return ServicesDTO.builder()
-//                .serviceId(Objects.requireNonNull(services).getServiceId())
-//                .serviceName(services.getServiceName())
-//                .price(services.getPrice())
-//                .description(services.getDescription())
-//                .status(services.getStatus().name())
-//                .serviceCategoryName(services.serviceCategoryName())
-//                .build();
+        Services service = servicesRepository.findById(serviceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Service Id", serviceId.toString()));
+        ServicesDTO servicesDTO =  ServicesDTO.builder()
+                .serviceId(service.getServiceId())
+                .serviceName(service.getServiceName())
+                .servicePrice(service.getServicePrice())
+                .description(service.getDescription())
+                .status(service.getStatus().name())
+                .specializationName(service.getSpecialization().getSpecializationName())
+                .build();
+        response.setData(servicesDTO);
         return response;
     }
 
     @Override
     public ResponseEntityBase updateService(ServiceRequest serviceRequest, Long serviceId) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-//        Services service = servicesRepository.findById(serviceId).orElse(null);
-//        ServiceCategory serviceCategory = serviceCategoryRepository.findById(serviceRequest.getServiceCategoryId()).orElse(null);
-//        Objects.requireNonNull(service).setServiceCategory(serviceCategory);
-//        service.setServiceName(serviceRequest.getServiceName());
-//        service.setPrice(serviceRequest.getPrice());
-//        service.setDescription(serviceRequest.getDescription());
-//        servicesRepository.save(service);
-//        return MessageConstants.UPDATE_SERVICE_SUCCESS;
+        User currentUser = authService.getCurrentUser();
+        Services service = servicesRepository.findById(serviceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Service Id", serviceId.toString()));
+        Specialization specialization = specializationRepository.findById(serviceRequest.getSpecializationId()).orElseThrow(() ->
+                new ResourceNotFoundException("Specialization ID" , serviceRequest.getSpecializationId().toString()));
+        if (service.getStatus().name().equals("INACTIVE") || service.getStatus().name().equals("DRAFT")) {
+            service.setSpecialization(specialization);
+            service.setServiceName(serviceRequest.getServiceName());
+            service.setServicePrice(serviceRequest.getServicePrice());
+            service.setDescription(serviceRequest.getDescription());
+            service.setUpdatedBy(currentUser.getUsername());
+            servicesRepository.save(service);
+            response.setData(MessageConstants.UPDATE_SERVICE_SUCCESS);
+        } else {
+            throw new SystemException("Service that has been " +service.getStatus().name()+ " can't be updated.");
+        }
         return response;
+    }
+
+    @Override
+    public List<ServicesDTO> getServices() {
+        return servicesRepository.findAll().stream()
+                .map(services -> {
+                    ServicesDTO servicesResponse = ServicesMapper.SERVICES_MAPPER.mapToServicesResponse(services);
+                    servicesResponse.setSpecializationName(services.getSpecialization().getSpecializationName());
+                    return servicesResponse;
+                }).toList();
     }
 
     @Override
@@ -230,24 +258,13 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public List<ServicesDTO> getServices() {
-        return servicesRepository.findAll().stream()
-                .map(services -> {
-                    ServicesDTO servicesResponse = ServicesMapper.SERVICES_MAPPER.mapToServicesResponse(services);
-//                    servicesResponse.setServiceCategoryName(services.serviceCategoryName());
-                    return servicesResponse;
-                }).toList();
-    }
-
-
-    @Override
     public ResponseEntityBase getAllServices(int page, int size, String[] sorts) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         Page<Services> servicesPage = servicesRepository.findAll(commonServiceImpl.pagingSort(page, size, sorts));
         List<ServicesDTO> servicesResponses = servicesPage.getContent().stream()
                 .map(services -> {
                     ServicesDTO servicesResponse = ServicesMapper.SERVICES_MAPPER.mapToServicesResponse(services);
-//                    servicesResponse.setServiceCategoryName(services.serviceCategoryName());
+                    servicesResponse.setSpecializationName(services.getSpecialization().getSpecializationName());
                     return servicesResponse;
                 }).toList();
         ServicesResponse servicesResponse = ServicesResponse.builder()
@@ -257,6 +274,118 @@ public class AdminServiceImpl implements AdminService {
                 .services(servicesResponses)
                 .build();
         response.setData(servicesResponse);
+        return response;
+    }
+
+    @Override
+    public ResponseEntityBase getAllBookings(int page, int size, String[] sorts) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        Pageable pageable = commonServiceImpl.pagingSort(page, size, sorts);
+        Page<BookingDetailsInfoProjection> bookingsPage = bookingRepository.getAllBookings(pageable);
+        BookingResponse bookingResponse = BookingResponse.builder()
+                .totalItems(bookingsPage.getTotalElements())
+                .totalPages(bookingsPage.getTotalPages())
+                .currentPage(bookingsPage.getNumber())
+                .bookings(bookingsPage.getContent())
+                .build();
+        response.setData(bookingResponse);
+        return response;
+    }
+
+    @Override
+    public ResponseEntityBase addTestPackage(TestPackageRequest testPackageRequest) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        User user = authService.getCurrentUser();
+        Services service = servicesRepository.findById(testPackageRequest.getServiceId())
+                .orElseThrow(() -> new ResourceNotFoundException("Service Id", testPackageRequest.getServiceId().toString()));
+        TestPackage testPackage = TestPackageMapper.TEST_PACKAGE_MAPPER.mapToTestPackage(testPackageRequest);
+        if (Objects.isNull(testPackage.getTestPackageAttributes())) {
+            testPackage.setTestPackageAttributes(new ArrayList<>());
+        }
+        for (Map<String, String> metaData : testPackageRequest.getAttributesMetadata()) {
+            if (!metaData.containsKey("name") || Objects.isNull(metaData.get("name")) || metaData.get("name").equals("")) {
+                throw new SystemException(MessageConstants.ERROR_NAME_FIELD_IN_TEST_PACKAGE);
+            }
+            TestPackageAttribute testPackageAttribute = new TestPackageAttribute();
+            testPackageAttribute.setAttributeMetadata(metaData);
+            testPackageAttribute.setCreatedBy(user.getUsername());
+            testPackageAttribute.getTestPackages().add(testPackage);
+            testPackage.getTestPackageAttributes().add(testPackageAttribute);
+        }
+        testPackage.setService(service);
+        testPackage.setStatus(ETestPackageStatus.DRAFT);
+        testPackage.setCreatedBy(user.getUsername());
+        testPackageRepository.save(testPackage);
+        response.setData(MessageConstants.ADD_TEST_PACKAGE_SUCCESS);
+        return response;
+    }
+
+    @Override
+    @Transactional
+    public ResponseEntityBase updateTestPackage(Long testPackageId, TestPackageRequest testPackageRequest) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        User user = authService.getCurrentUser();
+        TestPackage testPackage = testPackageRepository.findById(testPackageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Test Package Id", testPackageId.toString()));
+        Services service = servicesRepository.findById(testPackageRequest.getServiceId())
+                .orElseThrow(() -> new ResourceNotFoundException("Service Id", testPackageRequest.getServiceId().toString()));
+        if (testPackage.getStatus().name().equals("INACTIVE") || testPackage.getStatus().name().equals("DRAFT")) {
+            TestPackageMapper.TEST_PACKAGE_MAPPER.mapToTestPackage(testPackage, testPackageRequest);
+            List<TestPackageAttribute> testPackageAttributes = testPackage.getTestPackageAttributes();
+            if (Objects.nonNull(testPackageAttributes) && !testPackageAttributes.isEmpty()) {
+                List<TestPackageAttribute> attributesToDelete = new ArrayList<>(testPackageAttributes);
+                for (TestPackageAttribute testPackageAttribute : attributesToDelete) {
+                    testPackageAttribute.getTestPackages().remove(testPackage);
+                }
+                testPackage.getTestPackageAttributes().clear();
+                testPackageRepository.save(testPackage);
+                testPackageAttributeRepository.deleteAll(attributesToDelete);
+            }
+            List<TestPackageAttribute> newAttributes = new ArrayList<>();
+            for (Map<String, String> metaData : testPackageRequest.getAttributesMetadata()) {
+                if (!metaData.containsKey("name") || Objects.isNull(metaData.get("name")) || metaData.get("name").equals("")) {
+                    throw new SystemException(MessageConstants.ERROR_NAME_FIELD_IN_TEST_PACKAGE);
+                }
+                TestPackageAttribute testPackageAttribute = new TestPackageAttribute();
+                testPackageAttribute.setAttributeMetadata(metaData);
+                testPackageAttribute.setCreatedBy(user.getUsername());
+                testPackageAttribute.getTestPackages().add(testPackage);
+                newAttributes.add(testPackageAttribute);
+            }
+            testPackage.setTestPackageAttributes(newAttributes);
+            testPackage.setService(service);
+            testPackage.setStatus(ETestPackageStatus.DRAFT);
+            testPackage.setUpdatedBy(user.getUsername());
+            testPackageRepository.save(testPackage);
+            System.out.println(testPackage.getTestPackageAttributes());
+            response.setData(MessageConstants.UPDATE_TEST_PACKAGE_SUCCESS);
+        } else {
+            throw new SystemException("Test package that has been " +testPackage.getStatus().name()+ " can't be updated.");
+        }
+        return response;
+    }
+
+    @Override
+    public ResponseEntityBase updateTestPackageStatus(Long testPackageId, String status) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        User user = authService.getCurrentUser();
+        TestPackage testPackage = testPackageRepository.findById(testPackageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Test Package Id", testPackageId.toString()));
+        ETestPackageStatus testPackageStatus = testPackage.getStatus();
+        ETestPackageStatus newStatus = validateTestPackageStatus(status);
+        boolean isValid = switch (testPackageStatus) {
+            case DRAFT -> newStatus == ETestPackageStatus.ACTIVE;
+            case ACTIVE -> newStatus == ETestPackageStatus.INACTIVE;
+            case INACTIVE -> newStatus == ETestPackageStatus.ACTIVE || newStatus == ETestPackageStatus.DEPRECATED;
+            default -> false;
+        };
+        if (!isValid) {
+            throw new SystemException("The test package cannot change status from " + testPackageStatus + " to " + newStatus);
+        }
+        testPackage.setStatus(newStatus);
+        testPackage.setUpdatedBy(user.getUsername());
+        testPackageRepository.save(testPackage);
+        response.setData(MessageConstants.UPDATE_TEST_PACKAGE_STATUS_SUCCESS);
         return response;
     }
 
@@ -317,9 +446,9 @@ public class AdminServiceImpl implements AdminService {
             for (ServicesDTO service : services) {
                 Row currentRow = sheet.createRow(firstRow++);
                 commonServiceImpl.createCell(workbook, currentRow, 0, Objects.isNull(service.getServiceName()) ? " " : service.getServiceName());
-                commonServiceImpl.createCell(workbook, currentRow, 1, service.getPrice());
+                commonServiceImpl.createCell(workbook, currentRow, 1, service.getServicePrice());
                 commonServiceImpl.createCell(workbook, currentRow, 2, Objects.isNull(service.getDescription()) ? " " : service.getDescription());
-                commonServiceImpl.createCell(workbook, currentRow, 3, Objects.isNull(service.getServiceCategoryName()) ? " " : service.getServiceCategoryName());
+                commonServiceImpl.createCell(workbook, currentRow, 3, Objects.isNull(service.getSpecializationName()) ? " " : service.getSpecializationName());
                 commonServiceImpl.createCell(workbook, currentRow, 4, Objects.isNull(service.getStatus()) ? " " : service.getStatus());
             }
             workbook.write(outputStream);
@@ -488,21 +617,6 @@ public class AdminServiceImpl implements AdminService {
         }
     }
 
-    @Override
-    public ResponseEntityBase getAllBookings(int page, int size, String[] sorts) {
-        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        Pageable pageable = commonServiceImpl.pagingSort(page, size, sorts);
-        Page<BookingDetailsInfoProjection> bookingsPage = bookingRepository.getAllBookings(pageable);
-        BookingResponse bookingResponse = BookingResponse.builder()
-                .totalItems(bookingsPage.getTotalElements())
-                .totalPages(bookingsPage.getTotalPages())
-                .currentPage(bookingsPage.getNumber())
-                .bookings(bookingsPage.getContent())
-                .build();
-        response.setData(bookingResponse);
-        return response;
-    }
-
     public String randomPassword() {
         final String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
         SecureRandom random = new SecureRandom();
@@ -662,6 +776,22 @@ public class AdminServiceImpl implements AdminService {
                 booking.setBookingCode("BC" + (++maxBookingCode));
             }
         }
+    }
+
+    private ETestPackageStatus validateTestPackageStatus(String status) {
+        String enumValue = "";
+        if (status.equalsIgnoreCase("ACTIVE")) {
+            enumValue = "ACTIVE";
+        } else if (status.equalsIgnoreCase("INACTIVE")) {
+            enumValue = "INACTIVE";
+        } else if (status.equalsIgnoreCase("DRAFT")) {
+            enumValue = "DRAFT";
+        } else if (status.equalsIgnoreCase("DEPRECATED")) {
+            enumValue = "DEPRECATED";
+        } else {
+            throw new ResourceNotFoundException("Test Package Status", status);
+        }
+        return ETestPackageStatus.valueOf(enumValue);
     }
 
 }

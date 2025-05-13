@@ -1,6 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.security;
 
-import khanhnq.project.clinicbookingmanagementsystem.constant.MessageConstants;
+import khanhnq.project.clinicbookingmanagementsystem.common.MessageConstants;
 import khanhnq.project.clinicbookingmanagementsystem.entity.User;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EUserStatus;
 import khanhnq.project.clinicbookingmanagementsystem.exception.UnauthorizedException;
