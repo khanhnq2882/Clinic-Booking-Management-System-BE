@@ -302,12 +302,12 @@ public class AdminServiceImpl implements AdminService {
         if (Objects.isNull(testPackage.getTestPackageAttributes())) {
             testPackage.setTestPackageAttributes(new ArrayList<>());
         }
-        for (Map<String, String> metaData : testPackageRequest.getAttributesMetadata()) {
-            if (!metaData.containsKey("name") || Objects.isNull(metaData.get("name")) || metaData.get("name").equals("")) {
+        for (Map<String, String> attributeMetaData : testPackageRequest.getAttributesMetadata()) {
+            if (!checkRequiredTestAttribute(attributeMetaData, "name") && !checkRequiredTestAttribute(attributeMetaData, "normalRange")) {
                 throw new SystemException(MessageConstants.ERROR_NAME_FIELD_IN_TEST_PACKAGE);
             }
             TestPackageAttribute testPackageAttribute = new TestPackageAttribute();
-            testPackageAttribute.setAttributeMetadata(metaData);
+            testPackageAttribute.setAttributeMetadata(attributeMetaData);
             testPackageAttribute.setCreatedBy(user.getUsername());
             testPackageAttribute.getTestPackages().add(testPackage);
             testPackage.getTestPackageAttributes().add(testPackageAttribute);
@@ -342,12 +342,12 @@ public class AdminServiceImpl implements AdminService {
                 testPackageAttributeRepository.deleteAll(attributesToDelete);
             }
             List<TestPackageAttribute> newAttributes = new ArrayList<>();
-            for (Map<String, String> metaData : testPackageRequest.getAttributesMetadata()) {
-                if (!metaData.containsKey("name") || Objects.isNull(metaData.get("name")) || metaData.get("name").equals("")) {
+            for (Map<String, String> attributeMetaData : testPackageRequest.getAttributesMetadata()) {
+                if (!checkRequiredTestAttribute(attributeMetaData, "name") && !checkRequiredTestAttribute(attributeMetaData, "normalRange")) {
                     throw new SystemException(MessageConstants.ERROR_NAME_FIELD_IN_TEST_PACKAGE);
                 }
                 TestPackageAttribute testPackageAttribute = new TestPackageAttribute();
-                testPackageAttribute.setAttributeMetadata(metaData);
+                testPackageAttribute.setAttributeMetadata(attributeMetaData);
                 testPackageAttribute.setCreatedBy(user.getUsername());
                 testPackageAttribute.getTestPackages().add(testPackage);
                 newAttributes.add(testPackageAttribute);
@@ -792,6 +792,11 @@ public class AdminServiceImpl implements AdminService {
             throw new ResourceNotFoundException("Test Package Status", status);
         }
         return ETestPackageStatus.valueOf(enumValue);
+    }
+
+    private boolean checkRequiredTestAttribute(Map<String, String> attributeMetaData, String field) {
+        String data = attributeMetaData.get(field);
+        return (attributeMetaData.containsKey(field)) && (data != null) && (!data.equals(""));
     }
 
 }

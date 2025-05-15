@@ -80,12 +80,6 @@ public class User extends BaseEntity{
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private Set<Booking> bookings = new HashSet<>();
 
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-    private List<LabResult> labResults;
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-    private List<MedicalRecord> medicalRecords;
-
     @Override
     public boolean equals(Object o) {
         if (Objects.isNull(o)) return false;

@@ -35,7 +35,7 @@ public class LabResult extends BaseEntity{
 
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
-    private ELabResultStatus eLabResultStatus;
+    private ELabResultStatus status;
 
     @JsonBackReference
     @ManyToOne
@@ -46,10 +46,6 @@ public class LabResult extends BaseEntity{
     @ManyToOne
     @JoinColumn(name = "medical_record_id")
     private MedicalRecord medicalRecord;
-
-    @ManyToOne
-    @JoinColumn(name = "user_id")
-    private User user;
 
     @ManyToOne
     @JoinColumn(name = "doctor_id")

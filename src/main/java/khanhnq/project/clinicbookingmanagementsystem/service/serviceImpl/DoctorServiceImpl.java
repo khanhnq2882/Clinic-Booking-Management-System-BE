@@ -2,10 +2,10 @@ package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
 import jakarta.transaction.Transactional;
 import khanhnq.project.clinicbookingmanagementsystem.common.MessageConstants;
-import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EBookingStatus;
-import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EEducationLevel;
-import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ERole;
+import khanhnq.project.clinicbookingmanagementsystem.entity.enums.*;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceNotFoundException;
+import khanhnq.project.clinicbookingmanagementsystem.mapper.LabResultMapper;
+import khanhnq.project.clinicbookingmanagementsystem.mapper.MedicalRecordMapper;
 import khanhnq.project.clinicbookingmanagementsystem.model.projection.BookingDetailsInfoProjection;
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.SpecializationDTO;
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.WorkScheduleDTO;
@@ -13,13 +13,12 @@ import khanhnq.project.clinicbookingmanagementsystem.exception.SystemException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ForbiddenException;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.WorkExperienceMapper;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.WorkScheduleMapper;
-import khanhnq.project.clinicbookingmanagementsystem.model.request.RegisterWorkScheduleRequest;
+import khanhnq.project.clinicbookingmanagementsystem.model.projection.BookingTimeInfoProjection;
+import khanhnq.project.clinicbookingmanagementsystem.model.request.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.model.response.BookingResponse;
 import khanhnq.project.clinicbookingmanagementsystem.model.response.ResponseEntityBase;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
-import khanhnq.project.clinicbookingmanagementsystem.model.request.DoctorInformationRequest;
-import khanhnq.project.clinicbookingmanagementsystem.model.request.UserProfileRequest;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import khanhnq.project.clinicbookingmanagementsystem.service.DoctorService;
 import lombok.AllArgsConstructor;
@@ -30,8 +29,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import java.text.SimpleDateFormat;
 import java.time.*;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -45,6 +47,11 @@ public class DoctorServiceImpl implements DoctorService {
     private final WorkScheduleRepository workScheduleRepository;
     private final DayOfWeekRepository dayOfWeekRepository;
     private final WorkExperienceRepository workExperienceRepository;
+    private final MedicalRecordRepository medicalRecordRepository;
+    private final LabResultRepository labResultRepository;
+    private final TestPackageRepository testPackageRepository;
+    private final TestPackageAttributeRepository testPackageAttributeRepository;
+    private final TestResultRepository testResultRepository;
     private final CommonServiceImpl commonServiceImpl;
 
     @Override
@@ -236,21 +243,122 @@ public class DoctorServiceImpl implements DoctorService {
         return response;
     }
 
+    @Override
+    public ResponseEntityBase addMedicalRecord(MedicalRecordRequest medicalRecordRequest) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        User currentUser = authService.getCurrentUser();
+        boolean checkAdmin = currentUser.getRoles().stream().anyMatch(role -> role.getRoleName().equals(ERole.ROLE_ADMIN));
+        Doctor doctor = doctorRepository.findDoctorByUserId(currentUser.getUserId());
+        Long bookingId = medicalRecordRequest.getBookingId();
+        Booking booking = bookingRepository.findById(bookingId).orElseThrow(()
+                -> new ResourceNotFoundException("Booking id", bookingId.toString()));
+        if (medicalRecordRepository.findMedicalRecordByBooking(bookingId) == null) {
+            if (!booking.getStatus().equals(EBookingStatus.CONFIRMED)) {
+                throw new SystemException("Booking status is "+booking.getStatus().name()+". Booking status must be confirmed to be allowed to create medical records.");
+            }
+            long doctorId = bookingRepository.getDoctorIdByBookingId(bookingId);
+            if (!checkAdmin && doctor != null && !doctor.getDoctorId().equals(doctorId)) {
+                throw new ForbiddenException(MessageConstants.FORBIDDEN_ADD_MEDICAL_RECORD);
+            }
+            BookingTimeInfoProjection bookingTime = bookingRepository.getBookingInfoByBookingId(bookingId);
+            LocalDateTime visitDate = medicalRecordRequest.getVisitDate();
+            LocalDate workingDay = bookingTime.getWorkingDay().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+            boolean checkVisitDate = isVisitDateValid(visitDate, workingDay, bookingTime.getStartTime(), bookingTime.getEndTime());
+            if (!checkVisitDate) {
+                String formatWorkingDay = new SimpleDateFormat("dd-MM-yyyy").format(bookingTime.getWorkingDay());
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
+                String formatStartTime = bookingTime.getStartTime().format(formatter);
+                String formatEndTime = bookingTime.getEndTime().format(formatter);
+                throw new SystemException("The visit date must be within day " +formatWorkingDay+ " , booking time from " +formatStartTime+ " to "+formatEndTime+".");
+            }
+            if (!isValidNextAppointmentDate(medicalRecordRequest.getNextAppointmentDate())) {
+                throw new SystemException(MessageConstants.ERROR_NEXT_APPOINTMENT_DATE);
+            }
+            MedicalRecord medicalRecord = MedicalRecordMapper.MEDICAL_RECORD_MAPPER.mapToMedicalRecord(medicalRecordRequest);
+            medicalRecord.setBooking(booking);
+            medicalRecord.setStatus(EMedicalRecordStatus.CREATED);
+            medicalRecord.setCreatedAt(LocalDateTime.now());
+            medicalRecord.setCreatedBy(currentUser.getUsername());
+            medicalRecordRepository.save(medicalRecord);
+            response.setData(MessageConstants.ADD_MEDICAL_RECORD_SUCCESS);
+            return response;
+        } else {
+            throw new SystemException("A medical record for booking "+booking.getBookingCode()+" has been created. Please update it.");
+        }
+
+    }
+
+    @Override
+    public ResponseEntityBase addLabResultsToMedicalRecord(LabResultRequest labResultRequest) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        User currentUser = authService.getCurrentUser();
+        Long medicalRecordId = labResultRequest.getMedicalRecordId();
+        Long testPackageId = labResultRequest.getTestPackageId();
+        Long doctorId = labResultRequest.getDoctorPrescribedId();
+        MedicalRecord medicalRecord = medicalRecordRepository.findById(medicalRecordId).orElseThrow(
+                () -> new ResourceNotFoundException("Medical Record ID", medicalRecordId.toString()));
+        TestPackage testPackage = testPackageRepository.findById(testPackageId).orElseThrow(
+                () -> new ResourceNotFoundException("Test Package ID", testPackageId.toString()));
+        Doctor doctorPrescribed = doctorRepository.findById(doctorId).orElseThrow(
+                () -> new ResourceNotFoundException("Doctor ID", doctorId.toString()));
+
+        labResultRequest.getTestResults().forEach(testResultDTO -> {
+            Long testPackageAttributeId = testResultDTO.getTestPackageAttributeId();
+            TestPackageAttribute testPackageAttribute = testPackageAttributeRepository.findById(testPackageAttributeId).orElseThrow(
+                    () -> new ResourceNotFoundException("Test Package Attribute ID", testPackageAttributeId.toString()));
+            TestResult testResult = new TestResult();
+
+            Map<String, String> attributeMetadata = testPackageAttribute.getAttributeMetadata();
+            String result = testResult.getResult();
+            String normalRange = attributeMetadata.get("normalRange");
+
+            // range. example: 1.5-3.5
+            Pattern patternRange = Pattern.compile("^\\s*(\\d+(?:\\.\\d+)?)\\s*[-–]\\s*(\\d+(?:\\.\\d+)?)\\s*$", Pattern.CASE_INSENSITIVE);
+            Matcher matcher = patternRange.matcher(normalRange);
+            if (matcher.find()) {
+                String[] rangeValues = normalRange.split("-");
+                float minValue = Float.parseFloat(Arrays.asList(rangeValues).get(0).trim());
+                float maxValue = Float.parseFloat(Arrays.asList(rangeValues).get(1).trim());
+                Pattern pattern = Pattern.compile("^[0-9]{1,3}.[0-9]{1,3}$", Pattern.CASE_INSENSITIVE);
+                if (pattern.matcher(result).find()) {
+                    float value = Float.parseFloat(result);
+                    if (value >= minValue && value <= maxValue) {
+                        testResult.setResult(result);
+                        testResult.setStatus(ETestResultStatus.NORMAL);
+                    } else if (value < minValue) {
+                        testResult.setResult(result);
+                        testResult.setStatus(ETestResultStatus.LOW);
+                    } else {
+                        testResult.setResult(result);
+                        testResult.setStatus(ETestResultStatus.HIGH);
+                    }
+                }
+            }
+
+
+
+        });
+
+        LabResult labResult = LabResultMapper.LAB_RESULT_MAPPER.mapToLabResult(labResultRequest);
+        labResult.setMedicalRecord(medicalRecord);
+        labResult.setTestPackage(testPackage);
+        labResult.setDoctorPrescribed(doctorPrescribed);
+        labResult.setCreatedBy(currentUser.getUsername());
+        labResult.setCreatedAt(LocalDateTime.now());
+        labResultRepository.save(labResult);
+        return response;
+    }
+
     public Booking validateChangeBookingStatus(Long bookingId) {
         User currentUser = authService.getCurrentUser();
         boolean checkAdmin = currentUser.getRoles().stream().anyMatch(role -> role.getRoleName().equals(ERole.ROLE_ADMIN));
-        Optional<Booking> bookingOptional = bookingRepository.findById(bookingId);
-        if (bookingOptional.isEmpty()) {
-            throw new ResourceNotFoundException("Booking id", bookingId.toString());
-        }
+        Booking booking = bookingRepository.findById(bookingId).orElseThrow(() -> new ResourceNotFoundException("Booking id", bookingId.toString()));
         long doctorId = bookingRepository.getDoctorIdByBookingId(bookingId);
         Doctor doctor = doctorRepository.findDoctorByUserId(currentUser.getUserId());
-        if (!checkAdmin) {
-            if (doctor != null && !doctor.getDoctorId().equals(doctorId)) {
-                throw new ForbiddenException(MessageConstants.FORBIDDEN_CHANGE_BOOKING_STATUS);
-            }
+        if (!checkAdmin && doctor != null && !doctor.getDoctorId().equals(doctorId)) {
+            throw new ForbiddenException(MessageConstants.FORBIDDEN_CHANGE_BOOKING_STATUS);
         }
-        return bookingOptional.get();
+        return booking;
     }
 
     public boolean checkSpecializationExist(List<SpecializationDTO> specializations, SpecializationDTO specializationDTO) {
@@ -332,5 +440,25 @@ public class DoctorServiceImpl implements DoctorService {
             throw new ResourceNotFoundException("Education level", educationLevel);
         }
         return EEducationLevel.valueOf(enumValue);
+    }
+
+    public boolean isVisitDateValid(LocalDateTime visitDate, LocalDate workingDayDate,
+                                    LocalTime startTime, LocalTime endTime) {
+        LocalDate visitDateOnly = visitDate.toLocalDate();
+        LocalTime visitTimeOnly = visitDate.toLocalTime();
+        boolean sameDay = visitDateOnly.equals(workingDayDate);
+        boolean withinTime = !visitTimeOnly.isBefore(startTime) && !visitTimeOnly.isAfter(endTime);
+        return sameDay && withinTime;
+    }
+
+    public boolean isValidNextAppointmentDate(LocalDateTime nextAppointmentDate) {
+        LocalDateTime currentDate = LocalDateTime.now();
+        if (nextAppointmentDate.isBefore(currentDate)) {
+            return false;
+        }
+        if (nextAppointmentDate.isBefore(currentDate.plusDays(7))) {
+            return false;
+        }
+        return true;
     }
 }

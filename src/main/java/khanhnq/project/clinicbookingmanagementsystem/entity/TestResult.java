@@ -1,6 +1,7 @@
 package khanhnq.project.clinicbookingmanagementsystem.entity;
 
 import jakarta.persistence.*;
+import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ETestResultStatus;
 import lombok.*;
 
 @Entity
@@ -15,9 +16,14 @@ public class TestResult {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long testResultId;
 
-    private Float result;
+    @Column(nullable = false)
+    private String result;
 
     private String note;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private ETestResultStatus status;
 
     @ManyToOne
     @JoinColumn(name = "lab_result_id")

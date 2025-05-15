@@ -2,6 +2,7 @@ package khanhnq.project.clinicbookingmanagementsystem.controller;
 
 import jakarta.validation.Valid;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.DoctorInformationRequest;
+import khanhnq.project.clinicbookingmanagementsystem.model.request.MedicalRecordRequest;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.RegisterWorkScheduleRequest;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.UserProfileRequest;
 import khanhnq.project.clinicbookingmanagementsystem.model.response.ResponseEntityBase;
@@ -66,4 +67,9 @@ public class DoctorController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(doctorService.completedBooking(bookingId));
     }
 
+    @PostMapping("/add-medical-record")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('DOCTOR')")
+    public ResponseEntity<ResponseEntityBase> addMedicalRecord(@RequestBody MedicalRecordRequest medicalRecordRequest) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(doctorService.addMedicalRecord(medicalRecordRequest));
+    }
 }

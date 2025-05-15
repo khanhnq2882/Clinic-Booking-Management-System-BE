@@ -1,8 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.service;
 
-import khanhnq.project.clinicbookingmanagementsystem.model.request.DoctorInformationRequest;
-import khanhnq.project.clinicbookingmanagementsystem.model.request.RegisterWorkScheduleRequest;
-import khanhnq.project.clinicbookingmanagementsystem.model.request.UserProfileRequest;
+import khanhnq.project.clinicbookingmanagementsystem.model.request.*;
 import khanhnq.project.clinicbookingmanagementsystem.model.response.ResponseEntityBase;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -14,4 +12,6 @@ public interface DoctorService {
     ResponseEntityBase cancelledBooking (Long bookingId);
     ResponseEntityBase completedBooking (Long bookingId);
     ResponseEntityBase getAllBookings(int page, int size, String[] sorts);
+    ResponseEntityBase addMedicalRecord(MedicalRecordRequest medicalRecordRequest);
+    ResponseEntityBase addLabResultsToMedicalRecord(LabResultRequest labResultRequest);
 }

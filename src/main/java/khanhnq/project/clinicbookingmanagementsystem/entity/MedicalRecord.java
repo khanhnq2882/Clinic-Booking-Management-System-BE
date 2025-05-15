@@ -1,10 +1,10 @@
 package khanhnq.project.clinicbookingmanagementsystem.entity;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EMedicalRecordStatus;
 import lombok.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -20,19 +20,13 @@ public class MedicalRecord extends BaseEntity{
     private Long medicalRecordId;
 
     @Column(nullable = false)
-    private LocalDateTime admitDate;
+    private LocalDateTime visitDate;
 
     @Column(nullable = false)
-    private LocalDateTime dischargeDate;
-
-    @Column(nullable = false)
-    private String bloodType;
+    private String reasonForVisit;
 
     @Column(nullable = false)
     private String medicalHistory;
-
-    @Column(nullable = false)
-    private String medications;
 
     @Column(nullable = false)
     private String allergies;
@@ -41,20 +35,28 @@ public class MedicalRecord extends BaseEntity{
     private String diagnosis;
 
     @Column(nullable = false)
-    private String treatment;
+    private String treatmentPlan;
 
     @Column(nullable = false)
-    private String note;
+    private String prescribedMedications;
+
+    @Column(nullable = false)
+    private String followUpInstructions;
+
+    @Column(nullable = false)
+    private LocalDateTime nextAppointmentDate;
+
+    @Column(nullable = false)
+    private String consultationNotes;
 
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
     private EMedicalRecordStatus status;
 
-    @JsonBackReference
-    @ManyToOne
-    @JoinColumn(name = "user_id")
-    private User user;
-
     @OneToMany(mappedBy = "medicalRecord", cascade = CascadeType.ALL)
-    private List<LabResult> labResults;
+    private List<LabResult> labResults = new ArrayList<>();
+
+    @OneToOne(cascade = CascadeType.PERSIST, fetch = FetchType.EAGER)
+    @JoinColumn(name = "booking_id")
+    private Booking booking;
 }

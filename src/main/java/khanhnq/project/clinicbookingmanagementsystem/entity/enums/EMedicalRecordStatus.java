@@ -1,5 +1,5 @@
 package khanhnq.project.clinicbookingmanagementsystem.entity.enums;
 
 public enum EMedicalRecordStatus {
-    PENDING, IN_PROGRESS, COMPLETED, CLOSED, CANCELLED
+    CREATED, IN_PROGRESS, PENDING_LAB_RESULTS, COMPLETED, WAITING_FOR_FOLLOWUP, CANCELLED, CLOSED
 }

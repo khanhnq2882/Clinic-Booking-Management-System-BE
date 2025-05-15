@@ -42,8 +42,11 @@ public class MessageConstants {
     public static final String UPDATE_BOOKED_APPOINTMENT_SUCCESS = "Booking appointment updated successfully.";
     public static final String FORBIDDEN_CHANGE_BOOKING_STATUS = "No permission to change booking status.";
     public static final String REFRESH_TOKEN_EXPIRED = "Refresh token was expired. Please make a new login request";
-    public static final String ERROR_NAME_FIELD_IN_TEST_PACKAGE = "Each attribute in the test package must have a 'name' field and the value of 'name' cannot be empty.";
+    public static final String ERROR_NAME_FIELD_IN_TEST_PACKAGE = "Each attribute in the test package must have 'name' and 'normalRange' fields and the values of 'name' and 'normalRange' cannot be empty.";
     public static final String ADD_TEST_PACKAGE_SUCCESS = "Add test package successfully.";
     public static final String UPDATE_TEST_PACKAGE_SUCCESS = "Update test package successfully.";
     public static final String UPDATE_TEST_PACKAGE_STATUS_SUCCESS = "Update test package status successfully.";
+    public static final String ERROR_NEXT_APPOINTMENT_DATE = "The next appointment date cannot be in the past and must be at least 7 days before the next appointment date.";
+    public static final String ADD_MEDICAL_RECORD_SUCCESS = "Add medical record successfully.";
+    public static final String FORBIDDEN_ADD_MEDICAL_RECORD = "No permission to add medical record.";
 }
