@@ -301,51 +301,90 @@ public class DoctorServiceImpl implements DoctorService {
                 () -> new ResourceNotFoundException("Test Package ID", testPackageId.toString()));
         Doctor doctorPrescribed = doctorRepository.findById(doctorId).orElseThrow(
                 () -> new ResourceNotFoundException("Doctor ID", doctorId.toString()));
-
+        LabResult labResult = LabResultMapper.LAB_RESULT_MAPPER.mapToLabResult(labResultRequest);
+        List<TestResult> testResults = new ArrayList<>();
         labResultRequest.getTestResults().forEach(testResultDTO -> {
             Long testPackageAttributeId = testResultDTO.getTestPackageAttributeId();
             TestPackageAttribute testPackageAttribute = testPackageAttributeRepository.findById(testPackageAttributeId).orElseThrow(
                     () -> new ResourceNotFoundException("Test Package Attribute ID", testPackageAttributeId.toString()));
             TestResult testResult = new TestResult();
-
             Map<String, String> attributeMetadata = testPackageAttribute.getAttributeMetadata();
             String result = testResult.getResult();
             String normalRange = attributeMetadata.get("normalRange");
-
-            // range. example: 1.5-3.5
-            Pattern patternRange = Pattern.compile("^\\s*(\\d+(?:\\.\\d+)?)\\s*[-–]\\s*(\\d+(?:\\.\\d+)?)\\s*$", Pattern.CASE_INSENSITIVE);
-            Matcher matcher = patternRange.matcher(normalRange);
-            if (matcher.find()) {
-                String[] rangeValues = normalRange.split("-");
-                float minValue = Float.parseFloat(Arrays.asList(rangeValues).get(0).trim());
-                float maxValue = Float.parseFloat(Arrays.asList(rangeValues).get(1).trim());
-                Pattern pattern = Pattern.compile("^[0-9]{1,3}.[0-9]{1,3}$", Pattern.CASE_INSENSITIVE);
-                if (pattern.matcher(result).find()) {
+            try {
+                normalRange = normalRange.replace("≥", ">=").replace("≤", "<=");
+                if ("POSITIVE".equalsIgnoreCase(result)) {
+                    testResult.setStatus(ETestResultStatus.POSITIVE);
+                } else if ("NEGATIVE".equalsIgnoreCase(result)) {
+                    testResult.setStatus(ETestResultStatus.NEGATIVE);
+                } else if ("INCONCLUSIVE".equalsIgnoreCase(result)) {
+                    testResult.setStatus(ETestResultStatus.INCONCLUSIVE);
+                } else {
                     float value = Float.parseFloat(result);
-                    if (value >= minValue && value <= maxValue) {
-                        testResult.setResult(result);
-                        testResult.setStatus(ETestResultStatus.NORMAL);
-                    } else if (value < minValue) {
-                        testResult.setResult(result);
-                        testResult.setStatus(ETestResultStatus.LOW);
+                    Pattern rangePattern = Pattern.compile("^\\s*(\\d+(?:\\.\\d+)?)\\s*[-–]\\s*(\\d+(?:\\.\\d+)?)\\s*$");
+                    Matcher rangeMatcher = rangePattern.matcher(normalRange);
+                    if (rangeMatcher.find()) {
+                        float min = Float.parseFloat(rangeMatcher.group(1));
+                        float max = Float.parseFloat(rangeMatcher.group(2));
+                        if (value < min) {
+                            testResult.setStatus(ETestResultStatus.LOW);
+                        } else if (value > max) {
+                            testResult.setStatus(ETestResultStatus.HIGH);
+                        } else {
+                            testResult.setStatus(ETestResultStatus.NORMAL);
+                        }
                     } else {
-                        testResult.setResult(result);
-                        testResult.setStatus(ETestResultStatus.HIGH);
+                        Pattern comparisonPattern = Pattern.compile("^(>=|<=|>|<|=)\\s*(\\d+(?:\\.\\d+)?)$");
+                        Matcher comparisonMatcher = comparisonPattern.matcher(normalRange);
+                        if (comparisonMatcher.find()) {
+                            String operation = comparisonMatcher.group(1);
+                            float threshold = Float.parseFloat(comparisonMatcher.group(2));
+                            switch (operation) {
+                                case ">":
+                                    testResult.setStatus(value > threshold ? ETestResultStatus.NORMAL : ETestResultStatus.LOW);
+                                    break;
+                                case "<":
+                                    testResult.setStatus(value < threshold ? ETestResultStatus.NORMAL : ETestResultStatus.HIGH);
+                                    break;
+                                case ">=":
+                                    testResult.setStatus(value >= threshold ? ETestResultStatus.NORMAL : ETestResultStatus.LOW);
+                                    break;
+                                case "<=":
+                                    testResult.setStatus(value <= threshold ? ETestResultStatus.NORMAL : ETestResultStatus.HIGH);
+                                    break;
+                                case "=":
+                                    if (value == threshold) {
+                                        testResult.setStatus(ETestResultStatus.NORMAL);
+                                    } else if (value > threshold) {
+                                        testResult.setStatus(ETestResultStatus.HIGH);
+                                    } else {
+                                        testResult.setStatus(ETestResultStatus.LOW);
+                                    }
+                                    break;
+                            }
+                        } else {
+                            testResult.setStatus(ETestResultStatus.INCONCLUSIVE);
+                        }
                     }
                 }
+                testResult.setResult(result);
+                testResult.setNote(testResultDTO.getNote());
+                testResult.setTestPackageAttribute(testPackageAttribute);
+                testResult.setCreatedBy(doctorPrescribed.getUser().getUsername());
+                testResult.setCreatedAt(LocalDateTime.now());
+                testResult.setLabResult(labResult);
+                testResults.add(testResult);
+            } catch (NumberFormatException e) {
+                throw new SystemException(MessageConstants.SOMETHING_WENT_WRONG);
             }
-
-
-
         });
-
-        LabResult labResult = LabResultMapper.LAB_RESULT_MAPPER.mapToLabResult(labResultRequest);
         labResult.setMedicalRecord(medicalRecord);
         labResult.setTestPackage(testPackage);
         labResult.setDoctorPrescribed(doctorPrescribed);
         labResult.setCreatedBy(currentUser.getUsername());
         labResult.setCreatedAt(LocalDateTime.now());
         labResultRepository.save(labResult);
+        testResultRepository.saveAll(testResults);
         return response;
     }
 
