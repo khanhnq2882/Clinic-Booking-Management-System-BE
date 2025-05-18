@@ -289,7 +289,7 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
-    public ResponseEntityBase addLabResultsToMedicalRecord(LabResultRequest labResultRequest) {
+    public ResponseEntityBase addLabResultToMedicalRecord(LabResultRequest labResultRequest) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         User currentUser = authService.getCurrentUser();
         Long medicalRecordId = labResultRequest.getMedicalRecordId();
@@ -309,7 +309,7 @@ public class DoctorServiceImpl implements DoctorService {
                     () -> new ResourceNotFoundException("Test Package Attribute ID", testPackageAttributeId.toString()));
             TestResult testResult = new TestResult();
             Map<String, String> attributeMetadata = testPackageAttribute.getAttributeMetadata();
-            String result = testResult.getResult();
+            String result = testResultDTO.getResult();
             String normalRange = attributeMetadata.get("normalRange");
             try {
                 normalRange = normalRange.replace("≥", ">=").replace("≤", "<=");
@@ -385,6 +385,7 @@ public class DoctorServiceImpl implements DoctorService {
         labResult.setCreatedAt(LocalDateTime.now());
         labResultRepository.save(labResult);
         testResultRepository.saveAll(testResults);
+        response.setData(MessageConstants.ADD_LAB_RESULT_TO_MEDICAL_RECORD_SUCCESS);
         return response;
     }
 

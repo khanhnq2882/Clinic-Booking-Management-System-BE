@@ -20,6 +20,8 @@ public class ServiceRequest {
 
     private Double servicePrice;
 
+    private Integer durationMinutes;
+
     @NotNull(message = "Description can't be empty.")
     @Length(max = 255, message = "Description has a maximum of 255 characters.")
     private String description;

@@ -1,5 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.model.request;
 
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.TestPackageAttributeDTO;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,5 +17,5 @@ public class TestPackageRequest {
     private String testPreparationRequirements;
     private String testDescription;
     private Long serviceId;
-    private List<Map<String, String>> attributesMetadata = new ArrayList<>();
+    private List<TestPackageAttributeDTO> testPackageAttributes;
 }

@@ -302,16 +302,25 @@ public class AdminServiceImpl implements AdminService {
         if (Objects.isNull(testPackage.getTestPackageAttributes())) {
             testPackage.setTestPackageAttributes(new ArrayList<>());
         }
-        for (Map<String, String> attributeMetaData : testPackageRequest.getAttributesMetadata()) {
-            if (!checkRequiredTestAttribute(attributeMetaData, "name") && !checkRequiredTestAttribute(attributeMetaData, "normalRange")) {
-                throw new SystemException(MessageConstants.ERROR_NAME_FIELD_IN_TEST_PACKAGE);
+        testPackage.getTestPackageAttributes().forEach(testPackageAttribute -> {
+            if (testPackageAttribute.getNormalRanges() == null || testPackageAttribute.getNormalRanges().size() == 0) {
+                throw new SystemException("The normal range parameters of each index in the test package cannot be left blank.");
             }
-            TestPackageAttribute testPackageAttribute = new TestPackageAttribute();
-            testPackageAttribute.setAttributeMetadata(attributeMetaData);
+            List<NormalRange> normalRanges = testPackageAttribute.getNormalRanges()
+                    .stream()
+                    .map(normalRange -> {
+                        validateNormalRange(normalRange);
+                        normalRange.setTestPackageAttribute(testPackageAttribute);
+                        normalRange.setCreatedBy(user.getUsername());
+                        return normalRange;
+                    }).toList();
+            testPackageAttribute.setNormalRanges(normalRanges);
             testPackageAttribute.setCreatedBy(user.getUsername());
+            if (testPackageAttribute.getTestPackages() == null) {
+                testPackageAttribute.setTestPackages(new ArrayList<>());
+            }
             testPackageAttribute.getTestPackages().add(testPackage);
-            testPackage.getTestPackageAttributes().add(testPackageAttribute);
-        }
+        });
         testPackage.setService(service);
         testPackage.setStatus(ETestPackageStatus.DRAFT);
         testPackage.setCreatedBy(user.getUsername());
@@ -342,16 +351,16 @@ public class AdminServiceImpl implements AdminService {
                 testPackageAttributeRepository.deleteAll(attributesToDelete);
             }
             List<TestPackageAttribute> newAttributes = new ArrayList<>();
-            for (Map<String, String> attributeMetaData : testPackageRequest.getAttributesMetadata()) {
-                if (!checkRequiredTestAttribute(attributeMetaData, "name") && !checkRequiredTestAttribute(attributeMetaData, "normalRange")) {
-                    throw new SystemException(MessageConstants.ERROR_NAME_FIELD_IN_TEST_PACKAGE);
-                }
-                TestPackageAttribute testPackageAttribute = new TestPackageAttribute();
-                testPackageAttribute.setAttributeMetadata(attributeMetaData);
-                testPackageAttribute.setCreatedBy(user.getUsername());
-                testPackageAttribute.getTestPackages().add(testPackage);
-                newAttributes.add(testPackageAttribute);
-            }
+//            for (Map<String, String> attributeMetaData : testPackageRequest.getAttributesMetadata()) {
+//                if (!checkRequiredTestAttribute(attributeMetaData, "name") && !checkRequiredTestAttribute(attributeMetaData, "normalRange")) {
+//                    throw new SystemException(MessageConstants.ERROR_NAME_FIELD_IN_TEST_PACKAGE);
+//                }
+//                TestPackageAttribute testPackageAttribute = new TestPackageAttribute();
+//                testPackageAttribute.setAttributeMetadata(attributeMetaData);
+//                testPackageAttribute.setCreatedBy(user.getUsername());
+//                testPackageAttribute.getTestPackages().add(testPackage);
+//                newAttributes.add(testPackageAttribute);
+//            }
             testPackage.setTestPackageAttributes(newAttributes);
             testPackage.setService(service);
             testPackage.setStatus(ETestPackageStatus.DRAFT);
@@ -520,12 +529,6 @@ public class AdminServiceImpl implements AdminService {
                         case "Description" ->
                                 service.setDescription(commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue());
                         case "Service Category" -> {
-//                            ServiceCategory serviceCategory =
-//                                    serviceCategoryRepository.getServiceCategoryByServiceCategoryName(commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue());
-//                            if (Objects.isNull(serviceCategory)) {
-//                                throw new BusinessException("Import failed. Service category name in row " + indexRow + " is not exist.");
-//                            }
-//                            service.setServiceCategory(serviceCategory);
                         }
                         case "Status" -> {
                             String serviceStatus = commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue();
@@ -794,9 +797,30 @@ public class AdminServiceImpl implements AdminService {
         return ETestPackageStatus.valueOf(enumValue);
     }
 
-    private boolean checkRequiredTestAttribute(Map<String, String> attributeMetaData, String field) {
-        String data = attributeMetaData.get(field);
-        return (attributeMetaData.containsKey(field)) && (data != null) && (!data.equals(""));
+    public void validateNormalRange(NormalRange normalRange) {
+        switch (normalRange.getNormalRangeType()) {
+            case RANGE -> {
+                requireNonNull(normalRange.getMinValue(), "Min value is required for RANGE.");
+                requireNonNull(normalRange.getMaxValue(), "Max value is required for RANGE.");
+            }
+            case LESS_THAN, LESS_THAN_EQUAL, GREATER_THAN, GREATER_THAN_EQUAL, EQUAL -> {
+                requireNonNull(normalRange.getMinValue(), normalRange.getNormalRangeType() + " requires min value.");
+            }
+            case QUALITATIVE -> {
+                requireNonNull(normalRange.getExpectedValue(), "Expected value is required for QUALITATIVE.");
+            }
+            case SEMI_QUALITATIVE -> {
+                requireNonNull(normalRange.getExpectedValue(), "Expected value is required for SEMI QUALITATIVE");
+                requireNonNull(normalRange.getNormalText(), "Normal text is required for SEMI QUALITATIVE.");
+            }
+            case TEXT_ONLY -> {
+                requireNonNull(normalRange.getNormalText(), "Normal text is required for TEXT ONLY.");
+            }
+        }
+    }
+
+    private void requireNonNull(Object value, String message) {
+        if (value == null) throw new SystemException(message);
     }
 
 }

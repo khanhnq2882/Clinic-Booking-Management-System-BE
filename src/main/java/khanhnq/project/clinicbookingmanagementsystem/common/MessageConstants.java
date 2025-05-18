@@ -15,7 +15,6 @@ public class MessageConstants {
     public static final String UPDATE_PROFILE_SUCCESS = "Updated profile information successfully.";
     public static final String UNAUTHORIZED_ACCESS = "Unauthorized access.";
     public static final String FORBIDDEN_ACCESS = "Forbidden access.";
-    public static final String INVALID_DAY_OF_WEEK = "Day of week invalid.";
     public static final String FAILED_IMPORT_DATA_EXCEL = "Failed to import data from file excel.";
     public static final String FAILED_EXPORT_DATA_EXCEL = "Failed to export data to file excel.";
     public static final String SPECIALIZATION_NOT_FOUND = "You are not currently in any specific specialty. Please contact admin.";
@@ -49,4 +48,6 @@ public class MessageConstants {
     public static final String ERROR_NEXT_APPOINTMENT_DATE = "The next appointment date cannot be in the past and must be at least 7 days before the next appointment date.";
     public static final String ADD_MEDICAL_RECORD_SUCCESS = "Add medical record successfully.";
     public static final String FORBIDDEN_ADD_MEDICAL_RECORD = "No permission to add medical record.";
+    public static final String ADD_LAB_RESULT_TO_MEDICAL_RECORD_SUCCESS = "Add lab result to medical record success.";
+    public static final String ERROR_NORMAL_RANGE_VALUE = "Normal range is invalid. Normal range can be a range type ('1.5-2.5',...) or a comparison type ('<1.0', '>=2.3' ,...) or values like 'Positive' , 'Negative'";
 }
