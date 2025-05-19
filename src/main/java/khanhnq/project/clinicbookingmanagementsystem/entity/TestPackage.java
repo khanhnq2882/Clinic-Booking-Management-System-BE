@@ -47,7 +47,7 @@ public class TestPackage extends BaseEntity{
     @OneToMany(mappedBy = "testPackage", cascade = CascadeType.ALL)
     private List<LabResult> labResults;
 
-    @ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REMOVE})
+    @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REMOVE})
     @JoinTable(
             name = "test_package_attribute_mapping",
             joinColumns = @JoinColumn(name = "test_package_id"),

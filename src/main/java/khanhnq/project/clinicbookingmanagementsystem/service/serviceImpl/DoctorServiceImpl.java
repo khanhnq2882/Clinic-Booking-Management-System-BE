@@ -52,6 +52,7 @@ public class DoctorServiceImpl implements DoctorService {
     private final TestPackageRepository testPackageRepository;
     private final TestPackageAttributeRepository testPackageAttributeRepository;
     private final TestResultRepository testResultRepository;
+    private final NormalRangeRepository normalRangeRepository;
     private final CommonServiceImpl commonServiceImpl;
 
     @Override
@@ -267,9 +268,8 @@ public class DoctorServiceImpl implements DoctorService {
             if (!checkVisitDate) {
                 String formatWorkingDay = new SimpleDateFormat("dd-MM-yyyy").format(bookingTime.getWorkingDay());
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
-                String formatStartTime = bookingTime.getStartTime().format(formatter);
-                String formatEndTime = bookingTime.getEndTime().format(formatter);
-                throw new SystemException("The visit date must be within day " +formatWorkingDay+ " , booking time from " +formatStartTime+ " to "+formatEndTime+".");
+                throw new SystemException("The visit date must be within day " + formatWorkingDay + " , booking time from "
+                        + bookingTime.getStartTime().format(formatter) + " to "+ bookingTime.getEndTime().format(formatter) +".");
             }
             if (!isValidNextAppointmentDate(medicalRecordRequest.getNextAppointmentDate())) {
                 throw new SystemException(MessageConstants.ERROR_NEXT_APPOINTMENT_DATE);
@@ -283,7 +283,7 @@ public class DoctorServiceImpl implements DoctorService {
             response.setData(MessageConstants.ADD_MEDICAL_RECORD_SUCCESS);
             return response;
         } else {
-            throw new SystemException("A medical record for booking "+booking.getBookingCode()+" has been created. Please update it.");
+            throw new SystemException("A medical record for booking " + booking.getBookingCode() + " has been created. Please update it.");
         }
 
     }
@@ -303,81 +303,37 @@ public class DoctorServiceImpl implements DoctorService {
                 () -> new ResourceNotFoundException("Doctor ID", doctorId.toString()));
         LabResult labResult = LabResultMapper.LAB_RESULT_MAPPER.mapToLabResult(labResultRequest);
         List<TestResult> testResults = new ArrayList<>();
+
         labResultRequest.getTestResults().forEach(testResultDTO -> {
             Long testPackageAttributeId = testResultDTO.getTestPackageAttributeId();
             TestPackageAttribute testPackageAttribute = testPackageAttributeRepository.findById(testPackageAttributeId).orElseThrow(
                     () -> new ResourceNotFoundException("Test Package Attribute ID", testPackageAttributeId.toString()));
             TestResult testResult = new TestResult();
-            Map<String, String> attributeMetadata = testPackageAttribute.getAttributeMetadata();
             String result = testResultDTO.getResult();
-            String normalRange = attributeMetadata.get("normalRange");
-            try {
-                normalRange = normalRange.replace("≥", ">=").replace("≤", "<=");
-                if ("POSITIVE".equalsIgnoreCase(result)) {
-                    testResult.setStatus(ETestResultStatus.POSITIVE);
-                } else if ("NEGATIVE".equalsIgnoreCase(result)) {
-                    testResult.setStatus(ETestResultStatus.NEGATIVE);
-                } else if ("INCONCLUSIVE".equalsIgnoreCase(result)) {
-                    testResult.setStatus(ETestResultStatus.INCONCLUSIVE);
-                } else {
-                    float value = Float.parseFloat(result);
-                    Pattern rangePattern = Pattern.compile("^\\s*(\\d+(?:\\.\\d+)?)\\s*[-–]\\s*(\\d+(?:\\.\\d+)?)\\s*$");
-                    Matcher rangeMatcher = rangePattern.matcher(normalRange);
-                    if (rangeMatcher.find()) {
-                        float min = Float.parseFloat(rangeMatcher.group(1));
-                        float max = Float.parseFloat(rangeMatcher.group(2));
-                        if (value < min) {
-                            testResult.setStatus(ETestResultStatus.LOW);
-                        } else if (value > max) {
-                            testResult.setStatus(ETestResultStatus.HIGH);
-                        } else {
-                            testResult.setStatus(ETestResultStatus.NORMAL);
-                        }
-                    } else {
-                        Pattern comparisonPattern = Pattern.compile("^(>=|<=|>|<|=)\\s*(\\d+(?:\\.\\d+)?)$");
-                        Matcher comparisonMatcher = comparisonPattern.matcher(normalRange);
-                        if (comparisonMatcher.find()) {
-                            String operation = comparisonMatcher.group(1);
-                            float threshold = Float.parseFloat(comparisonMatcher.group(2));
-                            switch (operation) {
-                                case ">":
-                                    testResult.setStatus(value > threshold ? ETestResultStatus.NORMAL : ETestResultStatus.LOW);
-                                    break;
-                                case "<":
-                                    testResult.setStatus(value < threshold ? ETestResultStatus.NORMAL : ETestResultStatus.HIGH);
-                                    break;
-                                case ">=":
-                                    testResult.setStatus(value >= threshold ? ETestResultStatus.NORMAL : ETestResultStatus.LOW);
-                                    break;
-                                case "<=":
-                                    testResult.setStatus(value <= threshold ? ETestResultStatus.NORMAL : ETestResultStatus.HIGH);
-                                    break;
-                                case "=":
-                                    if (value == threshold) {
-                                        testResult.setStatus(ETestResultStatus.NORMAL);
-                                    } else if (value > threshold) {
-                                        testResult.setStatus(ETestResultStatus.HIGH);
-                                    } else {
-                                        testResult.setStatus(ETestResultStatus.LOW);
-                                    }
-                                    break;
-                            }
-                        } else {
-                            testResult.setStatus(ETestResultStatus.INCONCLUSIVE);
-                        }
-                    }
+            Booking booking = medicalRecord.getBooking();
+            LocalDate dateOfBirth = booking.getDateOfBirth().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+            LocalDate dateNow = LocalDate.now();
+            int yearOld = Period.between(dateOfBirth, dateNow).getYears();
+            String gender = booking.getGender() == 1 ? "MALE" : "FEMALE";
+            List<NormalRange> normalRanges =
+                    normalRangeRepository.getNormalRangesByTestPackageAttributeId(testPackageAttribute.getTestPackageAttributeId());
+            normalRanges.forEach(normalRange -> {
+                ENormalRangeType normalRangeType = normalRange.getNormalRangeType();
+                Integer ageMin = normalRange.getAgeMin();
+                Integer ageMax = normalRange.getAgeMax();
+                Double minValue = normalRange.getMinValue();
+                Double maxValue = normalRange.getMaxValue();
+                Double equalValue = normalRange.getEqualValue();
+                String expectedValue = normalRange.getExpectedValue();
+                if (result != null && !result.equals("") && normalRange.getGender().name().equals(gender)) {
+                    setStatusForTestResult(testResult, result, yearOld, ageMin,
+                            ageMax, minValue, maxValue, equalValue,
+                            expectedValue, normalRangeType);
+
                 }
-                testResult.setResult(result);
-                testResult.setNote(testResultDTO.getNote());
-                testResult.setTestPackageAttribute(testPackageAttribute);
-                testResult.setCreatedBy(doctorPrescribed.getUser().getUsername());
-                testResult.setCreatedAt(LocalDateTime.now());
-                testResult.setLabResult(labResult);
-                testResults.add(testResult);
-            } catch (NumberFormatException e) {
-                throw new SystemException(MessageConstants.SOMETHING_WENT_WRONG);
-            }
+            });
         });
+
         labResult.setMedicalRecord(medicalRecord);
         labResult.setTestPackage(testPackage);
         labResult.setDoctorPrescribed(doctorPrescribed);
@@ -501,4 +457,64 @@ public class DoctorServiceImpl implements DoctorService {
         }
         return true;
     }
+
+    private void setStatusForTestResult(TestResult testResult, String result, Integer yearOld,
+                                        Integer ageMin, Integer ageMax, Double minValue,
+                                        Double maxValue, Double equalValue,String expectedValue,
+                                        ENormalRangeType normalRangeType) {
+        Pattern doublePattern = Pattern.compile("^[+-]?(\\d+(\\.\\d{0,3})?|\\.\\d{1,3})$");
+        Matcher rangeMatcher = doublePattern.matcher(result);
+        if (!rangeMatcher.find()) return;
+        Double doubleResult = Double.valueOf(result);
+        boolean matchAge = (ageMin == null || yearOld >= ageMin) &&
+                (ageMax == null || yearOld <= ageMax);
+        if (!matchAge) return;
+        switch (normalRangeType) {
+            case RANGE:
+                if (doubleResult >= minValue && doubleResult <= maxValue) {
+                    testResult.setStatus(ETestResultStatus.NORMAL);
+                } else if (doubleResult < minValue) {
+                    testResult.setStatus(ETestResultStatus.LOW);
+                } else {
+                    testResult.setStatus(ETestResultStatus.HIGH);
+                }
+                break;
+            case LESS_THAN:
+                testResult.setStatus(doubleResult < maxValue ?
+                        ETestResultStatus.NORMAL : ETestResultStatus.HIGH);
+                break;
+            case LESS_THAN_EQUAL:
+                testResult.setStatus(doubleResult <= maxValue ?
+                        ETestResultStatus.NORMAL : ETestResultStatus.HIGH);
+                break;
+            case GREATER_THAN:
+                testResult.setStatus(doubleResult > minValue ?
+                        ETestResultStatus.NORMAL : ETestResultStatus.LOW);
+                break;
+            case GREATER_THAN_EQUAL:
+                testResult.setStatus(doubleResult >= minValue ?
+                        ETestResultStatus.NORMAL : ETestResultStatus.LOW);
+                break;
+            case EQUAL:
+                if (doubleResult.equals(minValue)) {
+                    testResult.setStatus(ETestResultStatus.NORMAL);
+                } else if (doubleResult < equalValue) {
+                    testResult.setStatus(ETestResultStatus.LOW);
+                } else {
+                    testResult.setStatus(ETestResultStatus.HIGH);
+                }
+                break;
+            case QUALITATIVE, SEMI_QUALITATIVE:
+                if (expectedValue != null && expectedValue.equalsIgnoreCase(result)) {
+                    testResult.setStatus(ETestResultStatus.NORMAL);
+                } else {
+                    testResult.setStatus(ETestResultStatus.ABNORMAL);
+                }
+                break;
+            case TEXT:
+                testResult.setStatus(ETestResultStatus.INCONCLUSIVE);
+                break;
+        }
+    }
+
 }

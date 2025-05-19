@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -169,7 +170,7 @@ public class AdminController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<InputStreamResource> exportBookingsToExcel () {
         String fileName = "bookings.xlsx";
-        InputStreamResource file = new InputStreamResource(adminService.exportBookingsToExcel(adminService.getBookings()));
+        InputStreamResource file = new InputStreamResource(adminService.exportBookingsToExcel(new ArrayList<>()));
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName)
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))

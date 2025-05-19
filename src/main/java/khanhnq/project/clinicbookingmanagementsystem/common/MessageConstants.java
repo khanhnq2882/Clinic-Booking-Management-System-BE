@@ -27,8 +27,6 @@ public class MessageConstants {
     public static final String INVALID_EXCEL_FORMAT = "Invalid excel file format.";
     public static final String ADD_SERVICE_SUCCESS = "Add service successfully.";
     public static final String UPDATE_SERVICE_SUCCESS = "Update service successfully.";
-    public static final String ADD_SERVICE_CATEGORY_SUCCESS = "Add service category successfully.";
-    public static final String UPDATE_SERVICE_CATEGORY_SUCCESS = "Update service category successfully.";
     public static final String INVALID_WORKING_DAY = "The working day must start from today and must fall within the current working week.";
     public static final String INVALID_APPOINTMENT_DATE = "The appointment date must start from today and must fall within the current working week.";
     public static final String INVALID_SERVICE_STATUS = "The service status must be one of the values ACTIVE, INACTIVE , SUSPENDED.";
@@ -41,7 +39,6 @@ public class MessageConstants {
     public static final String UPDATE_BOOKED_APPOINTMENT_SUCCESS = "Booking appointment updated successfully.";
     public static final String FORBIDDEN_CHANGE_BOOKING_STATUS = "No permission to change booking status.";
     public static final String REFRESH_TOKEN_EXPIRED = "Refresh token was expired. Please make a new login request";
-    public static final String ERROR_NAME_FIELD_IN_TEST_PACKAGE = "Each attribute in the test package must have 'name' and 'normalRange' fields and the values of 'name' and 'normalRange' cannot be empty.";
     public static final String ADD_TEST_PACKAGE_SUCCESS = "Add test package successfully.";
     public static final String UPDATE_TEST_PACKAGE_SUCCESS = "Update test package successfully.";
     public static final String UPDATE_TEST_PACKAGE_STATUS_SUCCESS = "Update test package status successfully.";
@@ -49,5 +46,6 @@ public class MessageConstants {
     public static final String ADD_MEDICAL_RECORD_SUCCESS = "Add medical record successfully.";
     public static final String FORBIDDEN_ADD_MEDICAL_RECORD = "No permission to add medical record.";
     public static final String ADD_LAB_RESULT_TO_MEDICAL_RECORD_SUCCESS = "Add lab result to medical record success.";
-    public static final String ERROR_NORMAL_RANGE_VALUE = "Normal range is invalid. Normal range can be a range type ('1.5-2.5',...) or a comparison type ('<1.0', '>=2.3' ,...) or values like 'Positive' , 'Negative'";
+    public static final String ERROR_NORMAL_RANGE_BLANK = "The normal range parameters of each index in the test package cannot be left blank.";
+    public static final String ERROR_ADD_NAME_OR_UNIT_ATTRIBUTE = "Do not add 'name' and 'unit' fields to test package properties because they already exist.";
 }

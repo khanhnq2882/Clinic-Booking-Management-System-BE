@@ -58,6 +58,7 @@ public class AdminServiceImpl implements AdminService {
     private final FileRepository fileRepository;
     private final TestPackageRepository testPackageRepository;
     private final TestPackageAttributeRepository testPackageAttributeRepository;
+    private final NormalRangeRepository normalRangeRepository;
     private final CommonServiceImpl commonServiceImpl;
     private final Workbook workbook = new XSSFWorkbook();
     private final JavaMailSender mailSender;
@@ -242,13 +243,6 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public List<BookingDetailsInfoProjection> getBookings() {
-        List<Booking> bookings = bookingRepository.findAll().stream()
-                .filter(booking -> Objects.isNull(booking.getUser())).toList();
-        return null;
-    }
-
-    @Override
     public ResponseEntityBase getAllSpecializations() {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         List<SpecializationDTO> specializations = specializationRepository.findAll().stream()
@@ -293,37 +287,24 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @Transactional
     public ResponseEntityBase addTestPackage(TestPackageRequest testPackageRequest) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        User user = authService.getCurrentUser();
+        User currentUser = authService.getCurrentUser();
         Services service = servicesRepository.findById(testPackageRequest.getServiceId())
                 .orElseThrow(() -> new ResourceNotFoundException("Service Id", testPackageRequest.getServiceId().toString()));
-        TestPackage testPackage = TestPackageMapper.TEST_PACKAGE_MAPPER.mapToTestPackage(testPackageRequest);
-        if (Objects.isNull(testPackage.getTestPackageAttributes())) {
-            testPackage.setTestPackageAttributes(new ArrayList<>());
-        }
-        testPackage.getTestPackageAttributes().forEach(testPackageAttribute -> {
-            if (testPackageAttribute.getNormalRanges() == null || testPackageAttribute.getNormalRanges().size() == 0) {
-                throw new SystemException("The normal range parameters of each index in the test package cannot be left blank.");
-            }
-            List<NormalRange> normalRanges = testPackageAttribute.getNormalRanges()
-                    .stream()
-                    .map(normalRange -> {
-                        validateNormalRange(normalRange);
-                        normalRange.setTestPackageAttribute(testPackageAttribute);
-                        normalRange.setCreatedBy(user.getUsername());
-                        return normalRange;
-                    }).toList();
-            testPackageAttribute.setNormalRanges(normalRanges);
-            testPackageAttribute.setCreatedBy(user.getUsername());
-            if (testPackageAttribute.getTestPackages() == null) {
-                testPackageAttribute.setTestPackages(new ArrayList<>());
-            }
-            testPackageAttribute.getTestPackages().add(testPackage);
-        });
+        String testPackageName = testPackageRequest.getTestPackageName();
+        validateTestPackageName(testPackageName);
+        TestPackage testPackage = new TestPackage();
+        testPackage.setTestPackageName(testPackageName);
+        testPackage.setTestPackagePrice(testPackageRequest.getTestPackagePrice());
+        testPackage.setTestPreparationRequirements(testPackageRequest.getTestPreparationRequirements());
+        testPackage.setTestDescription(testPackageRequest.getTestDescription());
         testPackage.setService(service);
+        List<TestPackageAttribute> testPackageAttributes = createTestPackageAttributes(testPackageRequest, testPackage, currentUser);
+        testPackage.setTestPackageAttributes(testPackageAttributes);
         testPackage.setStatus(ETestPackageStatus.DRAFT);
-        testPackage.setCreatedBy(user.getUsername());
+        testPackage.setCreatedBy(currentUser.getUsername());
         testPackageRepository.save(testPackage);
         response.setData(MessageConstants.ADD_TEST_PACKAGE_SUCCESS);
         return response;
@@ -333,40 +314,35 @@ public class AdminServiceImpl implements AdminService {
     @Transactional
     public ResponseEntityBase updateTestPackage(Long testPackageId, TestPackageRequest testPackageRequest) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        User user = authService.getCurrentUser();
+        User currentUser = authService.getCurrentUser();
         TestPackage testPackage = testPackageRepository.findById(testPackageId)
                 .orElseThrow(() -> new ResourceNotFoundException("Test Package Id", testPackageId.toString()));
         Services service = servicesRepository.findById(testPackageRequest.getServiceId())
                 .orElseThrow(() -> new ResourceNotFoundException("Service Id", testPackageRequest.getServiceId().toString()));
         if (testPackage.getStatus().name().equals("INACTIVE") || testPackage.getStatus().name().equals("DRAFT")) {
-            TestPackageMapper.TEST_PACKAGE_MAPPER.mapToTestPackage(testPackage, testPackageRequest);
             List<TestPackageAttribute> testPackageAttributes = testPackage.getTestPackageAttributes();
             if (Objects.nonNull(testPackageAttributes) && !testPackageAttributes.isEmpty()) {
                 List<TestPackageAttribute> attributesToDelete = new ArrayList<>(testPackageAttributes);
-                for (TestPackageAttribute testPackageAttribute : attributesToDelete) {
+                testPackageAttributes.forEach(testPackageAttribute -> {
+                    normalRangeRepository.deleteNormalRangesByTestPackageAttributeId(testPackageAttribute.getTestPackageAttributeId());
                     testPackageAttribute.getTestPackages().remove(testPackage);
-                }
+                });
                 testPackage.getTestPackageAttributes().clear();
                 testPackageRepository.save(testPackage);
                 testPackageAttributeRepository.deleteAll(attributesToDelete);
             }
-            List<TestPackageAttribute> newAttributes = new ArrayList<>();
-//            for (Map<String, String> attributeMetaData : testPackageRequest.getAttributesMetadata()) {
-//                if (!checkRequiredTestAttribute(attributeMetaData, "name") && !checkRequiredTestAttribute(attributeMetaData, "normalRange")) {
-//                    throw new SystemException(MessageConstants.ERROR_NAME_FIELD_IN_TEST_PACKAGE);
-//                }
-//                TestPackageAttribute testPackageAttribute = new TestPackageAttribute();
-//                testPackageAttribute.setAttributeMetadata(attributeMetaData);
-//                testPackageAttribute.setCreatedBy(user.getUsername());
-//                testPackageAttribute.getTestPackages().add(testPackage);
-//                newAttributes.add(testPackageAttribute);
-//            }
-            testPackage.setTestPackageAttributes(newAttributes);
+            String testPackageName = testPackageRequest.getTestPackageName();
+            validateTestPackageName(testPackageName);
+            testPackage.setTestPackageName(testPackageName);
+            testPackage.setTestPackagePrice(testPackageRequest.getTestPackagePrice());
+            testPackage.setTestPreparationRequirements(testPackageRequest.getTestPreparationRequirements());
+            testPackage.setTestDescription(testPackageRequest.getTestDescription());
             testPackage.setService(service);
+            List<TestPackageAttribute> savedTestPackageAttributes = createTestPackageAttributes(testPackageRequest, testPackage, currentUser);
+            testPackage.setTestPackageAttributes(savedTestPackageAttributes);
             testPackage.setStatus(ETestPackageStatus.DRAFT);
-            testPackage.setUpdatedBy(user.getUsername());
+            testPackage.setUpdatedBy(currentUser.getUsername());
             testPackageRepository.save(testPackage);
-            System.out.println(testPackage.getTestPackageAttributes());
             response.setData(MessageConstants.UPDATE_TEST_PACKAGE_SUCCESS);
         } else {
             throw new SystemException("Test package that has been " +testPackage.getStatus().name()+ " can't be updated.");
@@ -629,21 +605,6 @@ public class AdminServiceImpl implements AdminService {
                 .collect(Collectors.joining());
     }
 
-    public Map<Integer, String> serviceCategoryHeaderCellIndex (Row row) {
-        Map <Integer, String> headerCellIndex = new HashMap<>();
-        List<Cell> cellsHeader = commonServiceImpl.getAllCells(row);
-        for (int i = 0; i < cellsHeader.size(); i++) {
-            switch (cellsHeader.get(i).getStringCellValue()) {
-                case "Service Category Name" -> headerCellIndex.put(i, "Service Category Name");
-                case "Description" -> headerCellIndex.put(i, "Description");
-                case "Specialization" -> headerCellIndex.put(i, "Specialization");
-                default -> {
-                }
-            }
-        }
-        return headerCellIndex;
-    }
-
     public Map<Integer, String> serviceHeaderCellIndex (Row row) {
         Map <Integer, String> headerCellIndex = new HashMap<>();
         List<Cell> cellsHeader = commonServiceImpl.getAllCells(row);
@@ -797,14 +758,29 @@ public class AdminServiceImpl implements AdminService {
         return ETestPackageStatus.valueOf(enumValue);
     }
 
-    public void validateNormalRange(NormalRange normalRange) {
-        switch (normalRange.getNormalRangeType()) {
+    public void validateNormalRange(NormalRange normalRange, String testPackageAttributeUnit) {
+        ENormalRangeType normalRangeType = normalRange.getNormalRangeType();
+        switch (normalRangeType) {
             case RANGE -> {
                 requireNonNull(normalRange.getMinValue(), "Min value is required for RANGE.");
                 requireNonNull(normalRange.getMaxValue(), "Max value is required for RANGE.");
+                if (testPackageAttributeUnit == null || testPackageAttributeUnit.equals(""))
+                    throw new SystemException("Unit is required for RANGE.");
             }
-            case LESS_THAN, LESS_THAN_EQUAL, GREATER_THAN, GREATER_THAN_EQUAL, EQUAL -> {
-                requireNonNull(normalRange.getMinValue(), normalRange.getNormalRangeType() + " requires min value.");
+            case LESS_THAN, LESS_THAN_EQUAL-> {
+                requireNonNull(normalRange.getMaxValue(), normalRangeType + " requires max value.");
+                if (testPackageAttributeUnit == null || testPackageAttributeUnit.equals(""))
+                    throw new SystemException(normalRangeType + " requires unit value.");
+            }
+            case GREATER_THAN, GREATER_THAN_EQUAL-> {
+                requireNonNull(normalRange.getMinValue(), normalRangeType + " requires min value.");
+                if (testPackageAttributeUnit == null || testPackageAttributeUnit.equals(""))
+                    throw new SystemException(normalRangeType + " requires unit value.");
+            }
+            case EQUAL -> {
+                requireNonNull(normalRange.getEqualValue(), normalRangeType + " requires equal value.");
+                if (testPackageAttributeUnit == null || testPackageAttributeUnit.equals(""))
+                    throw new SystemException(normalRangeType + " requires unit value.");
             }
             case QUALITATIVE -> {
                 requireNonNull(normalRange.getExpectedValue(), "Expected value is required for QUALITATIVE.");
@@ -813,14 +789,77 @@ public class AdminServiceImpl implements AdminService {
                 requireNonNull(normalRange.getExpectedValue(), "Expected value is required for SEMI QUALITATIVE");
                 requireNonNull(normalRange.getNormalText(), "Normal text is required for SEMI QUALITATIVE.");
             }
-            case TEXT_ONLY -> {
-                requireNonNull(normalRange.getNormalText(), "Normal text is required for TEXT ONLY.");
+            case TEXT -> {
+                requireNonNull(normalRange.getNormalText(), "Normal text is required for TEXT.");
+            }
+            default -> {
+                throw new ResourceNotFoundException("Normal range type", normalRangeType.name());
             }
         }
     }
 
     private void requireNonNull(Object value, String message) {
         if (value == null) throw new SystemException(message);
+    }
+
+    private List<TestPackageAttribute> createTestPackageAttributes(TestPackageRequest testPackageRequest, TestPackage testPackage, User currentUser) {
+        List<TestPackageAttribute> testPackageAttributes = new ArrayList<>();
+        testPackageRequest.getTestPackageAttributes().forEach(testPackageAttributeDTO -> {
+            TestPackageAttribute testPackageAttribute = new TestPackageAttribute();
+            String testPackageAttributeName = testPackageAttributeDTO.getName();
+            List<String> testPackageAttributeNames = testPackageAttributeRepository.findAll().stream().map(TestPackageAttribute::getName).toList();
+            if (testPackageAttributeNames.stream().anyMatch(s -> s.equalsIgnoreCase(testPackageAttributeName))) {
+                throw new ResourceAlreadyExistException("Test package attribute name", testPackageAttributeName);
+            }
+            testPackageAttribute.setName(testPackageAttributeName);
+            String testPackageAttributeUnit = testPackageAttributeDTO.getUnit();
+            Map<String, String> attributeMetaData = testPackageAttributeDTO.getAttributeMetadata();
+            if (attributeMetaData.containsKey("name") || attributeMetaData.containsKey("unit")) {
+                throw new SystemException(MessageConstants.ERROR_ADD_NAME_OR_UNIT_ATTRIBUTE);
+            }
+            testPackageAttribute.setAttributeMetadata(attributeMetaData);
+            if (testPackageAttributeDTO.getNormalRanges() == null || testPackageAttributeDTO.getNormalRanges().size() == 0) {
+                throw new SystemException(MessageConstants.ERROR_NORMAL_RANGE_BLANK);
+            }
+            List<NormalRange> normalRanges = testPackageAttributeDTO.getNormalRanges()
+                    .stream()
+                    .map(normalRangeDTO -> {
+                        List<String> normalRangeTypes = Arrays.stream(ENormalRangeType.values())
+                                .map(Enum::name)
+                                .toList();
+                        if (normalRangeTypes.stream().noneMatch(s -> s.equalsIgnoreCase(normalRangeDTO.getNormalRangeType()))) {
+                            throw new ResourceNotFoundException("Normal range type", normalRangeDTO.getNormalRangeType());
+                        }
+                        List<String> genderTypes = Arrays.stream(EGender.values())
+                                .map(Enum::name)
+                                .toList();
+                        if (genderTypes.stream().noneMatch(s -> s.equalsIgnoreCase(normalRangeDTO.getGender()))) {
+                            throw new ResourceNotFoundException("Gender type", normalRangeDTO.getGender());
+                        }
+                        normalRangeDTO.setNormalRangeType(normalRangeDTO.getNormalRangeType().toUpperCase());
+                        NormalRange normalRange = NormalRangeMapper.NORMAL_RANGE_MAPPER.mapToNormalRange(normalRangeDTO);
+                        validateNormalRange(normalRange, testPackageAttributeUnit);
+                        normalRange.setTestPackageAttribute(testPackageAttribute);
+                        normalRange.setCreatedBy(currentUser.getUsername());
+                        return normalRange;
+                    }).toList();
+            testPackageAttribute.setUnit(testPackageAttributeUnit);
+            testPackageAttribute.setNormalRanges(normalRanges);
+            if (testPackageAttribute.getTestPackages() == null) {
+                testPackageAttribute.setTestPackages(new ArrayList<>());
+            }
+            testPackageAttribute.getTestPackages().add(testPackage);
+            testPackageAttribute.setCreatedBy(currentUser.getUsername());
+            testPackageAttributes.add(testPackageAttribute);
+        });
+        return testPackageAttributes;
+    }
+
+    private void validateTestPackageName(String testPackageName) {
+        List<String> testPackageNames = testPackageRepository.findAll().stream().map(TestPackage::getTestPackageName).toList();
+        if (testPackageNames.stream().anyMatch(s -> s.equalsIgnoreCase(testPackageName))) {
+            throw new ResourceAlreadyExistException("Test package name", testPackageName);
+        }
     }
 
 }

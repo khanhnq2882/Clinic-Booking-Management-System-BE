@@ -36,7 +36,7 @@ public class Booking extends BaseEntity{
     private Date dateOfBirth;
 
     @Column(length = 1, nullable = false)
-    private int gender;
+    private Integer gender;
 
     @Column(length = 10, nullable = false)
     @Size(max = 10)

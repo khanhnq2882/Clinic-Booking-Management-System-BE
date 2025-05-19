@@ -1,8 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.entity;
 
 import jakarta.persistence.*;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotEmpty;
 import khanhnq.project.clinicbookingmanagementsystem.common.MapToJsonConverter;
 import lombok.*;
 import java.util.*;
@@ -24,9 +22,7 @@ public class TestPackageAttribute extends BaseEntity {
 
     private String unit;
 
-    @Valid
     @OneToMany(mappedBy = "testPackageAttribute", cascade = CascadeType.ALL, orphanRemoval = true)
-    @NotEmpty(message = "Test package must have at least one normal range.")
     private List<NormalRange> normalRanges = new ArrayList<>();
 
     @Convert(converter = MapToJsonConverter.class)

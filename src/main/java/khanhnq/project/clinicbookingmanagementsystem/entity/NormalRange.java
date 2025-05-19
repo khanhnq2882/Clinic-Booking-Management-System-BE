@@ -38,6 +38,9 @@ public class NormalRange extends BaseEntity {
     @Column(name = "max_value")
     private Double maxValue;
 
+    @Column(name = "equal_value")
+    private Double equalValue;
+
     @Column(name = "expected_value")
     private String expectedValue;
 

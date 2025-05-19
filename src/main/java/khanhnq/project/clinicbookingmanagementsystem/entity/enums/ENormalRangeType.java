@@ -9,5 +9,5 @@ public enum ENormalRangeType {
     EQUAL,
     QUALITATIVE,
     SEMI_QUALITATIVE,
-    TEXT_ONLY
+    TEXT
 }

@@ -55,7 +55,7 @@ public class User extends BaseEntity{
     private Date dateOfBirth;
 
     @Column(length = 1)
-    private int gender;
+    private Integer gender;
 
     @Column(length = 10)
     @Size(max = 10)

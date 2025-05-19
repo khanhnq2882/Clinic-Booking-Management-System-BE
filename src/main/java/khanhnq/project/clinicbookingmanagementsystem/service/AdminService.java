@@ -24,7 +24,6 @@ public interface AdminService {
     ResponseEntityBase getServiceById (Long serviceId);
     ResponseEntityBase updateService(ServiceRequest serviceRequest, Long serviceId);
     List<UserDTO> getUsers();
-    List<BookingDetailsInfoProjection> getBookings();
     ByteArrayInputStream exportUsersToExcel (List<UserDTO> users);
     ByteArrayInputStream exportServicesToExcel(List<ServicesDTO> services);
     ByteArrayInputStream exportBookingsToExcel (List<BookingDetailsInfoProjection> bookings);
