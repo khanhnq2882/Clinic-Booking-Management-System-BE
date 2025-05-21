@@ -3,6 +3,7 @@ package khanhnq.project.clinicbookingmanagementsystem.service;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.*;
 import khanhnq.project.clinicbookingmanagementsystem.model.response.ResponseEntityBase;
 import org.springframework.web.multipart.MultipartFile;
+import java.util.List;
 
 public interface DoctorService {
     ResponseEntityBase updateProfile(UserProfileRequest userProfileRequest, MultipartFile avatar);
@@ -13,5 +14,5 @@ public interface DoctorService {
     ResponseEntityBase completedBooking (Long bookingId);
     ResponseEntityBase getAllBookings(int page, int size, String[] sorts);
     ResponseEntityBase addMedicalRecord(MedicalRecordRequest medicalRecordRequest);
-    ResponseEntityBase addLabResultToMedicalRecord(LabResultRequest labResultRequest);
+    ResponseEntityBase addLabResultsToMedicalRecord(List<LabResultRequest> labResultRequests);
 }

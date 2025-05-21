@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import java.util.List;
 
 @RestController
 @AllArgsConstructor
@@ -70,9 +71,9 @@ public class DoctorController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(doctorService.addMedicalRecord(medicalRecordRequest));
     }
 
-    @PostMapping("/add-lab-result-to-medical-record")
+    @PostMapping("/add-lab-results-to-medical-record")
     @PreAuthorize("hasRole('ADMIN') or hasRole('DOCTOR')")
-    public ResponseEntity<ResponseEntityBase> addLabResultToMedicalRecord(@RequestBody LabResultRequest labResultRequest) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(doctorService.addLabResultToMedicalRecord(labResultRequest));
+    public ResponseEntity<ResponseEntityBase> addLabResultsToMedicalRecord(@RequestBody List<LabResultRequest> labResultRequests) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(doctorService.addLabResultsToMedicalRecord(labResultRequests));
     }
 }

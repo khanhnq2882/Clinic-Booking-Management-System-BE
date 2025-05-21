@@ -289,58 +289,77 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
-    public ResponseEntityBase addLabResultToMedicalRecord(LabResultRequest labResultRequest) {
+    public ResponseEntityBase addLabResultsToMedicalRecord(List<LabResultRequest> labResultRequests) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         User currentUser = authService.getCurrentUser();
-        Long medicalRecordId = labResultRequest.getMedicalRecordId();
-        Long testPackageId = labResultRequest.getTestPackageId();
-        Long doctorId = labResultRequest.getDoctorPrescribedId();
-        MedicalRecord medicalRecord = medicalRecordRepository.findById(medicalRecordId).orElseThrow(
-                () -> new ResourceNotFoundException("Medical Record ID", medicalRecordId.toString()));
-        TestPackage testPackage = testPackageRepository.findById(testPackageId).orElseThrow(
-                () -> new ResourceNotFoundException("Test Package ID", testPackageId.toString()));
-        Doctor doctorPrescribed = doctorRepository.findById(doctorId).orElseThrow(
-                () -> new ResourceNotFoundException("Doctor ID", doctorId.toString()));
-        LabResult labResult = LabResultMapper.LAB_RESULT_MAPPER.mapToLabResult(labResultRequest);
-        List<TestResult> testResults = new ArrayList<>();
-
-        labResultRequest.getTestResults().forEach(testResultDTO -> {
-            Long testPackageAttributeId = testResultDTO.getTestPackageAttributeId();
-            TestPackageAttribute testPackageAttribute = testPackageAttributeRepository.findById(testPackageAttributeId).orElseThrow(
-                    () -> new ResourceNotFoundException("Test Package Attribute ID", testPackageAttributeId.toString()));
-            TestResult testResult = new TestResult();
-            String result = testResultDTO.getResult();
-            Booking booking = medicalRecord.getBooking();
-            LocalDate dateOfBirth = booking.getDateOfBirth().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-            LocalDate dateNow = LocalDate.now();
-            int yearOld = Period.between(dateOfBirth, dateNow).getYears();
-            String gender = booking.getGender() == 1 ? "MALE" : "FEMALE";
-            List<NormalRange> normalRanges =
-                    normalRangeRepository.getNormalRangesByTestPackageAttributeId(testPackageAttribute.getTestPackageAttributeId());
-            normalRanges.forEach(normalRange -> {
-                ENormalRangeType normalRangeType = normalRange.getNormalRangeType();
-                Integer ageMin = normalRange.getAgeMin();
-                Integer ageMax = normalRange.getAgeMax();
-                Double minValue = normalRange.getMinValue();
-                Double maxValue = normalRange.getMaxValue();
-                Double equalValue = normalRange.getEqualValue();
-                String expectedValue = normalRange.getExpectedValue();
-                if (result != null && !result.equals("") && normalRange.getGender().name().equals(gender)) {
-                    setStatusForTestResult(testResult, result, yearOld, ageMin,
-                            ageMax, minValue, maxValue, equalValue,
-                            expectedValue, normalRangeType);
-
+        labResultRequests.forEach(labResultRequest -> {
+            Long medicalRecordId = labResultRequest.getMedicalRecordId();
+            Long testPackageId = labResultRequest.getTestPackageId();
+            Long doctorId = labResultRequest.getDoctorPrescribedId();
+            MedicalRecord medicalRecord = medicalRecordRepository.findById(medicalRecordId).orElseThrow(
+                    () -> new ResourceNotFoundException("Medical Record ID", medicalRecordId.toString()));
+            TestPackage testPackage = testPackageRepository.findById(testPackageId).orElseThrow(
+                    () -> new ResourceNotFoundException("Test Package ID", testPackageId.toString()));
+            Doctor doctorPrescribed = doctorRepository.findById(doctorId).orElseThrow(
+                    () -> new ResourceNotFoundException("Doctor ID", doctorId.toString()));
+            LabResult labResult = LabResultMapper.LAB_RESULT_MAPPER.mapToLabResult(labResultRequest);
+            List<TestResult> testResults = new ArrayList<>();
+            labResultRequest.getTestResults().forEach(testResultDTO -> {
+                Long testPackageAttributeId = testResultDTO.getTestPackageAttributeId();
+                TestPackageAttribute testPackageAttribute = testPackageAttributeRepository.findById(testPackageAttributeId).orElseThrow(
+                        () -> new ResourceNotFoundException("Test Package Attribute ID", testPackageAttributeId.toString()));
+                TestResult testResult = new TestResult();
+                Booking booking = medicalRecord.getBooking();
+                Date dob = booking.getDateOfBirth();
+                LocalDate dateOfBirth = dob instanceof java.sql.Date
+                        ? ((java.sql.Date) dob).toLocalDate()
+                        : dob.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+                LocalDate dateNow = LocalDate.now();
+                int yearOld = Period.between(dateOfBirth, dateNow).getYears();
+                String gender = booking.getGender() == 1 ? "MALE" : "FEMALE";
+                List<NormalRange> normalRanges =
+                        normalRangeRepository.getNormalRangesByTestPackageAttributeId(testPackageAttribute.getTestPackageAttributeId());
+                String result = testResultDTO.getResult();
+                if (result != null && !result.equals("")) {
+                    testResult.setResult(result);
+                    testResult.setNote(testResultDTO.getNote());
+                    normalRanges.forEach(normalRange -> {
+                        ENormalRangeType normalRangeType = normalRange.getNormalRangeType();
+                        Integer ageMin = normalRange.getAgeMin();
+                        Integer ageMax = normalRange.getAgeMax();
+                        Double minValue = normalRange.getMinValue();
+                        Double maxValue = normalRange.getMaxValue();
+                        Double equalValue = normalRange.getEqualValue();
+                        String expectedValue = normalRange.getExpectedValue();
+                        EGender normalGender = normalRange.getGender();
+                        if (normalGender != null && normalGender.name().equals(gender)) {
+                            setStatusForTestResult(testResult, result, yearOld, ageMin,
+                                    ageMax, minValue, maxValue, equalValue,
+                                    expectedValue, normalRangeType);
+                        }
+                        if (normalGender == null) {
+                            setStatusForTestResult(testResult, result, yearOld, ageMin,
+                                    ageMax, minValue, maxValue, equalValue,
+                                    expectedValue, normalRangeType);
+                        }
+                    });
+                    testResult.setLabResult(labResult);
+                    testResult.setCreatedBy(doctorPrescribed.getUser().getUsername());
+                    testResult.setTestPackageAttribute(testPackageAttribute);
+                    testResults.add(testResult);
+                } else {
+                    throw new SystemException(MessageConstants.ERROR_TEST_RESULT);
                 }
             });
+            labResult.setMedicalRecord(medicalRecord);
+            labResult.setTestPackage(testPackage);
+            labResult.setDoctorPrescribed(doctorPrescribed);
+            labResult.setStatus(ELabResultStatus.CREATED);
+            labResult.setCreatedBy(currentUser.getUsername());
+            labResult.setCreatedAt(LocalDateTime.now());
+            labResultRepository.save(labResult);
+            testResultRepository.saveAll(testResults);
         });
-
-        labResult.setMedicalRecord(medicalRecord);
-        labResult.setTestPackage(testPackage);
-        labResult.setDoctorPrescribed(doctorPrescribed);
-        labResult.setCreatedBy(currentUser.getUsername());
-        labResult.setCreatedAt(LocalDateTime.now());
-        labResultRepository.save(labResult);
-        testResultRepository.saveAll(testResults);
         response.setData(MessageConstants.ADD_LAB_RESULT_TO_MEDICAL_RECORD_SUCCESS);
         return response;
     }
