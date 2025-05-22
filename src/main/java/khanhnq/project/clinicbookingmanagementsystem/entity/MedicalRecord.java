@@ -25,32 +25,24 @@ public class MedicalRecord extends BaseEntity{
     @Column(nullable = false)
     private String reasonForVisit;
 
-    @Column(nullable = false)
     private String medicalHistory;
 
-    @Column(nullable = false)
     private String allergies;
 
-    @Column(nullable = false)
     private String diagnosis;
 
-    @Column(nullable = false)
     private String treatmentPlan;
 
-    @Column(nullable = false)
     private String prescribedMedications;
 
-    @Column(nullable = false)
     private String followUpInstructions;
 
-    @Column(nullable = false)
     private LocalDateTime nextAppointmentDate;
 
-    @Column(nullable = false)
     private String consultationNotes;
 
     @Enumerated(EnumType.STRING)
-    @Column(length = 20)
+    @Column(length = 20, nullable = false)
     private EMedicalRecordStatus status;
 
     @OneToMany(mappedBy = "medicalRecord", cascade = CascadeType.ALL)

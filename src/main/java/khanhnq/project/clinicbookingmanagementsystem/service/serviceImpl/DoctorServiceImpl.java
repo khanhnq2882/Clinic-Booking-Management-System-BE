@@ -6,14 +6,17 @@ import khanhnq.project.clinicbookingmanagementsystem.entity.enums.*;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceNotFoundException;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.LabResultMapper;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.MedicalRecordMapper;
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.MedicalRecordDetailsDTO;
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.ResultDTO;
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.TestResultDTO;
 import khanhnq.project.clinicbookingmanagementsystem.model.projection.BookingDetailsInfoProjection;
-import khanhnq.project.clinicbookingmanagementsystem.model.dto.SpecializationDTO;
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.WorkScheduleDTO;
 import khanhnq.project.clinicbookingmanagementsystem.exception.SystemException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ForbiddenException;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.WorkExperienceMapper;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.WorkScheduleMapper;
 import khanhnq.project.clinicbookingmanagementsystem.model.projection.BookingTimeInfoProjection;
+import khanhnq.project.clinicbookingmanagementsystem.model.projection.MedicalRecordInfoProjection;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.model.response.BookingResponse;
@@ -52,7 +55,6 @@ public class DoctorServiceImpl implements DoctorService {
     private final TestPackageRepository testPackageRepository;
     private final TestPackageAttributeRepository testPackageAttributeRepository;
     private final TestResultRepository testResultRepository;
-    private final NormalRangeRepository normalRangeRepository;
     private final CommonServiceImpl commonServiceImpl;
 
     @Override
@@ -285,7 +287,6 @@ public class DoctorServiceImpl implements DoctorService {
         } else {
             throw new SystemException("A medical record for booking " + booking.getBookingCode() + " has been created. Please update it.");
         }
-
     }
 
     @Override
@@ -300,47 +301,57 @@ public class DoctorServiceImpl implements DoctorService {
                     () -> new ResourceNotFoundException("Medical Record ID", medicalRecordId.toString()));
             TestPackage testPackage = testPackageRepository.findById(testPackageId).orElseThrow(
                     () -> new ResourceNotFoundException("Test Package ID", testPackageId.toString()));
+            if (!testPackage.getStatus().name().equals("ACTIVE")) {
+                throw new SystemException(MessageConstants.ERROR_TEST_PACKAGE_NOT_ACTIVE);
+            }
             Doctor doctorPrescribed = doctorRepository.findById(doctorId).orElseThrow(
                     () -> new ResourceNotFoundException("Doctor ID", doctorId.toString()));
+            LocalDateTime sampleCollectionTime = labResultRequest.getSampleCollectionTime();
+            LocalDateTime sampleReceptionTime = labResultRequest.getSampleReceptionTime();
+            LocalDateTime testDate = labResultRequest.getTestDate();
+            LocalDateTime resultDeliveryDate = labResultRequest.getResultDeliveryDate();
+            if (sampleCollectionTime.isAfter(sampleReceptionTime)
+                    || sampleReceptionTime.isAfter(testDate)
+                    || testDate.isAfter(resultDeliveryDate)) {
+                throw new SystemException(MessageConstants.ERROR_TEST_TIME_ORDER);
+            }
             LabResult labResult = LabResultMapper.LAB_RESULT_MAPPER.mapToLabResult(labResultRequest);
             List<TestResult> testResults = new ArrayList<>();
-            labResultRequest.getTestResults().forEach(testResultDTO -> {
+            List<TestResultDTO> testResultDTOS = labResultRequest.getTestResults();
+            Set<Long> attributesId = testResultDTOS.stream().map(TestResultDTO::getTestPackageAttributeId).collect(Collectors.toSet());
+            if (attributesId.size() != testResultDTOS.size()) {
+                throw new SystemException(MessageConstants.ERROR_ADD_RESULT_FOR_SAME_ATTRIBUTE);
+            }
+            testResultDTOS.forEach(testResultDTO -> {
                 Long testPackageAttributeId = testResultDTO.getTestPackageAttributeId();
                 TestPackageAttribute testPackageAttribute = testPackageAttributeRepository.findById(testPackageAttributeId).orElseThrow(
                         () -> new ResourceNotFoundException("Test Package Attribute ID", testPackageAttributeId.toString()));
+                List<Long> testPackageAttributesId = testPackageAttributeRepository.getTestPackageAttributeIdsByTestPackageId(testPackageId);
+                if (testPackageAttributesId.stream().noneMatch(id -> id.equals(testPackageAttributeId))) {
+                    throw new SystemException(MessageConstants.ERROR_ATTRIBUTE_NOT_IN_TEST_PACKAGE);
+                }
                 TestResult testResult = new TestResult();
                 Booking booking = medicalRecord.getBooking();
                 Date dob = booking.getDateOfBirth();
-                LocalDate dateOfBirth = dob instanceof java.sql.Date
-                        ? ((java.sql.Date) dob).toLocalDate()
+                LocalDate dateOfBirth = dob instanceof java.sql.Date ? ((java.sql.Date) dob).toLocalDate()
                         : dob.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-                LocalDate dateNow = LocalDate.now();
-                int yearOld = Period.between(dateOfBirth, dateNow).getYears();
+                int yearOld = Period.between(dateOfBirth, LocalDate.now()).getYears();
                 String gender = booking.getGender() == 1 ? "MALE" : "FEMALE";
-                List<NormalRange> normalRanges =
-                        normalRangeRepository.getNormalRangesByTestPackageAttributeId(testPackageAttribute.getTestPackageAttributeId());
+                List<NormalRange> normalRanges = testPackageAttribute.getNormalRanges();
                 String result = testResultDTO.getResult();
                 if (result != null && !result.equals("")) {
                     testResult.setResult(result);
                     testResult.setNote(testResultDTO.getNote());
                     normalRanges.forEach(normalRange -> {
-                        ENormalRangeType normalRangeType = normalRange.getNormalRangeType();
-                        Integer ageMin = normalRange.getAgeMin();
-                        Integer ageMax = normalRange.getAgeMax();
-                        Double minValue = normalRange.getMinValue();
-                        Double maxValue = normalRange.getMaxValue();
-                        Double equalValue = normalRange.getEqualValue();
-                        String expectedValue = normalRange.getExpectedValue();
                         EGender normalGender = normalRange.getGender();
+                        ResultDTO resultDTO = new ResultDTO(result, yearOld, normalRange.getNormalRangeType(), normalRange.getAgeMin(),
+                                normalRange.getAgeMax(), normalRange.getMinValue(), normalRange.getMaxValue(),
+                                normalRange.getEqualValue(), normalRange.getExpectedValue(), normalRange.getGender());
                         if (normalGender != null && normalGender.name().equals(gender)) {
-                            setStatusForTestResult(testResult, result, yearOld, ageMin,
-                                    ageMax, minValue, maxValue, equalValue,
-                                    expectedValue, normalRangeType);
+                            setStatusForTestResult(testResult, resultDTO);
                         }
                         if (normalGender == null) {
-                            setStatusForTestResult(testResult, result, yearOld, ageMin,
-                                    ageMax, minValue, maxValue, equalValue,
-                                    expectedValue, normalRangeType);
+                            setStatusForTestResult(testResult, resultDTO);
                         }
                     });
                     testResult.setLabResult(labResult);
@@ -364,6 +375,17 @@ public class DoctorServiceImpl implements DoctorService {
         return response;
     }
 
+    @Override
+    public ResponseEntityBase getMedicalRecordByBookingId(Long bookingId) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        User currentUser = authService.getCurrentUser();
+        List<MedicalRecordInfoProjection> medicalRecordInfo = medicalRecordRepository.getMedicalRecordInfoByBookingId(bookingId);
+        MedicalRecordDetailsDTO medicalRecordDetails = new MedicalRecordDetailsDTO();
+
+        response.setData(medicalRecordDetails);
+        return response;
+    }
+
     public Booking validateChangeBookingStatus(Long bookingId) {
         User currentUser = authService.getCurrentUser();
         boolean checkAdmin = currentUser.getRoles().stream().anyMatch(role -> role.getRoleName().equals(ERole.ROLE_ADMIN));
@@ -374,17 +396,6 @@ public class DoctorServiceImpl implements DoctorService {
             throw new ForbiddenException(MessageConstants.FORBIDDEN_CHANGE_BOOKING_STATUS);
         }
         return booking;
-    }
-
-    public boolean checkSpecializationExist(List<SpecializationDTO> specializations, SpecializationDTO specializationDTO) {
-        boolean isExist = false;
-        for (SpecializationDTO specialization : specializations) {
-            if (specialization.equals(specializationDTO)) {
-                isExist = true;
-                break;
-            }
-        }
-        return isExist;
     }
 
     public Set<WorkScheduleDTO> invalidWorkSchedules(List<Doctor> doctors, RegisterWorkScheduleRequest registerWorkSchedule) {
@@ -477,61 +488,65 @@ public class DoctorServiceImpl implements DoctorService {
         return true;
     }
 
-    private void setStatusForTestResult(TestResult testResult, String result, Integer yearOld,
-                                        Integer ageMin, Integer ageMax, Double minValue,
-                                        Double maxValue, Double equalValue,String expectedValue,
-                                        ENormalRangeType normalRangeType) {
+    private void setStatusForTestResult(TestResult testResult, ResultDTO resultDTO) {
+        boolean matchAge = (resultDTO.getAgeMin() == null || resultDTO.getYearOld() >= resultDTO.getAgeMin()) &&
+                (resultDTO.getAgeMax() == null || resultDTO.getYearOld() <= resultDTO.getAgeMax());
+        if (!matchAge) return;
+        Double minValue = resultDTO.getMinValue();
+        Double maxValue = resultDTO.getMaxValue();
+        String result = resultDTO.getResult();
         Pattern doublePattern = Pattern.compile("^[+-]?(\\d+(\\.\\d{0,3})?|\\.\\d{1,3})$");
         Matcher rangeMatcher = doublePattern.matcher(result);
-        if (!rangeMatcher.find()) return;
-        Double doubleResult = Double.valueOf(result);
-        boolean matchAge = (ageMin == null || yearOld >= ageMin) &&
-                (ageMax == null || yearOld <= ageMax);
-        if (!matchAge) return;
-        switch (normalRangeType) {
+        switch (resultDTO.getNormalRangeType()) {
             case RANGE:
-                if (doubleResult >= minValue && doubleResult <= maxValue) {
+                if (!rangeMatcher.find()) return;
+                if (Double.parseDouble(result) >= minValue && Double.parseDouble(result) <= maxValue) {
                     testResult.setStatus(ETestResultStatus.NORMAL);
-                } else if (doubleResult < minValue) {
+                } else if (Double.parseDouble(result) < minValue) {
                     testResult.setStatus(ETestResultStatus.LOW);
                 } else {
                     testResult.setStatus(ETestResultStatus.HIGH);
                 }
                 break;
             case LESS_THAN:
-                testResult.setStatus(doubleResult < maxValue ?
-                        ETestResultStatus.NORMAL : ETestResultStatus.HIGH);
+                if (!rangeMatcher.find()) return;
+                testResult.setStatus(Double.parseDouble(result) < maxValue ? ETestResultStatus.NORMAL : ETestResultStatus.HIGH);
                 break;
             case LESS_THAN_EQUAL:
-                testResult.setStatus(doubleResult <= maxValue ?
-                        ETestResultStatus.NORMAL : ETestResultStatus.HIGH);
+                if (!rangeMatcher.find()) return;
+                testResult.setStatus(Double.parseDouble(result) <= maxValue ? ETestResultStatus.NORMAL : ETestResultStatus.HIGH);
                 break;
             case GREATER_THAN:
-                testResult.setStatus(doubleResult > minValue ?
-                        ETestResultStatus.NORMAL : ETestResultStatus.LOW);
+                if (!rangeMatcher.find()) return;
+                testResult.setStatus(Double.parseDouble(result) > minValue ? ETestResultStatus.NORMAL : ETestResultStatus.LOW);
                 break;
             case GREATER_THAN_EQUAL:
-                testResult.setStatus(doubleResult >= minValue ?
-                        ETestResultStatus.NORMAL : ETestResultStatus.LOW);
+                if (!rangeMatcher.find()) return;
+                testResult.setStatus(Double.parseDouble(result) >= minValue ? ETestResultStatus.NORMAL : ETestResultStatus.LOW);
                 break;
             case EQUAL:
-                if (doubleResult.equals(minValue)) {
+                if (!rangeMatcher.find()) return;
+                Double equalValue = resultDTO.getEqualValue();
+                if (Double.parseDouble(result) == equalValue) {
                     testResult.setStatus(ETestResultStatus.NORMAL);
-                } else if (doubleResult < equalValue) {
+                } else if (Double.parseDouble(result) < equalValue) {
                     testResult.setStatus(ETestResultStatus.LOW);
                 } else {
                     testResult.setStatus(ETestResultStatus.HIGH);
                 }
                 break;
-            case QUALITATIVE, SEMI_QUALITATIVE:
-                if (expectedValue != null && expectedValue.equalsIgnoreCase(result)) {
-                    testResult.setStatus(ETestResultStatus.NORMAL);
+            case QUALITATIVE, SEMI_QUALITATIVE, TEXT:
+                String expectedValue = resultDTO.getExpectedValue();
+                if (expectedValue != null) {
+                    List<String> values = Arrays.stream(expectedValue.split(",")).map(String::trim).toList();
+                    if (values.stream().anyMatch(s -> s.equalsIgnoreCase(result.trim()))) {
+                        testResult.setStatus(ETestResultStatus.NORMAL);
+                    } else {
+                        testResult.setStatus(ETestResultStatus.ABNORMAL);
+                    }
                 } else {
-                    testResult.setStatus(ETestResultStatus.ABNORMAL);
+                    testResult.setStatus(ETestResultStatus.INCONCLUSIVE);
                 }
-                break;
-            case TEXT:
-                testResult.setStatus(ETestResultStatus.INCONCLUSIVE);
                 break;
         }
     }

@@ -19,7 +19,6 @@ public class MessageConstants {
     public static final String FAILED_EXPORT_DATA_EXCEL = "Failed to export data to file excel.";
     public static final String SPECIALIZATION_NOT_FOUND = "You are not currently in any specific specialty. Please contact admin.";
     public static final String UPDATE_DOCTOR_INFORMATION_SUCCESS = "Successfully updated doctor information.";
-    public static final String INVALID_WORK_SCHEDULES = "The number of work schedules must be equal to the number of shifts per day.";
     public static final String BOOKING_SUCCESS = "Successfully booked an appointment.";
     public static final String CONFIRM_BOOKING_SUCCESS = "Successful confirm booking.";
     public static final String CANCELED_BOOKING_SUCCESS = "Successful canceled booking.";
@@ -28,7 +27,6 @@ public class MessageConstants {
     public static final String ADD_SERVICE_SUCCESS = "Add service successfully.";
     public static final String UPDATE_SERVICE_SUCCESS = "Update service successfully.";
     public static final String INVALID_WORKING_DAY = "The working day must start from today and must fall within the current working week.";
-    public static final String INVALID_APPOINTMENT_DATE = "The appointment date must start from today and must fall within the current working week.";
     public static final String INVALID_SERVICE_STATUS = "The service status must be one of the values ACTIVE, INACTIVE , SUSPENDED.";
     public static final String UNLOCK_ACCOUNT_SUCCESSFULLY = "Unlock account successfully.";
     public static final String ACCOUNT_TEMPORARY_LOCK = "Account temporarily locked due to 5 incorrect password attempts. Try again in 5 minutes.";
@@ -49,4 +47,8 @@ public class MessageConstants {
     public static final String ERROR_NORMAL_RANGE_BLANK = "The normal range parameters of each index in the test package cannot be left blank.";
     public static final String ERROR_ADD_NAME_OR_UNIT_ATTRIBUTE = "Do not add 'name' and 'unit' fields to test package properties because they already exist.";
     public static final String ERROR_TEST_RESULT = "Test result cannot be null or a blank string";
+    public static final String ERROR_TEST_PACKAGE_NOT_ACTIVE = "The test package is not currently active. Please contact to admin.";
+    public static final String ERROR_TEST_TIME_ORDER = "The test time order is invalid.";
+    public static final String ERROR_ATTRIBUTE_NOT_IN_TEST_PACKAGE = "The test package attribute is not included in the test package.";
+    public static final String ERROR_ADD_RESULT_FOR_SAME_ATTRIBUTE = "Do not add results of the same attribute in the test package.";
 }

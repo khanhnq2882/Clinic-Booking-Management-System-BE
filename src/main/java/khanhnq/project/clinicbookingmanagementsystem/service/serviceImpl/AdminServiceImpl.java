@@ -833,7 +833,7 @@ public class AdminServiceImpl implements AdminService {
                         List<String> genderTypes = Arrays.stream(EGender.values())
                                 .map(Enum::name)
                                 .toList();
-                        if (genderTypes.stream().noneMatch(s -> s.equalsIgnoreCase(normalRangeDTO.getGender()))) {
+                        if (normalRangeDTO.getGender() != null && genderTypes.stream().noneMatch(s -> s.equalsIgnoreCase(normalRangeDTO.getGender()))) {
                             throw new ResourceNotFoundException("Gender type", normalRangeDTO.getGender());
                         }
                         normalRangeDTO.setNormalRangeType(normalRangeDTO.getNormalRangeType().toUpperCase());

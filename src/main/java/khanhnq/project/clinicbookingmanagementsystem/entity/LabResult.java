@@ -34,7 +34,7 @@ public class LabResult extends BaseEntity{
     private String note;
 
     @Enumerated(EnumType.STRING)
-    @Column(length = 20)
+    @Column(length = 20, nullable = false)
     private ELabResultStatus status;
 
     @JsonBackReference
