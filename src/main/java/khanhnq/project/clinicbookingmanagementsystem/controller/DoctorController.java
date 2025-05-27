@@ -77,6 +77,11 @@ public class DoctorController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(doctorService.addLabResultsToMedicalRecord(labResultRequests));
     }
 
+    @GetMapping("/get-all-medical-records")
+    public ResponseEntity<ResponseEntityBase> getAllMedicalRecords() {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(doctorService.getAllMedicalRecords());
+    }
+
     @GetMapping("/get-medical-record-by-booking/{bookingId}")
     public ResponseEntity<ResponseEntityBase> getMedicalRecordByBookingId(@PathVariable("bookingId") Long bookingId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(doctorService.getMedicalRecordByBookingId(bookingId));

@@ -4,19 +4,13 @@ import jakarta.transaction.Transactional;
 import khanhnq.project.clinicbookingmanagementsystem.common.MessageConstants;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.*;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceNotFoundException;
-import khanhnq.project.clinicbookingmanagementsystem.mapper.LabResultMapper;
-import khanhnq.project.clinicbookingmanagementsystem.mapper.MedicalRecordMapper;
-import khanhnq.project.clinicbookingmanagementsystem.model.dto.MedicalRecordDetailsDTO;
-import khanhnq.project.clinicbookingmanagementsystem.model.dto.ResultDTO;
-import khanhnq.project.clinicbookingmanagementsystem.model.dto.TestResultDTO;
+import khanhnq.project.clinicbookingmanagementsystem.mapper.*;
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.*;
 import khanhnq.project.clinicbookingmanagementsystem.model.projection.BookingDetailsInfoProjection;
-import khanhnq.project.clinicbookingmanagementsystem.model.dto.WorkScheduleDTO;
 import khanhnq.project.clinicbookingmanagementsystem.exception.SystemException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ForbiddenException;
-import khanhnq.project.clinicbookingmanagementsystem.mapper.WorkExperienceMapper;
-import khanhnq.project.clinicbookingmanagementsystem.mapper.WorkScheduleMapper;
 import khanhnq.project.clinicbookingmanagementsystem.model.projection.BookingTimeInfoProjection;
-import khanhnq.project.clinicbookingmanagementsystem.model.projection.MedicalRecordInfoProjection;
+import khanhnq.project.clinicbookingmanagementsystem.model.projection.MedicalRecordDetailsProjection;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.model.response.BookingResponse;
@@ -376,14 +370,71 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
+    public ResponseEntityBase getAllMedicalRecords() {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        Map<Long, List<MedicalRecordDetailsProjection>> groupedByMedicalRecordId = medicalRecordRepository.getAllMedicalRecordsDetails().stream()
+                .collect(Collectors.groupingBy(MedicalRecordDetailsProjection::getMedicalRecordId));
+        List<MedicalRecordDetailsDTO> medicalRecordDetailsDTOList = new ArrayList<>();
+        for (Map.Entry<Long, List<MedicalRecordDetailsProjection>> entry : groupedByMedicalRecordId.entrySet()) {
+            List<MedicalRecordDetailsProjection> medicalRecordDetailsProjectionList = entry.getValue();
+            MedicalRecordDetailsProjection medicalRecordDetailsProjection = medicalRecordDetailsProjectionList.get(0);
+            MedicalRecordInfoDTO medicalRecordInfoDTO =
+                    MedicalRecordMapper.MEDICAL_RECORD_MAPPER.mapToMedicalRecordInfoDTO(medicalRecordDetailsProjection);
+            String userAddress = medicalRecordDetailsProjection.getSpecificAddress() + ", " +medicalRecordDetailsProjection.getWardName()
+                    + ", " +medicalRecordDetailsProjection.getDistrictName() + ", " + medicalRecordDetailsProjection.getCityName() + ".";
+            medicalRecordInfoDTO.setUserAddress(userAddress);
+            Map<Long, LabResultDetailsDTO> labResultDetailsMap = mapLabResultDetails(medicalRecordDetailsProjectionList);
+            MedicalRecordDetailsDTO medicalRecordDetailsDTO = new MedicalRecordDetailsDTO();
+            medicalRecordDetailsDTO.setMedicalRecordInfo(medicalRecordInfoDTO);
+            medicalRecordDetailsDTO.setLabResultsDetails(new ArrayList<>(labResultDetailsMap.values()));
+            medicalRecordDetailsDTOList.add(medicalRecordDetailsDTO);
+        }
+        response.setData(medicalRecordDetailsDTOList);
+        return response;
+    }
+
+    @Override
     public ResponseEntityBase getMedicalRecordByBookingId(Long bookingId) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        User currentUser = authService.getCurrentUser();
-        List<MedicalRecordInfoProjection> medicalRecordInfo = medicalRecordRepository.getMedicalRecordInfoByBookingId(bookingId);
-        MedicalRecordDetailsDTO medicalRecordDetails = new MedicalRecordDetailsDTO();
-
-        response.setData(medicalRecordDetails);
+        if (bookingRepository.findById(bookingId).isEmpty()) {
+            throw new ResourceNotFoundException("Booking id", bookingId.toString());
+        }
+        List<MedicalRecordDetailsProjection> medicalRecordDetailsByBookingId = medicalRecordRepository.getAllMedicalRecordsDetails()
+                .stream()
+                .filter(medicalRecordDetails -> medicalRecordDetails.getBookingId().equals(bookingId))
+                .toList();
+        Set<MedicalRecordInfoDTO> medicalRecordsInfo = new HashSet<>();
+        medicalRecordDetailsByBookingId.forEach(medicalRecordDetails -> {
+            MedicalRecordInfoDTO medicalRecordInfoDTO =
+                    MedicalRecordMapper.MEDICAL_RECORD_MAPPER.mapToMedicalRecordInfoDTO(medicalRecordDetails);
+            medicalRecordsInfo.add(medicalRecordInfoDTO);
+        });
+        Map<Long, LabResultDetailsDTO> labResultDetailsMap = mapLabResultDetails(medicalRecordDetailsByBookingId);
+        MedicalRecordDetailsDTO medicalRecordDetailsDTO = new MedicalRecordDetailsDTO();
+        medicalRecordDetailsDTO.setMedicalRecordInfo(medicalRecordsInfo.stream().findFirst().get());
+        medicalRecordDetailsDTO.setLabResultsDetails(new ArrayList<>(labResultDetailsMap.values()));
+        response.setData(medicalRecordDetailsDTO);
         return response;
+    }
+
+    private Map<Long, LabResultDetailsDTO> mapLabResultDetails(List<MedicalRecordDetailsProjection> medicalRecordDetailsProjections) {
+        Map<Long, LabResultDetailsDTO> labResultDetailsMap = new HashMap<>();
+        for (MedicalRecordDetailsProjection medicalRecordDetailsProjection : medicalRecordDetailsProjections) {
+            Long labResultId = medicalRecordDetailsProjection.getLabResultId();
+            LabResultDetailsDTO labResultDetailsDTO = labResultDetailsMap.get(labResultId);
+            if (labResultDetailsDTO == null) {
+                labResultDetailsDTO = new LabResultDetailsDTO();
+                LabResultInfoDTO labResultInfoDTO = new LabResultInfoDTO();
+                LabResultMapper.LAB_RESULT_MAPPER.mapToLabResultInfoDTO(labResultInfoDTO, medicalRecordDetailsProjection);
+                labResultDetailsDTO.setLabResultInfo(labResultInfoDTO);
+                labResultDetailsDTO.setTestResultsDetails(new HashSet<>());
+                labResultDetailsMap.put(labResultId, labResultDetailsDTO);
+            }
+            TestResultDetailsDTO testResultDetailsDTO =
+                    TestResultMapper.TEST_RESULT_MAPPER.mapToTestResultDetailsDTO(medicalRecordDetailsProjection);
+            labResultDetailsDTO.getTestResultsDetails().add(testResultDetailsDTO);
+        }
+        return labResultDetailsMap;
     }
 
     public Booking validateChangeBookingStatus(Long bookingId) {
@@ -451,7 +502,7 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     private EEducationLevel validateEducationLevel(String educationLevel) {
-        String enumValue = "";
+        String enumValue;
         if (educationLevel.equalsIgnoreCase("BACHELOR")) {
             enumValue = "BACHELOR";
         } else if (educationLevel.equalsIgnoreCase("MASTER")) {
@@ -482,10 +533,7 @@ public class DoctorServiceImpl implements DoctorService {
         if (nextAppointmentDate.isBefore(currentDate)) {
             return false;
         }
-        if (nextAppointmentDate.isBefore(currentDate.plusDays(7))) {
-            return false;
-        }
-        return true;
+        return !nextAppointmentDate.isBefore(currentDate.plusDays(7));
     }
 
     private void setStatusForTestResult(TestResult testResult, ResultDTO resultDTO) {
@@ -498,7 +546,7 @@ public class DoctorServiceImpl implements DoctorService {
         Pattern doublePattern = Pattern.compile("^[+-]?(\\d+(\\.\\d{0,3})?|\\.\\d{1,3})$");
         Matcher rangeMatcher = doublePattern.matcher(result);
         switch (resultDTO.getNormalRangeType()) {
-            case RANGE:
+            case RANGE -> {
                 if (!rangeMatcher.find()) return;
                 if (Double.parseDouble(result) >= minValue && Double.parseDouble(result) <= maxValue) {
                     testResult.setStatus(ETestResultStatus.NORMAL);
@@ -507,24 +555,24 @@ public class DoctorServiceImpl implements DoctorService {
                 } else {
                     testResult.setStatus(ETestResultStatus.HIGH);
                 }
-                break;
-            case LESS_THAN:
+            }
+            case LESS_THAN -> {
                 if (!rangeMatcher.find()) return;
                 testResult.setStatus(Double.parseDouble(result) < maxValue ? ETestResultStatus.NORMAL : ETestResultStatus.HIGH);
-                break;
-            case LESS_THAN_EQUAL:
+            }
+            case LESS_THAN_EQUAL -> {
                 if (!rangeMatcher.find()) return;
                 testResult.setStatus(Double.parseDouble(result) <= maxValue ? ETestResultStatus.NORMAL : ETestResultStatus.HIGH);
-                break;
-            case GREATER_THAN:
+            }
+            case GREATER_THAN -> {
                 if (!rangeMatcher.find()) return;
                 testResult.setStatus(Double.parseDouble(result) > minValue ? ETestResultStatus.NORMAL : ETestResultStatus.LOW);
-                break;
-            case GREATER_THAN_EQUAL:
+            }
+            case GREATER_THAN_EQUAL -> {
                 if (!rangeMatcher.find()) return;
                 testResult.setStatus(Double.parseDouble(result) >= minValue ? ETestResultStatus.NORMAL : ETestResultStatus.LOW);
-                break;
-            case EQUAL:
+            }
+            case EQUAL -> {
                 if (!rangeMatcher.find()) return;
                 Double equalValue = resultDTO.getEqualValue();
                 if (Double.parseDouble(result) == equalValue) {
@@ -534,8 +582,8 @@ public class DoctorServiceImpl implements DoctorService {
                 } else {
                     testResult.setStatus(ETestResultStatus.HIGH);
                 }
-                break;
-            case QUALITATIVE, SEMI_QUALITATIVE, TEXT:
+            }
+            case QUALITATIVE, SEMI_QUALITATIVE, TEXT -> {
                 String expectedValue = resultDTO.getExpectedValue();
                 if (expectedValue != null) {
                     List<String> values = Arrays.stream(expectedValue.split(",")).map(String::trim).toList();
@@ -547,7 +595,7 @@ public class DoctorServiceImpl implements DoctorService {
                 } else {
                     testResult.setStatus(ETestResultStatus.INCONCLUSIVE);
                 }
-                break;
+            }
         }
     }
 

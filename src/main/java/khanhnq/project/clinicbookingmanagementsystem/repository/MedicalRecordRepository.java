@@ -1,19 +1,19 @@
 package khanhnq.project.clinicbookingmanagementsystem.repository;
 
 import khanhnq.project.clinicbookingmanagementsystem.entity.MedicalRecord;
-import khanhnq.project.clinicbookingmanagementsystem.model.projection.MedicalRecordInfoProjection;
+import khanhnq.project.clinicbookingmanagementsystem.model.projection.MedicalRecordDetailsProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.util.List;
-
 
 public interface MedicalRecordRepository extends JpaRepository<MedicalRecord, Long> {
     @Query(value = "SELECT m FROM MedicalRecord m WHERE m.booking.bookingId = :bookingId")
     MedicalRecord findMedicalRecordByBooking(@Param("bookingId") Long bookingId);
 
     @Query(value = "SELECT \n" +
-            "    b.booking_code AS bookingCode,\n" +
+            "    mr.medical_record_id AS medicalRecordId,\n" +
+            "    b.booking_id AS bookingId,\n" +
             "    b.first_name AS firstName,\n" +
             "    b.last_name AS lastName,\n" +
             "    b.date_of_birth AS dateOfBirth,\n" +
@@ -36,18 +36,19 @@ public interface MedicalRecordRepository extends JpaRepository<MedicalRecord, Lo
             "    mr.next_appointment_date AS nextAppointmentDate,\n" +
             "    mr.consultation_notes AS consultationNotes,\n" +
             "    mr.status AS medicalRecordStatus,\n" +
+            "\tlr.lab_result_id as labResultId,\n" +
+            "\ttp.test_package_name AS testPackageName,\n" +
             "    lr.sample_collection_time AS sampleCollectionTime,\n" +
             "    lr.sample_reception_time AS sampleReceptionTime,\n" +
             "    lr.test_date AS testDate,\n" +
             "    lr.result_delivery_date AS resultDeliveryDate,\n" +
             "    lr.note AS labNote,\n" +
-            "    lr.status AS labStatus,\n" +
             "    dt.education_level as educationLevel,\n" +
             "    u.first_name as doctorFirstName,\n" +
             "    u.last_name as doctorLastName,\n" +
-            "    tp.test_package_name AS testPackageName,\n" +
+            "    lr.status AS labStatus,\n" +
             "    tpa.name AS testAttributeName,\n" +
-            "    tpa.unit AS testAttributeUnit,\n" +
+            "    tpa.unit AS unit,\n" +
             "    tpa.attribute_metadata AS attributeMetadata,\n" +
             "    tr.result AS testResult,\n" +
             "    tr.note AS testResultNote,\n" +
@@ -83,7 +84,6 @@ public interface MedicalRecordRepository extends JpaRepository<MedicalRecord, Lo
             "      )\n" +
             "    ORDER BY nr_sub.age_min DESC\n" +
             "    LIMIT 1\n" +
-            ") nr ON true\n" +
-            "WHERE b.booking_id = :bookingId\n", nativeQuery = true)
-    List<MedicalRecordInfoProjection> getMedicalRecordInfoByBookingId(@Param("bookingId") Long bookingId);
+            ") nr ON true\n", nativeQuery = true)
+    List<MedicalRecordDetailsProjection> getAllMedicalRecordsDetails();
 }

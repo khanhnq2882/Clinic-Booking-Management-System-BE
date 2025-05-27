@@ -3,9 +3,9 @@ package khanhnq.project.clinicbookingmanagementsystem.model.projection;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-public interface MedicalRecordInfoProjection {
-    // Booking info
-    String getBookingCode();
+public interface MedicalRecordDetailsProjection {
+    Long getMedicalRecordId();
+    Long getBookingId();
     String getFirstName();
     String getLastName();
     LocalDate getDateOfBirth();
@@ -15,8 +15,6 @@ public interface MedicalRecordInfoProjection {
     String getWardName();
     String getDistrictName();
     String getCityName();
-
-    // Medical Record
     LocalDateTime getVisitDate();
     String getReasonForVisit();
     String getMedicalHistory();
@@ -28,34 +26,23 @@ public interface MedicalRecordInfoProjection {
     LocalDateTime getNextAppointmentDate();
     String getConsultationNotes();
     String getMedicalRecordStatus();
-
-    // Lab Result
+    Long getLabResultId();
+    String getTestPackageName();
     LocalDateTime getSampleCollectionTime();
     LocalDateTime getSampleReceptionTime();
     LocalDateTime getTestDate();
     LocalDateTime getResultDeliveryDate();
     String getLabNote();
     String getLabStatus();
-
-    // Doctor Info
     String getEducationLevel();
     String getDoctorFirstName();
     String getDoctorLastName();
-
-    // Test Package
-    String getTestPackageName();
-
-    // Test Attribute
     String getTestAttributeName();
     String getTestAttributeUnit();
     String getAttributeMetadata();
-
-    // Test Result
     String getTestResult();
     String getTestResultNote();
     String getTestResultStatus();
-
-    // Normal Range
     Double getNormalMinValue();
     Double getNormalMaxValue();
     Double getNormalEqualValue();
