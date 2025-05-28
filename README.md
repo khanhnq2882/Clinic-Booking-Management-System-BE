@@ -53,11 +53,9 @@ hợp khiếu nại xảy ra và không lưu lịch sử bệnh án trên hệ t
 - Xem thống kê cá nhân
 
 * ROLE ADMIN
-- Quản lý danh sách người dùng 
-- Quản lý danh sách bác sĩ 
-- Quản lý chuyên khoa
-- Quản lý danh mục dịch vụ
-- Quản lý gói dịch vụ
+- Quản lý danh sách người dùng -> OK
+- Quản lý danh sách bác sĩ -> OK
+- Quản lý gói dịch vụ -> OK
 - Quản lý danh sách lịch khám
 - Quản lý doanh thu
 - Quản lý thuốc, vật tư y tế

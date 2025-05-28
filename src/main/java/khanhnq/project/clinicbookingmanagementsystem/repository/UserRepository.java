@@ -28,14 +28,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query(value = "SELECT u FROM User AS u INNER JOIN u.roles AS r WHERE r.roleName = 'ROLE_ADMIN'")
     List<User> getAdmins();
 
-//    @Query(value = "SELECT u FROM User AS u " +
-//            "INNER JOIN u.specialization AS s " +
-//            "INNER JOIN u.daysOfWeeks AS d " +
-//            "INNER JOIN d.workSchedules AS ws " +
-//            "WHERE s.specializationId = :specializationId " +
-//            "AND d.dayOfWeek = :dayOfWeek " +
-//            "AND ws.startTime = :startTime " +
-//            "AND ws.endTime = :endTime")
     @Query(value = "SELECT u FROM User AS u")
     User getUserFromExcel(Long specializationId, DayOfWeek dayOfWeek, LocalTime startTime, LocalTime endTime);
 }

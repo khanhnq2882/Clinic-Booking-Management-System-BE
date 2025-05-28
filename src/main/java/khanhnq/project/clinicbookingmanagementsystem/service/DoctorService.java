@@ -13,7 +13,9 @@ public interface DoctorService {
     ResponseEntityBase cancelledBooking (Long bookingId);
     ResponseEntityBase completedBooking (Long bookingId);
     ResponseEntityBase getAllBookings(int page, int size, String[] sorts);
-    ResponseEntityBase addMedicalRecord(MedicalRecordRequest medicalRecordRequest);
+    ResponseEntityBase addMedicalRecord(Long bookingId, MedicalRecordRequest medicalRecordRequest);
+    ResponseEntityBase updateMedicalRecord(Long medicalRecordId, MedicalRecordRequest medicalRecordRequest);
+    ResponseEntityBase getAllMedicalRecord();
     ResponseEntityBase addLabResultsToMedicalRecord(List<LabResultRequest> labResultRequests);
     ResponseEntityBase getAllMedicalRecords();
     ResponseEntityBase getMedicalRecordByBookingId(Long bookingId);

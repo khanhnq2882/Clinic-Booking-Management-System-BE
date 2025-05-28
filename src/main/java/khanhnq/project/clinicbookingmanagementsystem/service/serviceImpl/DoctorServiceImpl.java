@@ -241,46 +241,44 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
-    public ResponseEntityBase addMedicalRecord(MedicalRecordRequest medicalRecordRequest) {
+    public ResponseEntityBase addMedicalRecord(Long bookingId, MedicalRecordRequest medicalRecordRequest) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         User currentUser = authService.getCurrentUser();
-        boolean checkAdmin = currentUser.getRoles().stream().anyMatch(role -> role.getRoleName().equals(ERole.ROLE_ADMIN));
-        Doctor doctor = doctorRepository.findDoctorByUserId(currentUser.getUserId());
-        Long bookingId = medicalRecordRequest.getBookingId();
         Booking booking = bookingRepository.findById(bookingId).orElseThrow(()
                 -> new ResourceNotFoundException("Booking id", bookingId.toString()));
-        if (medicalRecordRepository.findMedicalRecordByBooking(bookingId) == null) {
-            if (!booking.getStatus().equals(EBookingStatus.CONFIRMED)) {
-                throw new SystemException("Booking status is "+booking.getStatus().name()+". Booking status must be confirmed to be allowed to create medical records.");
-            }
-            long doctorId = bookingRepository.getDoctorIdByBookingId(bookingId);
-            if (!checkAdmin && doctor != null && !doctor.getDoctorId().equals(doctorId)) {
-                throw new ForbiddenException(MessageConstants.FORBIDDEN_ADD_MEDICAL_RECORD);
-            }
-            BookingTimeInfoProjection bookingTime = bookingRepository.getBookingInfoByBookingId(bookingId);
-            LocalDateTime visitDate = medicalRecordRequest.getVisitDate();
-            LocalDate workingDay = bookingTime.getWorkingDay().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-            boolean checkVisitDate = isVisitDateValid(visitDate, workingDay, bookingTime.getStartTime(), bookingTime.getEndTime());
-            if (!checkVisitDate) {
-                String formatWorkingDay = new SimpleDateFormat("dd-MM-yyyy").format(bookingTime.getWorkingDay());
-                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
-                throw new SystemException("The visit date must be within day " + formatWorkingDay + " , booking time from "
-                        + bookingTime.getStartTime().format(formatter) + " to "+ bookingTime.getEndTime().format(formatter) +".");
-            }
-            if (!isValidNextAppointmentDate(medicalRecordRequest.getNextAppointmentDate())) {
-                throw new SystemException(MessageConstants.ERROR_NEXT_APPOINTMENT_DATE);
-            }
-            MedicalRecord medicalRecord = MedicalRecordMapper.MEDICAL_RECORD_MAPPER.mapToMedicalRecord(medicalRecordRequest);
-            medicalRecord.setBooking(booking);
-            medicalRecord.setStatus(EMedicalRecordStatus.CREATED);
-            medicalRecord.setCreatedAt(LocalDateTime.now());
-            medicalRecord.setCreatedBy(currentUser.getUsername());
-            medicalRecordRepository.save(medicalRecord);
-            response.setData(MessageConstants.ADD_MEDICAL_RECORD_SUCCESS);
-            return response;
-        } else {
+        if (medicalRecordRepository.findMedicalRecordByBooking(bookingId) == null)
             throw new SystemException("A medical record for booking " + booking.getBookingCode() + " has been created. Please update it.");
-        }
+        validateMedicalRecord(currentUser, booking, medicalRecordRequest);
+        MedicalRecord medicalRecord = MedicalRecordMapper.MEDICAL_RECORD_MAPPER.mapToMedicalRecord(medicalRecordRequest);
+        medicalRecord.setBooking(booking);
+        medicalRecord.setStatus(EMedicalRecordStatus.CREATED);
+        medicalRecord.setCreatedAt(LocalDateTime.now());
+        medicalRecord.setCreatedBy(currentUser.getUsername());
+        medicalRecordRepository.save(medicalRecord);
+        response.setData(MessageConstants.ADD_MEDICAL_RECORD_SUCCESS);
+        return response;
+    }
+
+    @Override
+    public ResponseEntityBase updateMedicalRecord(Long medicalRecordId, MedicalRecordRequest medicalRecordRequest) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        User currentUser = authService.getCurrentUser();
+        MedicalRecord medicalRecord = medicalRecordRepository.findById(medicalRecordId).orElseThrow(()
+                -> new ResourceNotFoundException("Medical record id", medicalRecordId.toString()));
+        Booking booking = medicalRecord.getBooking();
+        validateMedicalRecord(currentUser, booking, medicalRecordRequest);
+        MedicalRecordMapper.MEDICAL_RECORD_MAPPER.mapToMedicalRecord(medicalRecord, medicalRecordRequest);
+        medicalRecord.setStatus(EMedicalRecordStatus.CREATED);
+        medicalRecord.setUpdatedAt(LocalDateTime.now());
+        medicalRecord.setUpdatedBy(currentUser.getUsername());
+        medicalRecordRepository.save(medicalRecord);
+        response.setData(MessageConstants.UPDATE_MEDICAL_RECORD_SUCCESS);
+        return response;
+    }
+
+    @Override
+    public ResponseEntityBase getAllMedicalRecord() {
+        return null;
     }
 
     @Override
@@ -331,17 +329,16 @@ public class DoctorServiceImpl implements DoctorService {
                         : dob.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
                 int yearOld = Period.between(dateOfBirth, LocalDate.now()).getYears();
                 String gender = booking.getGender() == 1 ? "MALE" : "FEMALE";
-                List<NormalRange> normalRanges = testPackageAttribute.getNormalRanges();
                 String result = testResultDTO.getResult();
                 if (result != null && !result.equals("")) {
                     testResult.setResult(result);
                     testResult.setNote(testResultDTO.getNote());
-                    normalRanges.forEach(normalRange -> {
+                    testPackageAttribute.getNormalRanges().forEach(normalRange -> {
                         EGender normalGender = normalRange.getGender();
                         ResultDTO resultDTO = new ResultDTO(result, yearOld, normalRange.getNormalRangeType(), normalRange.getAgeMin(),
                                 normalRange.getAgeMax(), normalRange.getMinValue(), normalRange.getMaxValue(),
                                 normalRange.getEqualValue(), normalRange.getExpectedValue(), normalRange.getGender());
-                        if (normalGender != null && normalGender.name().equals(gender)) {
+                        if (normalGender != null && (normalGender.name().equals(gender) || normalGender.name().equals("ALL"))) {
                             setStatusForTestResult(testResult, resultDTO);
                         }
                         if (normalGender == null) {
@@ -415,6 +412,29 @@ public class DoctorServiceImpl implements DoctorService {
         medicalRecordDetailsDTO.setLabResultsDetails(new ArrayList<>(labResultDetailsMap.values()));
         response.setData(medicalRecordDetailsDTO);
         return response;
+    }
+
+    private void validateMedicalRecord(User currentUser, Booking booking, MedicalRecordRequest medicalRecordRequest) {
+        long doctorId = bookingRepository.getDoctorIdByBookingId(booking.getBookingId());
+        boolean checkAdmin = currentUser.getRoles().stream().anyMatch(role -> role.getRoleName().equals(ERole.ROLE_ADMIN));
+        Doctor doctor = doctorRepository.findDoctorByUserId(currentUser.getUserId());
+        if (!checkAdmin && doctor != null && !doctor.getDoctorId().equals(doctorId))
+            throw new ForbiddenException(MessageConstants.FORBIDDEN_ADD_MEDICAL_RECORD);
+        if (!booking.getStatus().equals(EBookingStatus.COMPLETED))
+             throw new SystemException("Booking status is "+booking.getStatus().name()+". Booking status must be completed to be allowed to create medical records.");
+        BookingTimeInfoProjection bookingTime = bookingRepository.getBookingInfoByBookingId(booking.getBookingId());
+        LocalDateTime visitDate = medicalRecordRequest.getVisitDate();
+        LocalDate workingDay = bookingTime.getWorkingDay().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        boolean checkVisitDate = isVisitDateValid(visitDate, workingDay, bookingTime.getStartTime(), bookingTime.getEndTime());
+        if (!checkVisitDate) {
+            String formatWorkingDay = new SimpleDateFormat("dd-MM-yyyy").format(bookingTime.getWorkingDay());
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
+            throw new SystemException("The visit date must be within day " + formatWorkingDay + " , booking time from "
+                    + bookingTime.getStartTime().format(formatter) + " to "+ bookingTime.getEndTime().format(formatter) +".");
+        }
+        if (!isValidNextAppointmentDate(medicalRecordRequest.getNextAppointmentDate())) {
+            throw new SystemException(MessageConstants.ERROR_NEXT_APPOINTMENT_DATE);
+        }
     }
 
     private Map<Long, LabResultDetailsDTO> mapLabResultDetails(List<MedicalRecordDetailsProjection> medicalRecordDetailsProjections) {
@@ -533,7 +553,7 @@ public class DoctorServiceImpl implements DoctorService {
         if (nextAppointmentDate.isBefore(currentDate)) {
             return false;
         }
-        return !nextAppointmentDate.isBefore(currentDate.plusDays(7));
+        return nextAppointmentDate.isAfter(currentDate.plusDays(7));
     }
 
     private void setStatusForTestResult(TestResult testResult, ResultDTO resultDTO) {

@@ -65,10 +65,18 @@ public class DoctorController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(doctorService.completedBooking(bookingId));
     }
 
-    @PostMapping("/add-medical-record")
+    @PostMapping("/add-medical-record/{bookingId}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('DOCTOR')")
-    public ResponseEntity<ResponseEntityBase> addMedicalRecord(@RequestBody MedicalRecordRequest medicalRecordRequest) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(doctorService.addMedicalRecord(medicalRecordRequest));
+    public ResponseEntity<ResponseEntityBase> addMedicalRecord(@PathVariable("bookingId") Long bookingId,
+                                                               @RequestBody MedicalRecordRequest medicalRecordRequest) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(doctorService.addMedicalRecord(bookingId, medicalRecordRequest));
+    }
+
+    @PostMapping("/update-medical-record/{medicalRecordId}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('DOCTOR')")
+    public ResponseEntity<ResponseEntityBase> updateMedicalRecord(@PathVariable("medicalRecordId") Long medicalRecordId,
+                                                               @RequestBody MedicalRecordRequest medicalRecordRequest) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(doctorService.updateMedicalRecord(medicalRecordId, medicalRecordRequest));
     }
 
     @PostMapping("/add-lab-results-to-medical-record")

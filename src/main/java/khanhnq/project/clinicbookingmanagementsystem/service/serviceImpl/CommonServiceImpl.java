@@ -228,19 +228,6 @@ public class CommonServiceImpl {
         }).toList();
     }
 
-    public AddressResponse getAddress(Booking booking) {
-        Long addressId = booking.getAddress().getAddressId();
-        Address address = addressRepository.findById(addressId).orElseThrow(
-                () -> new ResourceNotFoundException("Address id", addressId.toString()));
-        return AddressResponse.builder()
-                .addressId(Objects.requireNonNull(address).getAddressId())
-                .specificAddress(address.getSpecificAddress())
-                .wardName(address.getWard().getWardName())
-                .districtName(address.getWard().getDistrict().getDistrictName())
-                .cityName(address.getWard().getDistrict().getCity().getCityName())
-                .build();
-    }
-
     public void uploadFile(MultipartFile multipartFile, String fileType, User currentUser) {
         try {
             File file = new File();

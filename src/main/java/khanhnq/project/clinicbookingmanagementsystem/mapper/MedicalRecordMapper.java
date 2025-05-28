@@ -5,11 +5,13 @@ import khanhnq.project.clinicbookingmanagementsystem.model.dto.MedicalRecordInfo
 import khanhnq.project.clinicbookingmanagementsystem.model.projection.MedicalRecordDetailsProjection;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.MedicalRecordRequest;
 import org.mapstruct.Mapper;
+import org.mapstruct.MappingTarget;
 import org.mapstruct.factory.Mappers;
 
 @Mapper
 public interface MedicalRecordMapper {
     MedicalRecordMapper MEDICAL_RECORD_MAPPER = Mappers.getMapper(MedicalRecordMapper.class);
     MedicalRecord mapToMedicalRecord(MedicalRecordRequest medicalRecordRequest);
+    void mapToMedicalRecord(@MappingTarget MedicalRecord medicalRecord, MedicalRecordRequest medicalRecordRequest);
     MedicalRecordInfoDTO mapToMedicalRecordInfoDTO (MedicalRecordDetailsProjection medicalRecordDetailsProjection);
 }

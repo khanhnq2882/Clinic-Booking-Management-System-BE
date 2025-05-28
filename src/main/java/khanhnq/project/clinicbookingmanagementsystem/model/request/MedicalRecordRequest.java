@@ -21,5 +21,4 @@ public class MedicalRecordRequest {
     private String followUpInstructions;
     private LocalDateTime nextAppointmentDate;
     private String consultationNotes;
-    private Long bookingId;
 }
