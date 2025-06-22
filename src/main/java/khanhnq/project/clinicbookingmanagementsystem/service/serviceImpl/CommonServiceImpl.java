@@ -1,7 +1,16 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.model.ListObjectsV2Request;
+import com.amazonaws.services.s3.model.ListObjectsV2Result;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
+import jakarta.annotation.PostConstruct;
 import khanhnq.project.clinicbookingmanagementsystem.common.MessageConstants;
-import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceNotFoundException;
 import khanhnq.project.clinicbookingmanagementsystem.model.projection.BookingDetailsInfoProjection;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.exception.SystemException;
@@ -12,10 +21,10 @@ import khanhnq.project.clinicbookingmanagementsystem.repository.*;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.UserProfileRequest;
 import khanhnq.project.clinicbookingmanagementsystem.model.response.AddressResponse;
 import khanhnq.project.clinicbookingmanagementsystem.model.response.BookingResponse;
-import khanhnq.project.clinicbookingmanagementsystem.model.response.FileResponse;
-import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
-import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -23,24 +32,50 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.*;
-import java.util.stream.Stream;
 
 @Component
-@AllArgsConstructor
+@Slf4j
 public class CommonServiceImpl {
+    @Autowired
+    private  UserRepository userRepository;
+    @Autowired
+    private  CityRepository cityRepository;
+    @Autowired
+    private  DistrictRepository districtRepository;
+    @Autowired
+    private  WardRepository wardRepository;
+    @Autowired
+    private  AddressRepository addressRepository;
+    @Autowired
+    private  BookingRepository bookingRepository;
+    @Autowired
+    private FileRepository fileRepository;
 
-    private final UserRepository userRepository;
-    private final CityRepository cityRepository;
-    private final DistrictRepository districtRepository;
-    private final WardRepository wardRepository;
-    private final AddressRepository addressRepository;
-    private final BookingRepository bookingRepository;
-    private final AuthService authService;
-    private final FileRepository fileRepository;
+    private AmazonS3 s3Client;
+
+    @Value("${aws.s3.bucketName}")
+    private String bucketName;
+
+    @Value("${aws.s3.accessKey}")
+    private String accessKey;
+
+    @Value("${aws.s3.secretKey}")
+    private String secretKey;
+
+
+    @PostConstruct
+    private void initialize() {
+        log.info("Access key : " +accessKey+ ", Secret key : " +secretKey);
+        BasicAWSCredentials awsCredentials = new BasicAWSCredentials(accessKey, secretKey);
+        s3Client = AmazonS3ClientBuilder.standard()
+                .withCredentials(new AWSStaticCredentialsProvider(awsCredentials))
+                .withRegion(Regions.AP_SOUTHEAST_1)
+                .build();
+    }
 
     public Pageable pagingSort(int page, int size, String[] sorts) {
         List<Sort.Order> orders = new ArrayList<>();
@@ -220,35 +255,39 @@ public class CommonServiceImpl {
         return addressResponse;
     }
 
-
-    public List<FileResponse> getAllFiles(Long userId) {
-        return loadFilesByUserId(userId).map(file -> {
-            String fileUrl = ServletUriComponentsBuilder.fromCurrentContextPath().path("/admin/files/").path(file.getFileId().toString()).toUriString();
-            return new FileResponse(file.getFileType(), file.getFileName(), fileUrl);
-        }).toList();
-    }
-
     public void uploadFile(MultipartFile multipartFile, String fileType, User currentUser) {
+        File file = new File();
+        String filePath;
         try {
-            File file = new File();
-            if (fileRepository.getFilesById(currentUser.getUserId()).stream().noneMatch(f -> f.getFileType().equals(fileType))) {
-                file.setFileName(StringUtils.cleanPath(Objects.requireNonNull(multipartFile.getOriginalFilename())));
-                file.setFileType(fileType);
-                file.setData(multipartFile.getBytes());
-                file.setUser(currentUser);
-                file.setCreatedBy(currentUser.getUsername());
-                currentUser.getFiles().add(file);
-            } else {
-                file = fileRepository.getFileByType(currentUser.getUserId(), fileType);
-                file.setFileName(StringUtils.cleanPath(Objects.requireNonNull(multipartFile.getOriginalFilename())));
-                file.setFileType(fileType);
-                file.setData(multipartFile.getBytes());
-                file.setUser(currentUser);
+            String folderPath = currentUser.getUsername() + "/" + fileType + "/";
+            ListObjectsV2Request listRequest = new ListObjectsV2Request()
+                    .withBucketName(bucketName)
+                    .withPrefix(folderPath);
+            ListObjectsV2Result listing = s3Client.listObjectsV2(listRequest);
+            if (listing.getObjectSummaries().size() > 0) {
+                for (S3ObjectSummary summary : listing.getObjectSummaries())
+                    s3Client.deleteObject(bucketName, summary.getKey());
+            }
+            ObjectMetadata objectMetadata = new ObjectMetadata();
+            objectMetadata.setContentType(multipartFile.getContentType());
+            objectMetadata.setContentLength(multipartFile.getSize());
+            filePath = folderPath + multipartFile.getOriginalFilename();
+            s3Client.putObject(bucketName, filePath, multipartFile.getInputStream(), objectMetadata);
+            file.setFileName(StringUtils.cleanPath(Objects.requireNonNull(multipartFile.getOriginalFilename())));
+            file.setFileType(fileType);
+            file.setFilePath(filePath);
+            file.setFileSize(multipartFile.getSize());
+            file.setUser(currentUser);
+            if (fileRepository.getFilesById(currentUser.getUserId()).stream().anyMatch(f -> f.getFileType().equals(fileType))) {
+                fileRepository.deleteFileByFileType(currentUser.getUserId(), fileType);
                 file.setUpdatedBy(currentUser.getUsername());
+            } else {
+                file.setCreatedBy(currentUser.getUsername());
             }
             fileRepository.save(file);
-        } catch (Exception e) {
-            throw new FileUploadFailedException("Could not upload "+ fileType+ " file: " + multipartFile.getOriginalFilename() + ". Error: " + e.getMessage());
+        } catch (IOException e) {
+            log.error("Error occurred ==> {}", e.getMessage());
+            throw new FileUploadFailedException("Error occurred in file upload ==> "+e.getMessage());
         }
     }
 
@@ -271,14 +310,6 @@ public class CommonServiceImpl {
         address.setCreatedBy(currentUser.getUsername());
         currentUser.setAddress(address);
         uploadFile(avatar, "avatar", currentUser);
-    }
-
-    public Stream<File> loadFilesByUserId(Long userId) {
-        return fileRepository.getFilesById(userId).stream();
-    }
-
-    public File getFileById(Long fileId) {
-        return fileRepository.findById(fileId).get();
     }
 
     public void checkExcelFormat(MultipartFile file) {

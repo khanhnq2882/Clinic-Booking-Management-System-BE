@@ -53,15 +53,6 @@ public class AdminController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllUsers(page, size, sorts));
     }
 
-    @GetMapping("/files/{fileId}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<byte[]> getFile(@PathVariable Long fileId) {
-        File file = commonService.getFileById(fileId);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getFileName() + "\"")
-                .body(file.getData());
-    }
-
     @GetMapping("/get-all-doctors")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ResponseEntityBase> getAllDoctors(@RequestParam(defaultValue = "0") int page,

@@ -21,9 +21,11 @@ public class File extends BaseEntity{
     @Column(nullable = false)
     private String fileType;
 
-    @Lob
-    @Column(columnDefinition = "LONGBLOB")
-    private byte[] data;
+    @Column(nullable = false)
+    private String filePath;
+
+    @Column(nullable = true)
+    private Long fileSize;
 
     @ManyToOne
     @JoinColumn(name = "user_id")
