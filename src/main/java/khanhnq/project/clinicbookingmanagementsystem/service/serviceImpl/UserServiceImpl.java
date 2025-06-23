@@ -56,6 +56,14 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public ResponseEntityBase getUserProfile() {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        UserDTO userDTO = commonServiceImpl.getUserDetails(checkAccess());
+        response.setData(userDTO);
+        return response;
+    }
+
+    @Override
     public ResponseEntityBase getDoctorsBySpecialization(Long specializationId) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         List<DoctorDetailsInfoProjection> doctorDetailsInfoProjectionList = doctorRepository.getDoctorsBySpecialization(specializationId);

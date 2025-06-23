@@ -277,11 +277,6 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
-    public ResponseEntityBase getAllMedicalRecord() {
-        return null;
-    }
-
-    @Override
     public ResponseEntityBase addLabResultsToMedicalRecord(List<LabResultRequest> labResultRequests) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         User currentUser = authService.getCurrentUser();

@@ -25,6 +25,11 @@ public class UserController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(userService.updateProfile(userProfileRequest, avatar));
     }
 
+    @GetMapping("/get-user-profile")
+    public ResponseEntity<ResponseEntityBase> getUserProfile() {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(userService.getUserProfile());
+    }
+
     @GetMapping("/get-doctors-by-specialization/{specializationId}")
     public ResponseEntity<ResponseEntityBase> getDoctorsBySpecialization (@PathVariable("specializationId") Long specializationId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(userService.getDoctorsBySpecialization(specializationId));

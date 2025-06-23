@@ -7,6 +7,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 public interface UserService {
     ResponseEntityBase updateProfile(UserProfileRequest userProfileRequest, MultipartFile multipartFile);
+    ResponseEntityBase getUserProfile();
     ResponseEntityBase getDoctorsBySpecialization(Long specializationId);
     ResponseEntityBase getDoctorDetails (Long doctorId);
     ResponseEntityBase bookingAppointment(BookingAppointmentRequest bookingAppointmentRequest);

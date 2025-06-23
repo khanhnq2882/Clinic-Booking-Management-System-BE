@@ -55,7 +55,6 @@ public class AdminServiceImpl implements AdminService {
     private final ServicesRepository servicesRepository;
     private final BookingRepository bookingRepository;
     private final DoctorRepository doctorRepository;
-    private final FileRepository fileRepository;
     private final TestPackageRepository testPackageRepository;
     private final TestPackageAttributeRepository testPackageAttributeRepository;
     private final NormalRangeRepository normalRangeRepository;
@@ -115,29 +114,7 @@ public class AdminServiceImpl implements AdminService {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         Page<User> userPage = userRepository.getAllUsers(commonServiceImpl.pagingSort(page, size, sorts));
         List<UserDTO> users = userPage.getContent().stream()
-                .map(user -> {
-                    UserDTO userDTO = UserMapper.USER_MAPPER.mapToUserDTO(user);
-                    if (user.getAddress() != null) {
-                        userDTO.setUserAddress(commonServiceImpl.getAddress(user));
-                    }
-                    String gender = user.getGender() == 1 ? "Male" : "Female";
-                    userDTO.setGender(gender);
-                    if (userDTO.getDateOfBirth() != null) {
-                        DateTimeFormatter dobFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
-                        LocalDate dob = LocalDate.parse(user.getDateOfBirth().toString());
-                        userDTO.setDateOfBirth(dob.format(dobFormatter));
-                    }
-                    DateTimeFormatter createdAtFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
-                    LocalDateTime createdAt = LocalDateTime.parse(user.getCreatedAt().toString());
-                    userDTO.setCreatedAt(createdAt.format(createdAtFormatter));
-                    File file = fileRepository.getFileByType(user.getUserId(), "avatar");
-                    if (file != null) {
-                        String fileUrl = ServletUriComponentsBuilder.fromCurrentContextPath().path("/admin/files/").path(file.getFileId().toString()).toUriString();
-                        FileResponse fileResponse = new FileResponse(file.getFileType(), file.getFileName(), fileUrl);
-                        userDTO.setAvatar(fileResponse);
-                    }
-                    return userDTO;
-                }).toList();
+                .map(user -> commonServiceImpl.getUserDetails(user)).toList();
         UserResponse userResponse = UserResponse.builder()
                     .totalItems(userPage.getTotalElements())
                     .totalPages(userPage.getTotalPages())

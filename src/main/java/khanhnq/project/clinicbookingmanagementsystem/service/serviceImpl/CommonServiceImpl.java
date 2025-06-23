@@ -11,12 +11,14 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import jakarta.annotation.PostConstruct;
 import khanhnq.project.clinicbookingmanagementsystem.common.MessageConstants;
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.UserDTO;
 import khanhnq.project.clinicbookingmanagementsystem.model.projection.BookingDetailsInfoProjection;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.exception.SystemException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.FileUploadFailedException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceAlreadyExistException;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.UserMapper;
+import khanhnq.project.clinicbookingmanagementsystem.model.response.FileResponse;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.UserProfileRequest;
 import khanhnq.project.clinicbookingmanagementsystem.model.response.AddressResponse;
@@ -33,25 +35,27 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Component
 @Slf4j
 public class CommonServiceImpl {
     @Autowired
-    private  UserRepository userRepository;
+    private UserRepository userRepository;
     @Autowired
-    private  CityRepository cityRepository;
+    private CityRepository cityRepository;
     @Autowired
-    private  DistrictRepository districtRepository;
+    private DistrictRepository districtRepository;
     @Autowired
-    private  WardRepository wardRepository;
+    private WardRepository wardRepository;
     @Autowired
-    private  AddressRepository addressRepository;
+    private AddressRepository addressRepository;
     @Autowired
-    private  BookingRepository bookingRepository;
+    private BookingRepository bookingRepository;
     @Autowired
     private FileRepository fileRepository;
 
@@ -66,15 +70,43 @@ public class CommonServiceImpl {
     @Value("${aws.s3.secretKey}")
     private String secretKey;
 
+    @Value("${aws.s3.region}")
+    private String awsS3Region;
 
     @PostConstruct
     private void initialize() {
-        log.info("Access key : " +accessKey+ ", Secret key : " +secretKey);
         BasicAWSCredentials awsCredentials = new BasicAWSCredentials(accessKey, secretKey);
         s3Client = AmazonS3ClientBuilder.standard()
                 .withCredentials(new AWSStaticCredentialsProvider(awsCredentials))
                 .withRegion(Regions.AP_SOUTHEAST_1)
                 .build();
+    }
+
+    public UserDTO getUserDetails(User user) {
+        UserDTO userDTO = UserMapper.USER_MAPPER.mapToUserDTO(user);
+        if (user.getAddress() != null) {
+            userDTO.setUserAddress(getAddress(user));
+        }
+        String gender;
+        if (userDTO.getGender() != null) {
+            gender = user.getGender() == 1 ? "Male" : "Female";
+            userDTO.setGender(gender);
+        }
+        if (userDTO.getDateOfBirth() != null) {
+            DateTimeFormatter dobFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+            LocalDate dob = LocalDate.parse(user.getDateOfBirth().toString());
+            userDTO.setDateOfBirth(dob.format(dobFormatter));
+        }
+        DateTimeFormatter createdAtFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
+        LocalDateTime createdAt = LocalDateTime.parse(user.getCreatedAt().toString());
+        userDTO.setCreatedAt(createdAt.format(createdAtFormatter));
+        File file = fileRepository.getFileByType(user.getUserId(), "avatar");
+        if (file != null) {
+            String fileS3Url = "https://" +bucketName+ ".s3." +awsS3Region+ ".amazonaws.com/" + file.getFilePath();
+            FileResponse fileResponse = new FileResponse(file.getFileType(), file.getFileName(), fileS3Url);
+            userDTO.setAvatar(fileResponse);
+        }
+        return userDTO;
     }
 
     public Pageable pagingSort(int page, int size, String[] sorts) {
