@@ -17,43 +17,93 @@ public interface DoctorRepository extends JpaRepository<Doctor, Long> {
     @Query(value = "select * from doctor where specialization_id = :specializationId", nativeQuery = true)
     List<Doctor> getDoctorsBySpecializationId(@Param("specializationId") Long specializationId);
 
-    @Query(value = "select d.doctor_id as doctorId, u.user_code as userCode, u.first_name as firstName, u.last_name as lastName, \n" +
-            "s.specialization_name as specializationName, d.education_level as educationLevel, d.biography as biography, \n" +
-            "d.career_description as careerDescription, we.position as position, we.work_specialization_name as workSpecializationName, \n" +
-            "we.work_place as workPlace, we.year_of_start_work as yearOfStartWork, we.year_of_end_work as yearOfEndWork, \n" +
-            "we.description as description, f.file_id as fileId, f.file_type as fileType, f.file_name as fileName, dow.working_day as workingDay, \n" +
-            "ws.start_time as startTime, ws.end_time as endTime\n" +
-            "from doctor as d\n" +
-            "left join user as u on d.user_id = u.user_id\n" +
-            "left join specialization as s on d.specialization_id = s.specialization_id\n" +
-            "left join work_experience as we on d.doctor_id = we.doctor_id\n" +
-            "left join file as f on u.user_id = f.user_id\n" +
-            "left join day_of_week as dow on d.doctor_id = dow.doctor_id\n" +
-            "left join work_schedule as ws on dow.day_of_week_id = ws.day_of_week_id\n" +
-            "where u.status = 'ACTIVE' and d.specialization_id = :specializationId and ws.work_schedule_id not in (" +
-            "select ws.work_schedule_id from work_schedule as ws " +
-            "inner join booking as b " +
-            "on ws.work_schedule_id = b.work_schedule_id where b.status not in ('CANCELLED'))"
+    @Query(value = "SELECT \n" +
+            "    d.doctor_id AS doctorId,\n" +
+            "    u.user_code AS userCode,\n" +
+            "    u.first_name AS firstName,\n" +
+            "    u.last_name AS lastName,\n" +
+            "    s.specialization_name AS specializationName,\n" +
+            "    d.education_level AS educationLevel,\n" +
+            "    d.biography AS biography,\n" +
+            "    d.career_description AS careerDescription,\n" +
+            "    we.position AS position,\n" +
+            "    we.work_specialization_name AS workSpecializationName,\n" +
+            "    we.work_place AS workPlace,\n" +
+            "    we.year_of_start_work AS yearOfStartWork,\n" +
+            "    we.year_of_end_work AS yearOfEndWork,\n" +
+            "    we.description AS description,\n" +
+            "    f.file_id AS fileId,\n" +
+            "    f.file_type AS fileType,\n" +
+            "    f.file_name AS fileName,\n" +
+            "    f.file_path AS filePath,\n" +
+            "    dow.working_day AS workingDay,\n" +
+            "    ws.start_time AS startTime,\n" +
+            "    ws.end_time AS endTime\n" +
+            "FROM \n" +
+            "    doctor d\n" +
+            "LEFT JOIN user u ON d.user_id = u.user_id\n" +
+            "LEFT JOIN specialization s ON d.specialization_id = s.specialization_id\n" +
+            "LEFT JOIN work_experience we ON d.doctor_id = we.doctor_id\n" +
+            "LEFT JOIN file f ON u.user_id = f.user_id\n" +
+            "LEFT JOIN day_of_week dow ON d.doctor_id = dow.doctor_id\n" +
+            "LEFT JOIN work_schedule ws ON dow.day_of_week_id = ws.day_of_week_id\n" +
+            "WHERE \n" +
+            "    u.status = 'ACTIVE'\n" +
+            "    AND d.specialization_id = :specializationId\n" +
+            "    AND (\n" +
+            "        ws.work_schedule_id IS NULL\n" +
+            "        OR ws.work_schedule_id NOT IN (\n" +
+            "            SELECT b.work_schedule_id\n" +
+            "            FROM booking b\n" +
+            "            JOIN work_schedule ws ON b.work_schedule_id = ws.work_schedule_id\n" +
+            "            WHERE b.status NOT IN ('CANCELLED')\n" +
+            "        )\n" +
+            "    );\n"
             , nativeQuery = true)
     List<DoctorDetailsInfoProjection> getDoctorsBySpecialization(@Param("specializationId") Long specializationId);
 
-    @Query(value = "select d.doctor_id as doctorId, u.user_code as userCode, u.first_name as firstName, u.last_name as lastName, \n" +
-            "s.specialization_name as specializationName, d.education_level as educationLevel, d.biography as biography, \n" +
-            "d.career_description as careerDescription, we.position as position, we.work_specialization_name as workSpecializationName, \n" +
-            "we.work_place as workPlace, we.year_of_start_work as yearOfStartWork, we.year_of_end_work as yearOfEndWork, \n" +
-            "we.description as description, f.file_id as fileId, f.file_type as fileType, f.file_name as fileName, dow.working_day as workingDay, \n" +
-            "ws.start_time as startTime, ws.end_time as endTime\n" +
-            "from doctor as d\n" +
-            "left join user as u on d.user_id = u.user_id\n" +
-            "left join specialization as s on d.specialization_id = s.specialization_id\n" +
-            "left join work_experience as we on d.doctor_id = we.doctor_id\n" +
-            "left join file as f on u.user_id = f.user_id\n" +
-            "left join day_of_week as dow on d.doctor_id = dow.doctor_id\n" +
-            "left join work_schedule as ws on dow.day_of_week_id = ws.day_of_week_id\n" +
-            "where u.status = 'ACTIVE' and d.doctor_id = :doctorId and ws.work_schedule_id not in (" +
-            "select ws.work_schedule_id from work_schedule as ws " +
-            "inner join booking as b " +
-            "on ws.work_schedule_id = b.work_schedule_id where b.status not in ('CANCELLED'))"
+    @Query(value = "SELECT \n" +
+            "    d.doctor_id AS doctorId,\n" +
+            "    u.user_code AS userCode,\n" +
+            "    u.first_name AS firstName,\n" +
+            "    u.last_name AS lastName,\n" +
+            "    s.specialization_name AS specializationName,\n" +
+            "    d.education_level AS educationLevel,\n" +
+            "    d.biography AS biography,\n" +
+            "    d.career_description AS careerDescription,\n" +
+            "    we.position AS position,\n" +
+            "    we.work_specialization_name AS workSpecializationName,\n" +
+            "    we.work_place AS workPlace,\n" +
+            "    we.year_of_start_work AS yearOfStartWork,\n" +
+            "    we.year_of_end_work AS yearOfEndWork,\n" +
+            "    we.description AS description,\n" +
+            "    f.file_id AS fileId,\n" +
+            "    f.file_type AS fileType,\n" +
+            "    f.file_name AS fileName,\n" +
+            "    f.file_path AS filePath,\n" +
+            "    dow.working_day AS workingDay,\n" +
+            "    ws.start_time AS startTime,\n" +
+            "    ws.end_time AS endTime\n" +
+            "FROM \n" +
+            "    doctor d\n" +
+            "LEFT JOIN user u ON d.user_id = u.user_id\n" +
+            "LEFT JOIN specialization s ON d.specialization_id = s.specialization_id\n" +
+            "LEFT JOIN work_experience we ON d.doctor_id = we.doctor_id\n" +
+            "LEFT JOIN file f ON u.user_id = f.user_id\n" +
+            "LEFT JOIN day_of_week dow ON d.doctor_id = dow.doctor_id\n" +
+            "LEFT JOIN work_schedule ws ON dow.day_of_week_id = ws.day_of_week_id\n" +
+            "WHERE \n" +
+            "    u.status = 'ACTIVE'\n" +
+            "    AND d.doctor_id = :doctorId\n" +
+            "    AND (\n" +
+            "        ws.work_schedule_id IS NULL \n" +
+            "        OR ws.work_schedule_id NOT IN (\n" +
+            "            SELECT b.work_schedule_id\n" +
+            "            FROM booking b\n" +
+            "            JOIN work_schedule ws ON b.work_schedule_id = ws.work_schedule_id\n" +
+            "            WHERE b.status NOT IN ('CANCELLED')\n" +
+            "        )\n" +
+            "    )"
             , nativeQuery = true)
     List<DoctorDetailsInfoProjection> getDoctorDetails(@Param("doctorId") Long doctorId);
 
@@ -70,12 +120,12 @@ public interface DoctorRepository extends JpaRepository<Doctor, Long> {
             "    f.file_id as fileId, \n" +
             "    f.file_type as fileType, \n" +
             "    f.file_name as fileName, \n" +
+            "    f.file_path as filePath, \n" +
             "    DATE_FORMAT(d.created_at, '%d-%m-%Y %H:%i:%s') as createdAt\n" +
             "from doctor as d\n" +
-            "inner join user as u on d.user_id = u.user_id\n" +
-            "inner join specialization as s on d.specialization_id = s.specialization_id\n" +
-            "inner join file as f on u.user_id = f.user_id\n" +
-            "where f.file_type = 'avatar'"
+            "left join user as u on d.user_id = u.user_id\n" +
+            "left join specialization as s on d.specialization_id = s.specialization_id\n" +
+            "left join file as f on u.user_id = f.user_id"
             , countQuery = "SELECT COUNT(*) FROM doctor"
             , nativeQuery = true)
     Page<DoctorInfoProjection> getDoctorsInfo(Pageable pageable);

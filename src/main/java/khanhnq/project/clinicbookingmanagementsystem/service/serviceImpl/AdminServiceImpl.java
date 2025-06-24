@@ -44,7 +44,6 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @Service
 @AllArgsConstructor
@@ -113,14 +112,13 @@ public class AdminServiceImpl implements AdminService {
     public ResponseEntityBase getAllUsers(int page, int size, String[] sorts) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         Page<User> userPage = userRepository.getAllUsers(commonServiceImpl.pagingSort(page, size, sorts));
-        List<UserDTO> users = userPage.getContent().stream()
-                .map(user -> commonServiceImpl.getUserDetails(user)).toList();
+        List<UserDTO> users = userPage.getContent().stream().map(commonServiceImpl::getUserDetails).toList();
         UserResponse userResponse = UserResponse.builder()
-                    .totalItems(userPage.getTotalElements())
-                    .totalPages(userPage.getTotalPages())
-                    .currentPage(userPage.getNumber())
-                    .users(users)
-                    .build();
+                .totalItems(userPage.getTotalElements())
+                .totalPages(userPage.getTotalPages())
+                .currentPage(userPage.getNumber())
+                .users(users)
+                .build();
         response.setData(userResponse);
         return response;
     }
@@ -129,18 +127,17 @@ public class AdminServiceImpl implements AdminService {
     public ResponseEntityBase getAllDoctors(int page, int size, String[] sorts) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         Page<DoctorInfoProjection> doctorPage = doctorRepository.getDoctorsInfo(commonServiceImpl.pagingSort(page, size, sorts));
-        List<DoctorInfoDTO> doctors = doctorPage.getContent().stream().map(doctorInfoProjection -> {
-            DoctorInfoDTO doctorInfoDTO = DoctorMapper.DOCTOR_MAPPER.mapToDoctorInfo(doctorInfoProjection);
-            String avatar = doctorInfoProjection.getFileType();
-            String fileName = doctorInfoProjection.getFileName();
-            if (avatar != null && fileName != null) {
-                String fileUrl =
-                        ServletUriComponentsBuilder.fromCurrentContextPath().path("/admin/files/").path(doctorInfoProjection.getFileId().toString()).toUriString();
-                FileResponse fileResponse = new FileResponse(avatar, fileName, fileUrl);
-                doctorInfoDTO.setAvatar(fileResponse);
-            }
-            return doctorInfoDTO;
-        }).toList();
+        List<DoctorInfoDTO> doctors = doctorPage.getContent().stream()
+                .filter(doctorInfoProjection -> doctorInfoProjection.getFileType() == null || doctorInfoProjection.getFileType().equals("avatar"))
+                .map(doctorInfoProjection -> {
+                    DoctorInfoDTO doctorInfoDTO = DoctorMapper.DOCTOR_MAPPER.mapToDoctorInfo(doctorInfoProjection);
+                    if (doctorInfoProjection.getFileType() != null) {
+                        FileResponse fileResponse = commonServiceImpl.getFileFromS3(
+                                "avatar", doctorInfoProjection.getFileName(), doctorInfoProjection.getFilePath());
+                        doctorInfoDTO.setAvatar(fileResponse);
+                    }
+                    return doctorInfoDTO;
+                }).toList();
         response.setData(doctors);
         return response;
     }

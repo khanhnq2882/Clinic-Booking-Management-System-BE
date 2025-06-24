@@ -21,6 +21,7 @@ public interface DoctorDetailsInfoProjection {
     Long getFileId();
     String getFileType();
     String getFileName();
+    String getFilePath();
     Date getWorkingDay();
     LocalTime getStartTime();
     LocalTime getEndTime();

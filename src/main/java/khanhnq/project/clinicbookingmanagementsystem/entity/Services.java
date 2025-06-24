@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EServiceStatus;
 import lombok.*;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -42,5 +43,8 @@ public class Services extends BaseEntity{
     private Specialization specialization;
 
     @OneToMany(mappedBy = "service", cascade = CascadeType.ALL)
-    private List<TestPackage> testPackages;
+    private List<TestPackage> testPackages = new ArrayList<>();
+
+    @OneToMany(mappedBy = "service", cascade = CascadeType.ALL)
+    private List<MedicalImage> medicalImages = new ArrayList<>();
 }

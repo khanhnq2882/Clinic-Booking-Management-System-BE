@@ -1,7 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.controller;
 
 import jakarta.mail.MessagingException;
-import khanhnq.project.clinicbookingmanagementsystem.entity.File;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Services;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.TestPackageRequest;
 import khanhnq.project.clinicbookingmanagementsystem.model.response.*;

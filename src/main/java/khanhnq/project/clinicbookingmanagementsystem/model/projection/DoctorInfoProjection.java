@@ -13,5 +13,6 @@ public interface DoctorInfoProjection {
     Long getFileId();
     String getFileType();
     String getFileName();
+    String getFilePath();
     String getCreatedAt();
 }

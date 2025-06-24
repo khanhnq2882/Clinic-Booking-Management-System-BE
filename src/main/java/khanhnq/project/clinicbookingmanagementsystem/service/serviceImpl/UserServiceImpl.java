@@ -3,6 +3,8 @@ package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 import khanhnq.project.clinicbookingmanagementsystem.common.MessageConstants;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ForbiddenException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.UnauthorizedException;
+import khanhnq.project.clinicbookingmanagementsystem.mapper.DoctorMapper;
+import khanhnq.project.clinicbookingmanagementsystem.mapper.WorkExperienceMapper;
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EBookingStatus;
@@ -71,15 +73,13 @@ public class UserServiceImpl implements UserService {
         doctorDetailsInfoProjectionList.forEach(doctorDetailsInfoProjection -> {
             Long doctorId = doctorDetailsInfoProjection.getDoctorId();
             DoctorDTO doctorDTO = doctorMap.getOrDefault(doctorId, new DoctorDTO());
-            doctorDTO.setDoctorId(doctorId);
-            doctorDTO.setFirstName(doctorDetailsInfoProjection.getFirstName());
-            doctorDTO.setLastName(doctorDetailsInfoProjection.getLastName());
-            doctorDTO.setSpecializationName(doctorDetailsInfoProjection.getSpecializationName());
-            doctorDTO.setEducationLevel(doctorDetailsInfoProjection.getEducationLevel());
-            doctorDTO.setBiography(doctorDetailsInfoProjection.getBiography());
-            if (doctorDetailsInfoProjection.getFileType().equals("avatar")) {
-                String fileUrl = ServletUriComponentsBuilder.fromCurrentContextPath().path("/admin/files/").path(doctorDetailsInfoProjection.getFileId().toString()).toUriString();
-                FileResponse fileResponse = new FileResponse(doctorDetailsInfoProjection.getFileType(), doctorDetailsInfoProjection.getFileName(), fileUrl);
+            DoctorMapper.DOCTOR_MAPPER.mapToDoctorDTO(doctorDTO, doctorDetailsInfoProjection);
+            String fileType = doctorDetailsInfoProjection.getFileType();
+            if (fileType != null && fileType.equals("avatar")) {
+                FileResponse fileResponse = commonServiceImpl.getFileFromS3(
+                        fileType,
+                        doctorDetailsInfoProjection.getFileName(),
+                        doctorDetailsInfoProjection.getFilePath());
                 doctorDTO.setFile(fileResponse);
             }
             if (doctorDetailsInfoProjection.getWorkingDay() != null) {
@@ -99,30 +99,21 @@ public class UserServiceImpl implements UserService {
         Map<Long, DoctorDetailsDTO> doctorMap = new HashMap<>();
         doctorDetails.forEach(doctorDetailsInfoProjection -> {
             DoctorDetailsDTO doctorDetailsDTO = doctorMap.getOrDefault(doctorId, new DoctorDetailsDTO());
-            doctorDetailsDTO.setDoctorId(doctorId);
-            doctorDetailsDTO.setUserCode(doctorDetailsInfoProjection.getUserCode());
-            doctorDetailsDTO.setFirstName(doctorDetailsInfoProjection.getFirstName());
-            doctorDetailsDTO.setLastName(doctorDetailsInfoProjection.getLastName());
-            doctorDetailsDTO.setSpecializationName(doctorDetailsInfoProjection.getSpecializationName());
-            doctorDetailsDTO.setBiography(doctorDetailsInfoProjection.getBiography());
-            doctorDetailsDTO.setCareerDescription(doctorDetailsInfoProjection.getCareerDescription());
-            doctorDetailsDTO.setEducationLevel(doctorDetailsInfoProjection.getEducationLevel());
+            DoctorMapper.DOCTOR_MAPPER.mapToDoctorDetailsDTO(doctorDetailsDTO, doctorDetailsInfoProjection);
             if (doctorDetailsInfoProjection.getPosition() != null || doctorDetailsInfoProjection.getWorkSpecializationName() != null ||
                     doctorDetailsInfoProjection.getWorkPlace() != null || doctorDetailsInfoProjection.getYearOfStartWork() != null ||
                     doctorDetailsInfoProjection.getYearOfEndWork() != null || doctorDetailsInfoProjection.getDescription() != null) {
-                WorkExperienceDTO workExperienceDTO = WorkExperienceDTO.builder()
-                        .position(doctorDetailsInfoProjection.getPosition())
-                        .workSpecializationName(doctorDetailsInfoProjection.getWorkSpecializationName())
-                        .workPlace(doctorDetailsInfoProjection.getWorkPlace())
-                        .yearOfStartWork(doctorDetailsInfoProjection.getYearOfStartWork())
-                        .yearOfEndWork(doctorDetailsInfoProjection.getYearOfEndWork())
-                        .description(doctorDetailsInfoProjection.getDescription())
-                        .build();
+                WorkExperienceDTO workExperienceDTO =
+                        WorkExperienceMapper.WORK_EXPERIENCE_MAPPER.mapToWorkExperienceDTO(doctorDetailsInfoProjection);
                 doctorDetailsDTO.getWorkExperiences().add(workExperienceDTO);
             }
-            String fileUrl = ServletUriComponentsBuilder.fromCurrentContextPath().path("/admin/files/").path(doctorDetailsInfoProjection.getFileId().toString()).toUriString();
-            FileResponse fileResponse = new FileResponse(doctorDetailsInfoProjection.getFileType(), doctorDetailsInfoProjection.getFileName(), fileUrl);
-            doctorDetailsDTO.getFiles().add(fileResponse);
+            if (doctorDetailsInfoProjection.getFileId() != null) {
+                FileResponse fileResponse = commonServiceImpl.getFileFromS3(
+                        doctorDetailsInfoProjection.getFileType(),
+                        doctorDetailsInfoProjection.getFileName(),
+                        doctorDetailsInfoProjection.getFilePath());
+                doctorDetailsDTO.getFiles().add(fileResponse);
+            }
             if (doctorDetailsInfoProjection.getWorkingDay() != null) {
                 Set<DayOfWeekDTO> daysOfWeek = doctorDetailsDTO.getDaysOfWeek();
                 getDayOfWeekDetails(doctorDetailsInfoProjection, daysOfWeek);

@@ -24,10 +24,14 @@ public class File extends BaseEntity{
     @Column(nullable = false)
     private String filePath;
 
-    @Column(nullable = true)
+    @Column
     private Long fileSize;
 
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
+
+    @ManyToOne
+    @JoinColumn(name = "medical_image_id")
+    private MedicalImage medicalImage;
 }

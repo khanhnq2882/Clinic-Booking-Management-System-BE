@@ -48,6 +48,9 @@ public class MedicalRecord extends BaseEntity{
     @OneToMany(mappedBy = "medicalRecord", cascade = CascadeType.ALL)
     private List<LabResult> labResults = new ArrayList<>();
 
+    @OneToMany(mappedBy = "medicalRecord", cascade = CascadeType.ALL)
+    private List<MedicalImage> medicalImages = new ArrayList<>();
+
     @OneToOne(cascade = CascadeType.PERSIST, fetch = FetchType.EAGER)
     @JoinColumn(name = "booking_id")
     private Booking booking;

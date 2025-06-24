@@ -102,11 +102,15 @@ public class CommonServiceImpl {
         userDTO.setCreatedAt(createdAt.format(createdAtFormatter));
         File file = fileRepository.getFileByType(user.getUserId(), "avatar");
         if (file != null) {
-            String fileS3Url = "https://" +bucketName+ ".s3." +awsS3Region+ ".amazonaws.com/" + file.getFilePath();
-            FileResponse fileResponse = new FileResponse(file.getFileType(), file.getFileName(), fileS3Url);
+            FileResponse fileResponse = getFileFromS3(file.getFileType(), file.getFileName(), file.getFilePath());
             userDTO.setAvatar(fileResponse);
         }
         return userDTO;
+    }
+
+    public FileResponse getFileFromS3(String fileType, String fileName, String filePath) {
+        String fileS3Url = "https://" +bucketName+ ".s3." +awsS3Region+ ".amazonaws.com/" + filePath;
+        return new FileResponse(fileType, fileName, fileS3Url);
     }
 
     public Pageable pagingSort(int page, int size, String[] sorts) {
