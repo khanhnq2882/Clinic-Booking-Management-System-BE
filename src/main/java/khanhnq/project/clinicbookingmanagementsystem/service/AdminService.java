@@ -5,6 +5,7 @@ import khanhnq.project.clinicbookingmanagementsystem.entity.Services;
 import khanhnq.project.clinicbookingmanagementsystem.model.projection.BookingDetailsInfoProjection;
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.ServicesDTO;
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.UserDTO;
+import khanhnq.project.clinicbookingmanagementsystem.model.request.ImagingServiceRequest;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.ServiceRequest;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.TestPackageRequest;
 import khanhnq.project.clinicbookingmanagementsystem.model.response.*;
@@ -33,4 +34,7 @@ public interface AdminService {
     ResponseEntityBase addTestPackage(TestPackageRequest testPackageRequest);
     ResponseEntityBase updateTestPackage(Long testPackageId, TestPackageRequest testPackageRequest);
     ResponseEntityBase updateTestPackageStatus(Long testPackageId, String status);
+    ResponseEntityBase addImagingService(ImagingServiceRequest imagingServiceRequest);
+    ResponseEntityBase updateImagingService(Long imagingServiceId, ImagingServiceRequest imagingServiceRequest);
+    ResponseEntityBase updateImagingServiceStatus(Long imagingServiceId, String status);
 }

@@ -1,5 +1,5 @@
 package khanhnq.project.clinicbookingmanagementsystem.entity.enums;
 
-public enum ELabResultStatus {
+public enum EResultStatus {
     CREATED, IN_PROGRESS, COMPLETED, CANCELLED
 }

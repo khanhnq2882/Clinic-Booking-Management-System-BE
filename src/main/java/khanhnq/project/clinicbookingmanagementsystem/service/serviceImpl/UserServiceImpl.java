@@ -4,7 +4,6 @@ import khanhnq.project.clinicbookingmanagementsystem.common.MessageConstants;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ForbiddenException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.UnauthorizedException;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.DoctorMapper;
-import khanhnq.project.clinicbookingmanagementsystem.mapper.WorkExperienceMapper;
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EBookingStatus;
@@ -28,13 +27,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.*;
 import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Service
 @AllArgsConstructor
@@ -84,7 +80,7 @@ public class UserServiceImpl implements UserService {
             }
             if (doctorDetailsInfoProjection.getWorkingDay() != null) {
                 Set<DayOfWeekDTO> daysOfWeek = doctorDTO.getDaysOfWeek();
-                getDayOfWeekDetails(doctorDetailsInfoProjection, daysOfWeek);
+                commonServiceImpl.getDayOfWeekDetails(doctorDetailsInfoProjection, daysOfWeek);
             }
             doctorMap.put(doctorId, doctorDTO);
         });
@@ -95,32 +91,8 @@ public class UserServiceImpl implements UserService {
     @Override
     public ResponseEntityBase getDoctorDetails(Long doctorId) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        List<DoctorDetailsInfoProjection> doctorDetails = doctorRepository.getDoctorDetails(doctorId);
-        Map<Long, DoctorDetailsDTO> doctorMap = new HashMap<>();
-        doctorDetails.forEach(doctorDetailsInfoProjection -> {
-            DoctorDetailsDTO doctorDetailsDTO = doctorMap.getOrDefault(doctorId, new DoctorDetailsDTO());
-            DoctorMapper.DOCTOR_MAPPER.mapToDoctorDetailsDTO(doctorDetailsDTO, doctorDetailsInfoProjection);
-            if (doctorDetailsInfoProjection.getPosition() != null || doctorDetailsInfoProjection.getWorkSpecializationName() != null ||
-                    doctorDetailsInfoProjection.getWorkPlace() != null || doctorDetailsInfoProjection.getYearOfStartWork() != null ||
-                    doctorDetailsInfoProjection.getYearOfEndWork() != null || doctorDetailsInfoProjection.getDescription() != null) {
-                WorkExperienceDTO workExperienceDTO =
-                        WorkExperienceMapper.WORK_EXPERIENCE_MAPPER.mapToWorkExperienceDTO(doctorDetailsInfoProjection);
-                doctorDetailsDTO.getWorkExperiences().add(workExperienceDTO);
-            }
-            if (doctorDetailsInfoProjection.getFileId() != null) {
-                FileResponse fileResponse = commonServiceImpl.getFileFromS3(
-                        doctorDetailsInfoProjection.getFileType(),
-                        doctorDetailsInfoProjection.getFileName(),
-                        doctorDetailsInfoProjection.getFilePath());
-                doctorDetailsDTO.getFiles().add(fileResponse);
-            }
-            if (doctorDetailsInfoProjection.getWorkingDay() != null) {
-                Set<DayOfWeekDTO> daysOfWeek = doctorDetailsDTO.getDaysOfWeek();
-                getDayOfWeekDetails(doctorDetailsInfoProjection, daysOfWeek);
-            }
-            doctorMap.put(doctorId, doctorDetailsDTO);
-        });
-        response.setData(doctorMap.get(doctorId));
+        Doctor doctor = doctorRepository.findById(doctorId).orElseThrow(() -> new ResourceNotFoundException("Doctor ID", doctorId.toString()));
+        response.setData(commonServiceImpl.getDoctorDetails(doctor.getDoctorId()));
         return response;
     }
 
@@ -256,30 +228,6 @@ public class UserServiceImpl implements UserService {
             throw new ForbiddenException(MessageConstants.FORBIDDEN_ACCESS);
         }
         return currentUser;
-    }
-
-    private void getDayOfWeekDetails(DoctorDetailsInfoProjection doctorDetailsInfoProjection, Set<DayOfWeekDTO> daysOfWeek) {
-        DayOfWeekDTO existingDay = daysOfWeek.stream()
-                .filter(d -> d.getWorkingDay().equals(doctorDetailsInfoProjection.getWorkingDay()))
-                .findFirst()
-                .orElse(null);
-        WorkScheduleDTO workScheduleDTO = new WorkScheduleDTO();
-        workScheduleDTO.setStartTime(doctorDetailsInfoProjection.getStartTime());
-        workScheduleDTO.setEndTime(doctorDetailsInfoProjection.getEndTime());
-        if (existingDay != null) {
-            existingDay.getWorkSchedules().add(workScheduleDTO);
-            Set<WorkScheduleDTO> sorted = existingDay.getWorkSchedules().stream()
-                    .sorted(Comparator.comparing(WorkScheduleDTO::getStartTime))
-                    .collect(Collectors.toCollection(LinkedHashSet::new));
-            existingDay.setWorkSchedules(sorted);
-        } else {
-            DayOfWeekDTO newDay = new DayOfWeekDTO();
-            newDay.setWorkingDay(doctorDetailsInfoProjection.getWorkingDay());
-            Set<WorkScheduleDTO> sorted = Stream.of(workScheduleDTO)
-                    .collect(Collectors.toCollection(LinkedHashSet::new));
-            newDay.setWorkSchedules(sorted);
-            daysOfWeek.add(newDay);
-        }
     }
 
     private WorkSchedule validateWorkSchedule(Long workScheduleId) {

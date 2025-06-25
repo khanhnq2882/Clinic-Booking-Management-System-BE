@@ -2,6 +2,7 @@ package khanhnq.project.clinicbookingmanagementsystem.controller;
 
 import jakarta.mail.MessagingException;
 import khanhnq.project.clinicbookingmanagementsystem.entity.Services;
+import khanhnq.project.clinicbookingmanagementsystem.model.request.ImagingServiceRequest;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.TestPackageRequest;
 import khanhnq.project.clinicbookingmanagementsystem.model.response.*;
 import khanhnq.project.clinicbookingmanagementsystem.repository.ServicesRepository;
@@ -116,6 +117,26 @@ public class AdminController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ResponseEntityBase> updateTestPackageStatus(@PathVariable("testPackageId") Long testPackageId, @RequestParam String status) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.updateTestPackageStatus(testPackageId, status));
+    }
+
+    @PostMapping("/add-imaging-service")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResponseEntityBase> addImagingService(@RequestBody ImagingServiceRequest imagingServiceRequest) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.addImagingService(imagingServiceRequest));
+    }
+
+    @PostMapping("/update-imaging-service/{imagingServiceId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResponseEntityBase> updateImagingService(@PathVariable("imagingServiceId") Long imagingServiceId,
+                                                                   @RequestBody ImagingServiceRequest imagingServiceRequest) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.updateImagingService(imagingServiceId, imagingServiceRequest));
+    }
+
+    @PostMapping("/update-imaging-service-status/{imagingServiceId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResponseEntityBase> updateImagingServiceStatus(@PathVariable("imagingServiceId") Long imagingServiceId,
+                                                                         @RequestParam String status) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.updateImagingServiceStatus(imagingServiceId, status));
     }
 
     @GetMapping("/export-users-to-excel")

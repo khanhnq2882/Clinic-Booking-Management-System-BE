@@ -46,5 +46,5 @@ public class Services extends BaseEntity{
     private List<TestPackage> testPackages = new ArrayList<>();
 
     @OneToMany(mappedBy = "service", cascade = CascadeType.ALL)
-    private List<MedicalImage> medicalImages = new ArrayList<>();
+    private List<ImagingService> imagingServices = new ArrayList<>();
 }

@@ -39,7 +39,10 @@ public class MessageConstants {
     public static final String REFRESH_TOKEN_EXPIRED = "Refresh token was expired. Please make a new login request";
     public static final String ADD_TEST_PACKAGE_SUCCESS = "Add test package successfully.";
     public static final String UPDATE_TEST_PACKAGE_SUCCESS = "Update test package successfully.";
+    public static final String ADD_IMAGING_SERVICE_SUCCESS = "Add imaging service successfully.";
+    public static final String UPDATE_IMAGING_SERVICE_SUCCESS = "Update imaging service successfully.";
     public static final String UPDATE_TEST_PACKAGE_STATUS_SUCCESS = "Update test package status successfully.";
+    public static final String UPDATE_IMAGING_SERVICE_STATUS_SUCCESS = "Update imaging service status successfully.";
     public static final String ERROR_NEXT_APPOINTMENT_DATE = "The next appointment date cannot be in the past and must be at least 7 days before the next appointment date.";
     public static final String ADD_MEDICAL_RECORD_SUCCESS = "Add medical record successfully.";
     public static final String UPDATE_MEDICAL_RECORD_SUCCESS = "Update medical record successfully.";

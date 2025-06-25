@@ -1,5 +1,7 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 import jakarta.transaction.Transactional;
 import khanhnq.project.clinicbookingmanagementsystem.common.MessageConstants;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.*;
@@ -18,12 +20,15 @@ import khanhnq.project.clinicbookingmanagementsystem.model.response.ResponseEnti
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import khanhnq.project.clinicbookingmanagementsystem.service.DoctorService;
-import lombok.AllArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
@@ -34,22 +39,49 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
-@AllArgsConstructor
 public class DoctorServiceImpl implements DoctorService {
-    private final AuthService authService;
-    private final SpecializationRepository specializationRepository;
-    private final BookingRepository bookingRepository;
-    private final UserRepository userRepository;
-    private final DoctorRepository doctorRepository;
-    private final WorkScheduleRepository workScheduleRepository;
-    private final DayOfWeekRepository dayOfWeekRepository;
-    private final WorkExperienceRepository workExperienceRepository;
-    private final MedicalRecordRepository medicalRecordRepository;
-    private final LabResultRepository labResultRepository;
-    private final TestPackageRepository testPackageRepository;
-    private final TestPackageAttributeRepository testPackageAttributeRepository;
-    private final TestResultRepository testResultRepository;
-    private final CommonServiceImpl commonServiceImpl;
+    @Autowired
+    private AuthService authService;
+    @Autowired
+    private SpecializationRepository specializationRepository;
+    @Autowired
+    private BookingRepository bookingRepository;
+    @Autowired
+    private UserRepository userRepository;
+    @Autowired
+    private DoctorRepository doctorRepository;
+    @Autowired
+    private WorkScheduleRepository workScheduleRepository;
+    @Autowired
+    private DayOfWeekRepository dayOfWeekRepository;
+    @Autowired
+    private WorkExperienceRepository workExperienceRepository;
+    @Autowired
+    private MedicalRecordRepository medicalRecordRepository;
+    @Autowired
+    private LabResultRepository labResultRepository;
+    @Autowired
+    private TestPackageRepository testPackageRepository;
+    @Autowired
+    private TestPackageAttributeRepository testPackageAttributeRepository;
+    @Autowired
+    private TestResultRepository testResultRepository;
+    @Autowired
+    private ImagingServiceRepository imagingServiceRepository;
+    @Autowired
+    private MedicalImageRepository medicalImageRepository;
+    @Autowired
+    private FileRepository fileRepository;
+    @Autowired
+    private CommonServiceImpl commonServiceImpl;
+
+    private AmazonS3 s3Client;
+
+    @Value("${aws.s3.bucketName}")
+    private String bucketName;
+
+    @Value("${aws.s3.region}")
+    private String awsS3Region;
 
     @Override
     public ResponseEntityBase updateProfile(UserProfileRequest userProfileRequest, MultipartFile avatar) {
@@ -58,6 +90,26 @@ public class DoctorServiceImpl implements DoctorService {
         commonServiceImpl.updateProfile(userProfileRequest, currentUser, avatar);
         userRepository.save(currentUser);
         response.setData(MessageConstants.UPDATE_PROFILE_SUCCESS);
+        return response;
+    }
+
+    @Override
+    public ResponseEntityBase getUserProfile() {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        User currentUser = authService.getCurrentUser();
+        UserDTO userDTO = commonServiceImpl.getUserDetails(currentUser);
+        response.setData(userDTO);
+        return response;
+    }
+
+    @Override
+    public ResponseEntityBase getDoctorCareerInfo() {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        User currentUser = authService.getCurrentUser();
+        Doctor doctor = doctorRepository.findDoctorByUserId(currentUser.getUserId());
+        if (doctor != null) {
+            response.setData(commonServiceImpl.getDoctorDetails(doctor.getDoctorId()));
+        }
         return response;
     }
 
@@ -121,13 +173,12 @@ public class DoctorServiceImpl implements DoctorService {
                 workingDayLocalDate.isAfter(endOfWeek)) {
             throw new SystemException(MessageConstants.INVALID_WORKING_DAY);
         }
-        List<WorkScheduleDTO> newWorkSchedules = registerWorkSchedule.getWorkSchedules();
         DaysOfWeek existDayOfWeek = dayOfWeekRepository.getDayOfWeekByWorkingDay(doctor.getDoctorId(), registerWorkSchedule.getWorkingDay());
         DaysOfWeek newDayOfWeek = Objects.nonNull(existDayOfWeek) ? existDayOfWeek : new DaysOfWeek();
         Long specializationId = doctor.getSpecialization().getSpecializationId();
         List<Doctor> doctors = doctorRepository.getDoctorsBySpecializationId(specializationId).stream().filter(dt -> !dt.equals(doctor)).toList();
         List<WorkScheduleDTO> invalidWorkSchedules = invalidWorkSchedules(doctors, registerWorkSchedule).stream().toList();
-        List<WorkScheduleDTO> filterValidWorkSchedules = newWorkSchedules
+        List<WorkScheduleDTO> filterValidWorkSchedules = registerWorkSchedule.getWorkSchedules()
                 .stream()
                 .filter(workScheduleDTO -> !invalidWorkSchedules.contains(workScheduleDTO))
                 .toList();
@@ -155,9 +206,7 @@ public class DoctorServiceImpl implements DoctorService {
                         return workSchedule;
                     })
                 .toList();
-        if (validWorkSchedules.size() == 0) {
-            throw new SystemException(MessageConstants.ALL_WORK_SCHEDULES_INVALID);
-        } else {
+        if (validWorkSchedules.size() != 0) {
             newDayOfWeek.setWorkingDay(workingDay);
             newDayOfWeek.setDoctor(doctor);
             newDayOfWeek.getWorkSchedules().addAll(validWorkSchedules);
@@ -168,6 +217,8 @@ public class DoctorServiceImpl implements DoctorService {
             doctor.setDaysOfWeeks(doctor.getDaysOfWeeks());
             doctorRepository.save(doctor);
             response.setData(workSchedulesMessage(invalidWorkSchedules, workingDay));
+        } else {
+            throw new SystemException(MessageConstants.ALL_WORK_SCHEDULES_INVALID);
         }
         return response;
     }
@@ -237,6 +288,14 @@ public class DoctorServiceImpl implements DoctorService {
                     .build();
             response.setData(bookingResponse);
         }
+        return response;
+    }
+
+    @Override
+    public ResponseEntityBase getBookingDetail(Long bookingId) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        BookingDetailsInfoProjection bookingDetailInfo = bookingRepository.getBookingDetail(bookingId);
+        response.setData(bookingDetailInfo);
         return response;
     }
 
@@ -351,13 +410,71 @@ public class DoctorServiceImpl implements DoctorService {
             labResult.setMedicalRecord(medicalRecord);
             labResult.setTestPackage(testPackage);
             labResult.setDoctorPrescribed(doctorPrescribed);
-            labResult.setStatus(ELabResultStatus.CREATED);
+            labResult.setStatus(EResultStatus.CREATED);
             labResult.setCreatedBy(currentUser.getUsername());
             labResult.setCreatedAt(LocalDateTime.now());
             labResultRepository.save(labResult);
             testResultRepository.saveAll(testResults);
         });
         response.setData(MessageConstants.ADD_LAB_RESULT_TO_MEDICAL_RECORD_SUCCESS);
+        return response;
+    }
+
+    @Override
+    public ResponseEntityBase addMedicalImagesToMedicalRecord(MedicalImageRequest medicalImageRequest, List<MultipartFile> medicalImageFiles) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        User currentUser = authService.getCurrentUser();
+        Doctor doctor = doctorRepository.findDoctorByUserId(currentUser.getUserId());
+        MedicalRecord medicalRecord = medicalRecordRepository.findById(medicalImageRequest.getMedicalRecordId()).orElseThrow(
+                () -> new ResourceNotFoundException("Medical Record ID", medicalImageRequest.getMedicalRecordId().toString()));
+        ImagingService imagingService = imagingServiceRepository.findById(medicalImageRequest.getImagingServiceId())
+                .orElseThrow(() -> new ResourceNotFoundException("Imaging Service ID", medicalImageRequest.getImagingServiceId().toString()));
+        LocalDateTime performedAt = medicalImageRequest.getPerformedAt();
+        MedicalImage medicalImage = new MedicalImage();
+        medicalImage.setDescription(medicalImageRequest.getDescription());
+        medicalImage.setConclusion(medicalImageRequest.getConclusion());
+        medicalImage.setPerformedAt(performedAt);
+        medicalImage.setDoctorPrescribed(doctor);
+        medicalImage.setMedicalRecord(medicalRecord);
+        medicalImage.setImagingService(imagingService);
+        medicalImage.setStatus(EResultStatus.CREATED);
+
+        medicalImageFiles.forEach(multipartFile -> {
+            String fileType = switch (imagingService.getImagingServiceType().name()) {
+                case "ULTRASOUND" -> "ultrasound";
+                case "X_RAY" -> "x-ray";
+                case "CT" -> "ct";
+                case "MRI" -> "mri";
+                case "ENDOSCOPY" -> "endoscopy";
+                default -> "";
+            };
+            File file = new File();
+            String formattedDate = performedAt.toLocalDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+            try {
+                ObjectMetadata objectMetadata = new ObjectMetadata();
+                objectMetadata.setContentType(multipartFile.getContentType());
+                objectMetadata.setContentLength(multipartFile.getSize());
+
+                // k phai doctor hien tai ma lay thong tin user booking
+                // trong truong hop user A (cha) booking cho nguoi than (con), thi viec de dau thu muc chinh la user A co ve k dung lam
+                // ma phai theo thong tin nguoi dc kham (con)
+                String filePath = currentUser.getUsername() + "/" + fileType + "/" + formattedDate + "/" + multipartFile.getOriginalFilename(); // ???
+
+                s3Client.putObject(bucketName, filePath, multipartFile.getInputStream(), objectMetadata);
+                file.setFileName(StringUtils.cleanPath(Objects.requireNonNull(multipartFile.getOriginalFilename())));
+                file.setFileType(fileType);
+                file.setFilePath(filePath);
+                file.setFileSize(multipartFile.getSize());
+//                file.setUser();
+                file.setCreatedBy(currentUser.getUsername());
+                file.setMedicalImage(medicalImage);
+
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        medicalImageRepository.save(medicalImage);
         return response;
     }
 

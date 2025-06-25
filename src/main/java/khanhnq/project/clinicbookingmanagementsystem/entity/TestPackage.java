@@ -21,6 +21,9 @@ public class TestPackage extends BaseEntity{
     private Long testPackageId;
 
     @Column(nullable = false)
+    private String testPackageCode;
+
+    @Column(nullable = false)
     private String testPackageName;
 
     @Column(nullable = false)

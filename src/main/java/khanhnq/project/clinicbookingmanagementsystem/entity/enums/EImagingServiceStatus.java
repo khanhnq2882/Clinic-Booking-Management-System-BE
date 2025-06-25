@@ -1,5 +1,5 @@
 package khanhnq.project.clinicbookingmanagementsystem.entity.enums;
 
-public enum EServiceStatus {
+public enum EImagingServiceStatus {
     ACTIVE, INACTIVE, DRAFT, DEPRECATED
 }

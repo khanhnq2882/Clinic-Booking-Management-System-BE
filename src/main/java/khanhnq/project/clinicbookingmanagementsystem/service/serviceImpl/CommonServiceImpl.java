@@ -11,13 +11,16 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import jakarta.annotation.PostConstruct;
 import khanhnq.project.clinicbookingmanagementsystem.common.MessageConstants;
-import khanhnq.project.clinicbookingmanagementsystem.model.dto.UserDTO;
+import khanhnq.project.clinicbookingmanagementsystem.mapper.DoctorMapper;
+import khanhnq.project.clinicbookingmanagementsystem.mapper.WorkExperienceMapper;
+import khanhnq.project.clinicbookingmanagementsystem.model.dto.*;
 import khanhnq.project.clinicbookingmanagementsystem.model.projection.BookingDetailsInfoProjection;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.exception.SystemException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.FileUploadFailedException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceAlreadyExistException;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.UserMapper;
+import khanhnq.project.clinicbookingmanagementsystem.model.projection.DoctorDetailsInfoProjection;
 import khanhnq.project.clinicbookingmanagementsystem.model.response.FileResponse;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.UserProfileRequest;
@@ -40,6 +43,8 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Component
 @Slf4j
@@ -58,6 +63,8 @@ public class CommonServiceImpl {
     private BookingRepository bookingRepository;
     @Autowired
     private FileRepository fileRepository;
+    @Autowired
+    private DoctorRepository doctorRepository;
 
     private AmazonS3 s3Client;
 
@@ -80,6 +87,11 @@ public class CommonServiceImpl {
                 .withCredentials(new AWSStaticCredentialsProvider(awsCredentials))
                 .withRegion(Regions.AP_SOUTHEAST_1)
                 .build();
+    }
+
+    public FileResponse getFileFromS3(String fileType, String fileName, String filePath) {
+        String fileS3Url = "https://" +bucketName+ ".s3." +awsS3Region+ ".amazonaws.com/" + filePath;
+        return new FileResponse(fileType, fileName, fileS3Url);
     }
 
     public UserDTO getUserDetails(User user) {
@@ -108,9 +120,56 @@ public class CommonServiceImpl {
         return userDTO;
     }
 
-    public FileResponse getFileFromS3(String fileType, String fileName, String filePath) {
-        String fileS3Url = "https://" +bucketName+ ".s3." +awsS3Region+ ".amazonaws.com/" + filePath;
-        return new FileResponse(fileType, fileName, fileS3Url);
+    public DoctorDetailsDTO getDoctorDetails(Long doctorId) {
+        List<DoctorDetailsInfoProjection> doctorDetails = doctorRepository.getDoctorDetails(doctorId);
+        Map<Long, DoctorDetailsDTO> doctorMap = new HashMap<>();
+        doctorDetails.forEach(doctorDetailsInfoProjection -> {
+            DoctorDetailsDTO doctorDetailsDTO = doctorMap.getOrDefault(doctorId, new DoctorDetailsDTO());
+            DoctorMapper.DOCTOR_MAPPER.mapToDoctorDetailsDTO(doctorDetailsDTO, doctorDetailsInfoProjection);
+            if (doctorDetailsInfoProjection.getPosition() != null || doctorDetailsInfoProjection.getWorkSpecializationName() != null ||
+                    doctorDetailsInfoProjection.getWorkPlace() != null || doctorDetailsInfoProjection.getYearOfStartWork() != null ||
+                    doctorDetailsInfoProjection.getYearOfEndWork() != null || doctorDetailsInfoProjection.getDescription() != null) {
+                WorkExperienceDTO workExperienceDTO =
+                        WorkExperienceMapper.WORK_EXPERIENCE_MAPPER.mapToWorkExperienceDTO(doctorDetailsInfoProjection);
+                doctorDetailsDTO.getWorkExperiences().add(workExperienceDTO);
+            }
+            if (doctorDetailsInfoProjection.getFileId() != null) {
+                FileResponse fileResponse = getFileFromS3(doctorDetailsInfoProjection.getFileType(),
+                        doctorDetailsInfoProjection.getFileName(),
+                        doctorDetailsInfoProjection.getFilePath());
+                doctorDetailsDTO.getFiles().add(fileResponse);
+            }
+            if (doctorDetailsInfoProjection.getWorkingDay() != null) {
+                Set<DayOfWeekDTO> daysOfWeek = doctorDetailsDTO.getDaysOfWeek();
+                getDayOfWeekDetails(doctorDetailsInfoProjection, daysOfWeek);
+            }
+            doctorMap.put(doctorId, doctorDetailsDTO);
+        });
+        return doctorMap.get(doctorId);
+    }
+
+    public void getDayOfWeekDetails(DoctorDetailsInfoProjection doctorDetailsInfoProjection, Set<DayOfWeekDTO> daysOfWeek) {
+        DayOfWeekDTO existingDay = daysOfWeek.stream()
+                .filter(d -> d.getWorkingDay().equals(doctorDetailsInfoProjection.getWorkingDay()))
+                .findFirst()
+                .orElse(null);
+        WorkScheduleDTO workScheduleDTO = new WorkScheduleDTO();
+        workScheduleDTO.setStartTime(doctorDetailsInfoProjection.getStartTime());
+        workScheduleDTO.setEndTime(doctorDetailsInfoProjection.getEndTime());
+        if (existingDay != null) {
+            existingDay.getWorkSchedules().add(workScheduleDTO);
+            Set<WorkScheduleDTO> sorted = existingDay.getWorkSchedules().stream()
+                    .sorted(Comparator.comparing(WorkScheduleDTO::getStartTime))
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
+            existingDay.setWorkSchedules(sorted);
+        } else {
+            DayOfWeekDTO newDay = new DayOfWeekDTO();
+            newDay.setWorkingDay(doctorDetailsInfoProjection.getWorkingDay());
+            Set<WorkScheduleDTO> sorted = Stream.of(workScheduleDTO)
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
+            newDay.setWorkSchedules(sorted);
+            daysOfWeek.add(newDay);
+        }
     }
 
     public Pageable pagingSort(int page, int size, String[] sorts) {
@@ -293,12 +352,9 @@ public class CommonServiceImpl {
 
     public void uploadFile(MultipartFile multipartFile, String fileType, User currentUser) {
         File file = new File();
-        String filePath;
         try {
             String folderPath = currentUser.getUsername() + "/" + fileType + "/";
-            ListObjectsV2Request listRequest = new ListObjectsV2Request()
-                    .withBucketName(bucketName)
-                    .withPrefix(folderPath);
+            ListObjectsV2Request listRequest = new ListObjectsV2Request().withBucketName(bucketName).withPrefix(folderPath);
             ListObjectsV2Result listing = s3Client.listObjectsV2(listRequest);
             if (listing.getObjectSummaries().size() > 0) {
                 for (S3ObjectSummary summary : listing.getObjectSummaries())
@@ -307,7 +363,7 @@ public class CommonServiceImpl {
             ObjectMetadata objectMetadata = new ObjectMetadata();
             objectMetadata.setContentType(multipartFile.getContentType());
             objectMetadata.setContentLength(multipartFile.getSize());
-            filePath = folderPath + multipartFile.getOriginalFilename();
+            String filePath = folderPath + multipartFile.getOriginalFilename();
             s3Client.putObject(bucketName, filePath, multipartFile.getInputStream(), objectMetadata);
             file.setFileName(StringUtils.cleanPath(Objects.requireNonNull(multipartFile.getOriginalFilename())));
             file.setFileType(fileType);
@@ -322,8 +378,7 @@ public class CommonServiceImpl {
             }
             fileRepository.save(file);
         } catch (IOException e) {
-            log.error("Error occurred ==> {}", e.getMessage());
-            throw new FileUploadFailedException("Error occurred in file upload ==> "+e.getMessage());
+            throw new FileUploadFailedException("Error occurred in file upload : "+e.getMessage());
         }
     }
 

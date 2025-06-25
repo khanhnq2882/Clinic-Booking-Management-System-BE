@@ -12,6 +12,7 @@ import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.*;
 import khanhnq.project.clinicbookingmanagementsystem.model.projection.BookingDetailsInfoProjection;
 import khanhnq.project.clinicbookingmanagementsystem.model.projection.DoctorInfoProjection;
+import khanhnq.project.clinicbookingmanagementsystem.model.request.ImagingServiceRequest;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.TestPackageRequest;
 import khanhnq.project.clinicbookingmanagementsystem.model.response.*;
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
@@ -48,7 +49,6 @@ import org.springframework.stereotype.Service;
 @Service
 @AllArgsConstructor
 public class AdminServiceImpl implements AdminService {
-
     private final UserRepository userRepository;
     private final SpecializationRepository specializationRepository;
     private final ServicesRepository servicesRepository;
@@ -57,6 +57,7 @@ public class AdminServiceImpl implements AdminService {
     private final TestPackageRepository testPackageRepository;
     private final TestPackageAttributeRepository testPackageAttributeRepository;
     private final NormalRangeRepository normalRangeRepository;
+    private final ImagingServiceRepository imagingServiceRepository;
     private final CommonServiceImpl commonServiceImpl;
     private final Workbook workbook = new XSSFWorkbook();
     private final JavaMailSender mailSender;
@@ -268,8 +269,12 @@ public class AdminServiceImpl implements AdminService {
         Services service = servicesRepository.findById(testPackageRequest.getServiceId())
                 .orElseThrow(() -> new ResourceNotFoundException("Service Id", testPackageRequest.getServiceId().toString()));
         String testPackageName = testPackageRequest.getTestPackageName();
-        validateTestPackageName(testPackageName);
+        List<String> testPackageNames = testPackageRepository.findAll().stream().map(TestPackage::getTestPackageName).toList();
+        if (testPackageNames.stream().anyMatch(s -> s.equalsIgnoreCase(testPackageName))) {
+            throw new ResourceAlreadyExistException("Test package name", testPackageName);
+        }
         TestPackage testPackage = new TestPackage();
+        testPackage.setTestPackageCode(generateTestPackageCode());
         testPackage.setTestPackageName(testPackageName);
         testPackage.setTestPackagePrice(testPackageRequest.getTestPackagePrice());
         testPackage.setTestPreparationRequirements(testPackageRequest.getTestPreparationRequirements());
@@ -306,7 +311,10 @@ public class AdminServiceImpl implements AdminService {
                 testPackageAttributeRepository.deleteAll(attributesToDelete);
             }
             String testPackageName = testPackageRequest.getTestPackageName();
-            validateTestPackageName(testPackageName);
+            List<String> testPackageNames = testPackageRepository.findAll().stream().map(TestPackage::getTestPackageName).toList();
+            if (testPackageNames.stream().anyMatch(s -> s.equalsIgnoreCase(testPackageName))) {
+                throw new ResourceAlreadyExistException("Test package name", testPackageName);
+            }
             testPackage.setTestPackageName(testPackageName);
             testPackage.setTestPackagePrice(testPackageRequest.getTestPackagePrice());
             testPackage.setTestPreparationRequirements(testPackageRequest.getTestPreparationRequirements());
@@ -331,7 +339,11 @@ public class AdminServiceImpl implements AdminService {
         TestPackage testPackage = testPackageRepository.findById(testPackageId)
                 .orElseThrow(() -> new ResourceNotFoundException("Test Package Id", testPackageId.toString()));
         ETestPackageStatus testPackageStatus = testPackage.getStatus();
-        ETestPackageStatus newStatus = validateTestPackageStatus(status);
+        List<String> testPackageStatusList = Arrays.stream(ETestPackageStatus.values()).map(Enum::name).toList();
+        if (testPackageStatusList.stream().noneMatch(s -> s.equalsIgnoreCase(status))) {
+            throw new ResourceNotFoundException("Test Package Status", status);
+        }
+        ETestPackageStatus newStatus = ETestPackageStatus.valueOf(status.toUpperCase());
         boolean isValid = switch (testPackageStatus) {
             case DRAFT -> newStatus == ETestPackageStatus.ACTIVE;
             case ACTIVE -> newStatus == ETestPackageStatus.INACTIVE;
@@ -345,6 +357,85 @@ public class AdminServiceImpl implements AdminService {
         testPackage.setUpdatedBy(user.getUsername());
         testPackageRepository.save(testPackage);
         response.setData(MessageConstants.UPDATE_TEST_PACKAGE_STATUS_SUCCESS);
+        return response;
+    }
+
+    @Override
+    public ResponseEntityBase addImagingService(ImagingServiceRequest imagingServiceRequest) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        User currentUser = authService.getCurrentUser();
+        Services service = servicesRepository.findById(imagingServiceRequest.getServiceId())
+                .orElseThrow(() -> new ResourceNotFoundException("Service Id", imagingServiceRequest.getServiceId().toString()));
+        String imagingServiceType = imagingServiceRequest.getImagingServiceType();
+        List<String> imagingServiceTypes = Arrays.stream(EImagingServiceType.values()).map(Enum::name).toList();
+        if (imagingServiceTypes.stream().noneMatch(s -> s.equalsIgnoreCase(imagingServiceType))) {
+            throw new ResourceNotFoundException("Imaging Service Type", imagingServiceType);
+        }
+        imagingServiceRequest.setImagingServiceType(imagingServiceType.toUpperCase());
+        ImagingService imagingService = ImagingServiceMapper.IMAGING_SERVICE_MAPPER.mapToImagingService(imagingServiceRequest);
+        imagingService.setImagingServiceCode(generateImagingServiceCode(imagingServiceType.toUpperCase()));
+        imagingService.setService(service);
+        imagingService.setStatus(EImagingServiceStatus.DRAFT);
+        imagingService.setCreatedBy(currentUser.getUsername());
+        imagingServiceRepository.save(imagingService);
+        response.setData(MessageConstants.ADD_IMAGING_SERVICE_SUCCESS);
+        return response;
+    }
+
+    @Override
+    public ResponseEntityBase updateImagingService(Long imagingServiceId, ImagingServiceRequest imagingServiceRequest) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        ImagingService imagingService = imagingServiceRepository.findById(imagingServiceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Imaging Service ID", imagingServiceId.toString()));
+        User currentUser = authService.getCurrentUser();
+        Services service = servicesRepository.findById(imagingServiceRequest.getServiceId())
+                .orElseThrow(() -> new ResourceNotFoundException("Service Id", imagingServiceRequest.getServiceId().toString()));
+        String imagingServiceType = imagingServiceRequest.getImagingServiceType();
+        List<String> imagingServiceTypes = Arrays.stream(EImagingServiceType.values()).map(Enum::name).toList();
+        if (imagingServiceTypes.stream().noneMatch(s -> s.equalsIgnoreCase(imagingServiceType))) {
+            throw new ResourceNotFoundException("Imaging Service Type", imagingServiceType);
+        }
+        String imagingServiceStatus = imagingService.getStatus().name();
+        if (imagingServiceStatus.equals("INACTIVE") || imagingServiceStatus.equals("DRAFT")) {
+            imagingServiceRequest.setImagingServiceType(imagingServiceType.toUpperCase());
+            ImagingServiceMapper.IMAGING_SERVICE_MAPPER.updateImagingService(imagingService, imagingServiceRequest);
+            imagingService.setImagingServiceCode(generateImagingServiceCode(imagingServiceType.toUpperCase()));
+            imagingService.setService(service);
+            imagingService.setStatus(EImagingServiceStatus.DRAFT);
+            imagingService.setUpdatedBy(currentUser.getUsername());
+            imagingServiceRepository.save(imagingService);
+            response.setData(MessageConstants.UPDATE_IMAGING_SERVICE_SUCCESS);
+        } else {
+            throw new SystemException("Imaging service that has been " +imagingServiceStatus+ " can't be updated.");
+        }
+        return response;
+    }
+
+    @Override
+    public ResponseEntityBase updateImagingServiceStatus(Long imagingServiceId, String status) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        User user = authService.getCurrentUser();
+        ImagingService imagingService = imagingServiceRepository.findById(imagingServiceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Imaging Service ID", imagingServiceId.toString()));
+        EImagingServiceStatus imagingServiceStatus = imagingService.getStatus();
+        List<String> imagingServiceStatusList = Arrays.stream(EImagingServiceStatus.values()).map(Enum::name).toList();
+        if (imagingServiceStatusList.stream().noneMatch(s -> s.equalsIgnoreCase(status))) {
+            throw new ResourceNotFoundException("Imaging Service Status", status);
+        }
+        EImagingServiceStatus newStatus = EImagingServiceStatus.valueOf(status.toUpperCase());
+        boolean isValid = switch (imagingServiceStatus) {
+            case DRAFT -> newStatus == EImagingServiceStatus.ACTIVE;
+            case ACTIVE -> newStatus == EImagingServiceStatus.INACTIVE;
+            case INACTIVE -> newStatus == EImagingServiceStatus.ACTIVE || newStatus == EImagingServiceStatus.DEPRECATED;
+            default -> false;
+        };
+        if (!isValid) {
+            throw new SystemException("The imaging service cannot change status from " + imagingServiceStatus + " to " + newStatus);
+        }
+        imagingService.setStatus(newStatus);
+        imagingService.setUpdatedBy(user.getUsername());
+        imagingServiceRepository.save(imagingService);
+        response.setData(MessageConstants.UPDATE_IMAGING_SERVICE_STATUS_SUCCESS);
         return response;
     }
 
@@ -374,7 +465,7 @@ public class AdminServiceImpl implements AdminService {
                     dateOfBirth = dateTime.format(outputFormatter);
                 }
                 DateTimeFormatter createdAtFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
-                LocalDateTime createdAt = LocalDateTime.parse(user.getCreatedAt().toString());
+                LocalDateTime createdAt = LocalDateTime.parse(user.getCreatedAt());
                 user.setCreatedAt(createdAt.format(createdAtFormatter));
                 commonServiceImpl.createCell(workbook, currentRow, 0, user.getUserId());
                 commonServiceImpl.createCell(workbook, currentRow, 1, user.getUserCode());
@@ -560,8 +651,9 @@ public class AdminServiceImpl implements AdminService {
                 for (int i=0; i<invalidBookings.size(); i++) {
                     rowsErrorMessage.append(invalidBookings.get(i).getRowIndex()+1).append((i != invalidBookings.size()-1) ? ",":"");
                 }
-                responseMessage.append("Successfully imported "+bookingImportResponse.getValidBookings().size()+" rows from excel file. " +
-                        "Rows "+rowsErrorMessage+" were imported unsuccessfully.Please check your booking information again.");
+                responseMessage.append("Successfully imported ").append(bookingImportResponse.getValidBookings().size())
+                        .append(" rows from excel file. ").append("Rows ").append(rowsErrorMessage)
+                        .append(" were imported unsuccessfully.Please check your booking information again.");
             }
             response.setData(responseMessage.toString());
             return response;
@@ -686,7 +778,7 @@ public class AdminServiceImpl implements AdminService {
         List<Booking> bookings = bookingExcelResponses.stream()
                 .map(bookingExcelResponse -> {
                     Booking booking = BookingMapper.BOOKING_MAPPER.mapExcelToBooking(bookingExcelResponse.getBookingExcelDTO());
-                    LocalDate appointmentDate = bookingExcelResponse.getBookingExcelDTO().getAppointmentDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+//                    LocalDate appointmentDate = bookingExcelResponse.getBookingExcelDTO().getAppointmentDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
 //                    WorkSchedule workSchedule = workScheduleRepository.getWorkScheduleByTime(
 //                            bookingExcelResponse.getBookingExcelDTO().getSpecializationName(), appointmentDate.getDayOfWeek(),
 //                            bookingExcelResponse.getBookingExcelDTO().getStartTime(), bookingExcelResponse.getBookingExcelDTO().getEndTime());
@@ -716,22 +808,6 @@ public class AdminServiceImpl implements AdminService {
         }
     }
 
-    private ETestPackageStatus validateTestPackageStatus(String status) {
-        String enumValue = "";
-        if (status.equalsIgnoreCase("ACTIVE")) {
-            enumValue = "ACTIVE";
-        } else if (status.equalsIgnoreCase("INACTIVE")) {
-            enumValue = "INACTIVE";
-        } else if (status.equalsIgnoreCase("DRAFT")) {
-            enumValue = "DRAFT";
-        } else if (status.equalsIgnoreCase("DEPRECATED")) {
-            enumValue = "DEPRECATED";
-        } else {
-            throw new ResourceNotFoundException("Test Package Status", status);
-        }
-        return ETestPackageStatus.valueOf(enumValue);
-    }
-
     public void validateNormalRange(NormalRange normalRange, String testPackageAttributeUnit) {
         ENormalRangeType normalRangeType = normalRange.getNormalRangeType();
         switch (normalRangeType) {
@@ -756,19 +832,13 @@ public class AdminServiceImpl implements AdminService {
                 if (testPackageAttributeUnit == null || testPackageAttributeUnit.equals(""))
                     throw new SystemException(normalRangeType + " requires unit value.");
             }
-            case QUALITATIVE -> {
-                requireNonNull(normalRange.getExpectedValue(), "Expected value is required for QUALITATIVE.");
-            }
+            case QUALITATIVE -> requireNonNull(normalRange.getExpectedValue(), "Expected value is required for QUALITATIVE.");
             case SEMI_QUALITATIVE -> {
                 requireNonNull(normalRange.getExpectedValue(), "Expected value is required for SEMI QUALITATIVE");
                 requireNonNull(normalRange.getNormalText(), "Normal text is required for SEMI QUALITATIVE.");
             }
-            case TEXT -> {
-                requireNonNull(normalRange.getNormalText(), "Normal text is required for TEXT.");
-            }
-            default -> {
-                throw new ResourceNotFoundException("Normal range type", normalRangeType.name());
-            }
+            case TEXT -> requireNonNull(normalRange.getNormalText(), "Normal text is required for TEXT.");
+            default -> throw new ResourceNotFoundException("Normal range type", normalRangeType.name());
         }
     }
 
@@ -829,11 +899,30 @@ public class AdminServiceImpl implements AdminService {
         return testPackageAttributes;
     }
 
-    private void validateTestPackageName(String testPackageName) {
-        List<String> testPackageNames = testPackageRepository.findAll().stream().map(TestPackage::getTestPackageName).toList();
-        if (testPackageNames.stream().anyMatch(s -> s.equalsIgnoreCase(testPackageName))) {
-            throw new ResourceAlreadyExistException("Test package name", testPackageName);
-        }
+    private String generateTestPackageCode() {
+        List<String> testPackageCodes = testPackageRepository.findAll().stream().map(TestPackage::getTestPackageCode).toList();
+        int maxCodeValue = testPackageCodes.stream()
+                .map(code -> code.replaceAll("\\D+", ""))
+                .mapToInt(Integer::parseInt).max()
+                .orElse(0);
+        return String.format("TEST-%03d", maxCodeValue + 1);
+    }
+
+    private String generateImagingServiceCode(String imagingServiceType) {
+        String abbreviatedTypeName = switch (imagingServiceType) {
+            case "ULTRASOUND" -> "US";
+            case "X_RAY" -> "XR";
+            case "CT" -> "CT";
+            case "MRI" -> "MRI";
+            case "ENDOSCOPY" -> "EN";
+            default -> "";
+        };
+        List<String> imagingServiceCodes = imagingServiceRepository.getImagingServicesByType(imagingServiceType);
+        int maxCodeValue = imagingServiceCodes.stream()
+                .map(code -> code.replaceAll("\\D+", ""))
+                .mapToInt(Integer::parseInt).max()
+                .orElse(0);
+        return String.format("IMG-%s-%03d", abbreviatedTypeName, maxCodeValue + 1);
     }
 
 }

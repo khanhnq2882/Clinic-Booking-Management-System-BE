@@ -2,7 +2,7 @@ package khanhnq.project.clinicbookingmanagementsystem.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
-import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ELabResultStatus;
+import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EResultStatus;
 import lombok.*;
 import java.time.LocalDateTime;
 
@@ -35,7 +35,7 @@ public class LabResult extends BaseEntity{
 
     @Enumerated(EnumType.STRING)
     @Column(length = 20, nullable = false)
-    private ELabResultStatus status;
+    private EResultStatus status;
 
     @JsonBackReference
     @ManyToOne

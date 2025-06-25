@@ -33,6 +33,16 @@ public class DoctorController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(doctorService.updateDoctorInformation(doctorInformationRequest, specialtyDegree));
     }
 
+    @GetMapping("/doctor-profile")
+    public ResponseEntity<ResponseEntityBase> getUserProfile() {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(doctorService.getUserProfile());
+    }
+
+    @GetMapping("/doctor-career-info")
+    public ResponseEntity<ResponseEntityBase> getDoctorCareerInfo() {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(doctorService.getDoctorCareerInfo());
+    }
+
     @PostMapping("/register-work-schedules")
     @PreAuthorize("hasRole('ADMIN') or hasRole('DOCTOR')")
     public ResponseEntity<ResponseEntityBase> registerWorkSchedules(@RequestBody RegisterWorkScheduleRequest registerWorkScheduleRequest) {
@@ -65,6 +75,11 @@ public class DoctorController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(doctorService.completedBooking(bookingId));
     }
 
+    @GetMapping("/booking-detail/{bookingId}")
+    public ResponseEntity<ResponseEntityBase> getUserProfile(@PathVariable("bookingId") Long bookingId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(doctorService.getBookingDetail(bookingId));
+    }
+
     @PostMapping("/add-medical-record/{bookingId}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('DOCTOR')")
     public ResponseEntity<ResponseEntityBase> addMedicalRecord(@PathVariable("bookingId") Long bookingId,
@@ -86,11 +101,13 @@ public class DoctorController {
     }
 
     @GetMapping("/get-all-medical-records")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('DOCTOR')")
     public ResponseEntity<ResponseEntityBase> getAllMedicalRecords() {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(doctorService.getAllMedicalRecords());
     }
 
     @GetMapping("/get-medical-record-by-booking/{bookingId}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('DOCTOR')")
     public ResponseEntity<ResponseEntityBase> getMedicalRecordByBookingId(@PathVariable("bookingId") Long bookingId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(doctorService.getMedicalRecordByBookingId(bookingId));
     }

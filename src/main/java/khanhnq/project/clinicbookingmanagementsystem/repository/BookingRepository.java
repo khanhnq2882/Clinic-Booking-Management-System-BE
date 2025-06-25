@@ -120,6 +120,39 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     )
     Page<BookingDetailsInfoProjection> getBookingDetailsByDoctorId(@Param("doctorId") Long doctorId, Pageable pageable);
 
+    @Query(value = "SELECT\n" +
+            "    b.booking_id AS bookingId,\n" +
+            "    b.booking_code AS bookingCode,\n" +
+            "    s.specialization_name AS specializationName,\n" +
+            "    b.first_name AS firstName,\n" +
+            "    b.last_name AS lastName,\n" +
+            "    DATE_FORMAT(b.date_of_birth, '%d-%m-%Y') AS dateOfBirth,\n" +
+            "    CASE\n" +
+            "        WHEN b.gender = 1 THEN 'Male'\n" +
+            "        WHEN b.gender = 0 THEN 'Female'\n" +
+            "        ELSE 'Other'\n" +
+            "    END AS gender,\n" +
+            "    b.phone_number AS phoneNumber,\n" +
+            "    CONCAT(a.specific_address, ', ', w.ward_name, ', ', d.district_name, ', ', c.city_name) AS userAddress,\n" +
+            "    b.describe_symptoms AS describeSymptoms,\n" +
+            "    DATE_FORMAT(dow.working_day, '%d-%m-%Y') AS workingDay,\n" +
+            "    TIME_FORMAT(ws.start_time, '%H:%i') AS startTime,\n" +
+            "    TIME_FORMAT(ws.end_time, '%H:%i') AS endTime,\n" +
+            "    b.status AS status,\n" +
+            "    DATE_FORMAT(b.created_at, '%d-%m-%Y %H:%i:%s') AS createdAt\n" +
+            "FROM booking AS b\n" +
+            "INNER JOIN address AS a ON b.address_id = a.address_id\n" +
+            "INNER JOIN ward AS w ON a.ward_id = w.ward_id\n" +
+            "INNER JOIN district AS d ON w.district_id = d.district_id\n" +
+            "INNER JOIN city AS c ON d.city_id = c.city_id\n" +
+            "INNER JOIN work_schedule AS ws ON b.work_schedule_id = ws.work_schedule_id\n" +
+            "INNER JOIN day_of_week AS dow ON ws.day_of_week_id = dow.day_of_week_id\n" +
+            "INNER JOIN doctor AS dt ON dow.doctor_id = dt.doctor_id\n" +
+            "INNER JOIN user AS u ON dt.user_id = u.user_id\n" +
+            "INNER JOIN specialization AS s ON dt.specialization_id = s.specialization_id\n" +
+            "WHERE b.booking_id = :bookingId", nativeQuery = true)
+    BookingDetailsInfoProjection getBookingDetail(@Param("bookingId") Long bookingId);
+
     @Query(
             value = "select \n" +
                     "    b.booking_id as bookingId, \n" +
