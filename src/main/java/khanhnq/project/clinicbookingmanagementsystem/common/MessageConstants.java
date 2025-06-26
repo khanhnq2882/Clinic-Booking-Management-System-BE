@@ -48,6 +48,8 @@ public class MessageConstants {
     public static final String UPDATE_MEDICAL_RECORD_SUCCESS = "Update medical record successfully.";
     public static final String FORBIDDEN_ADD_MEDICAL_RECORD = "No permission to add medical record.";
     public static final String ADD_LAB_RESULT_TO_MEDICAL_RECORD_SUCCESS = "Add lab result to medical record success.";
+    public static final String ADD_MEDICAL_IMAGES_TO_MEDICAL_RECORD_SUCCESS = "Add medical images to medical record success.";
+    public static final String ERROR_SAVE_OR_ROLLBACK_MEDICAL_IMAGE_TO_S3 = "Error saving medical image or rollback S3.";
     public static final String ERROR_NORMAL_RANGE_BLANK = "The normal range parameters of each index in the test package cannot be left blank.";
     public static final String ERROR_ADD_NAME_OR_UNIT_ATTRIBUTE = "Do not add 'name' and 'unit' fields to test package properties because they already exist.";
     public static final String ERROR_TEST_RESULT = "Test result cannot be null or a blank string";

@@ -1,5 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
+import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import jakarta.transaction.Transactional;
@@ -20,6 +21,7 @@ import khanhnq.project.clinicbookingmanagementsystem.model.response.ResponseEnti
 import khanhnq.project.clinicbookingmanagementsystem.repository.*;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import khanhnq.project.clinicbookingmanagementsystem.service.DoctorService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -28,7 +30,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
@@ -39,6 +40,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class DoctorServiceImpl implements DoctorService {
     @Autowired
     private AuthService authService;
@@ -74,7 +76,7 @@ public class DoctorServiceImpl implements DoctorService {
     private FileRepository fileRepository;
     @Autowired
     private CommonServiceImpl commonServiceImpl;
-
+    @Autowired
     private AmazonS3 s3Client;
 
     @Value("${aws.s3.bucketName}")
@@ -175,8 +177,8 @@ public class DoctorServiceImpl implements DoctorService {
         }
         DaysOfWeek existDayOfWeek = dayOfWeekRepository.getDayOfWeekByWorkingDay(doctor.getDoctorId(), registerWorkSchedule.getWorkingDay());
         DaysOfWeek newDayOfWeek = Objects.nonNull(existDayOfWeek) ? existDayOfWeek : new DaysOfWeek();
-        Long specializationId = doctor.getSpecialization().getSpecializationId();
-        List<Doctor> doctors = doctorRepository.getDoctorsBySpecializationId(specializationId).stream().filter(dt -> !dt.equals(doctor)).toList();
+        List<Doctor> doctors = doctorRepository.getDoctorsBySpecializationId(doctor.getSpecialization().getSpecializationId())
+                .stream().filter(dt -> !dt.equals(doctor)).toList();
         List<WorkScheduleDTO> invalidWorkSchedules = invalidWorkSchedules(doctors, registerWorkSchedule).stream().toList();
         List<WorkScheduleDTO> filterValidWorkSchedules = registerWorkSchedule.getWorkSchedules()
                 .stream()
@@ -305,10 +307,11 @@ public class DoctorServiceImpl implements DoctorService {
         User currentUser = authService.getCurrentUser();
         Booking booking = bookingRepository.findById(bookingId).orElseThrow(()
                 -> new ResourceNotFoundException("Booking id", bookingId.toString()));
-        if (medicalRecordRepository.findMedicalRecordByBooking(bookingId) == null)
+        if (medicalRecordRepository.findMedicalRecordByBooking(bookingId) != null)
             throw new SystemException("A medical record for booking " + booking.getBookingCode() + " has been created. Please update it.");
         validateMedicalRecord(currentUser, booking, medicalRecordRequest);
         MedicalRecord medicalRecord = MedicalRecordMapper.MEDICAL_RECORD_MAPPER.mapToMedicalRecord(medicalRecordRequest);
+        medicalRecord.setMedicalRecordCode(generateMedicalRecordCode());
         medicalRecord.setBooking(booking);
         medicalRecord.setStatus(EMedicalRecordStatus.CREATED);
         medicalRecord.setCreatedAt(LocalDateTime.now());
@@ -336,6 +339,7 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
+    @Transactional
     public ResponseEntityBase addLabResultsToMedicalRecord(List<LabResultRequest> labResultRequests) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         User currentUser = authService.getCurrentUser();
@@ -421,6 +425,7 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
+    @Transactional
     public ResponseEntityBase addMedicalImagesToMedicalRecord(MedicalImageRequest medicalImageRequest, List<MultipartFile> medicalImageFiles) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         User currentUser = authService.getCurrentUser();
@@ -438,7 +443,7 @@ public class DoctorServiceImpl implements DoctorService {
         medicalImage.setMedicalRecord(medicalRecord);
         medicalImage.setImagingService(imagingService);
         medicalImage.setStatus(EResultStatus.CREATED);
-
+        medicalImage.setCreatedBy(currentUser.getUsername());
         medicalImageFiles.forEach(multipartFile -> {
             String fileType = switch (imagingService.getImagingServiceType().name()) {
                 case "ULTRASOUND" -> "ultrasound";
@@ -448,33 +453,36 @@ public class DoctorServiceImpl implements DoctorService {
                 case "ENDOSCOPY" -> "endoscopy";
                 default -> "";
             };
-            File file = new File();
+            String filePath = "";
+            User userCreateBooking = medicalRecord.getBooking().getUser();
             String formattedDate = performedAt.toLocalDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
             try {
                 ObjectMetadata objectMetadata = new ObjectMetadata();
                 objectMetadata.setContentType(multipartFile.getContentType());
                 objectMetadata.setContentLength(multipartFile.getSize());
-
-                // k phai doctor hien tai ma lay thong tin user booking
-                // trong truong hop user A (cha) booking cho nguoi than (con), thi viec de dau thu muc chinh la user A co ve k dung lam
-                // ma phai theo thong tin nguoi dc kham (con)
-                String filePath = currentUser.getUsername() + "/" + fileType + "/" + formattedDate + "/" + multipartFile.getOriginalFilename(); // ???
-
+                filePath = userCreateBooking.getUsername() + medicalRecord.getMedicalRecordCode() + "/" + fileType + "/"
+                        + imagingService.getImagingServiceCode() + "/" + formattedDate + "/" + multipartFile.getOriginalFilename();
                 s3Client.putObject(bucketName, filePath, multipartFile.getInputStream(), objectMetadata);
+                File file = new File();
                 file.setFileName(StringUtils.cleanPath(Objects.requireNonNull(multipartFile.getOriginalFilename())));
                 file.setFileType(fileType);
                 file.setFilePath(filePath);
                 file.setFileSize(multipartFile.getSize());
-//                file.setUser();
+                file.setUser(userCreateBooking);
                 file.setCreatedBy(currentUser.getUsername());
                 file.setMedicalImage(medicalImage);
-
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+                medicalImage.getMedicalImageFiles().add(file);
+            } catch (Exception e) {
+                try {
+                    s3Client.deleteObject(bucketName, filePath);
+                } catch (AmazonClientException deleteEx) {
+                    log.error("S3 rollback failed: {}", deleteEx.getMessage());
+                }
+                throw new SystemException(MessageConstants.ERROR_SAVE_OR_ROLLBACK_MEDICAL_IMAGE_TO_S3);
             }
         });
-
         medicalImageRepository.save(medicalImage);
+        response.setData(MessageConstants.ADD_MEDICAL_IMAGES_TO_MEDICAL_RECORD_SUCCESS);
         return response;
     }
 
@@ -731,4 +739,21 @@ public class DoctorServiceImpl implements DoctorService {
         }
     }
 
+    private String generateMedicalRecordCode() {
+        List<String> medicalRecordCodes = medicalRecordRepository.findAll().stream().map(MedicalRecord::getMedicalRecordCode).toList();
+        int maxCodeValue = 0;
+        for (String code : medicalRecordCodes) {
+            String[] parts = code.split("-");
+            if (parts.length == 3) {
+                try {
+                    int seq = Integer.parseInt(parts[2]);
+                    maxCodeValue = Math.max(maxCodeValue, seq);
+                } catch (NumberFormatException ignored) {
+                    throw new SystemException(MessageConstants.SOMETHING_WENT_WRONG);
+                }
+            }
+        }
+        String formattedDate = LocalDateTime.now().toLocalDate().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        return String.format("MR-%s-%05d", formattedDate, maxCodeValue + 1);
+    }
 }

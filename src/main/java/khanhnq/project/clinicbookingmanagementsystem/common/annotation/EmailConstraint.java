@@ -1,4 +1,4 @@
-package khanhnq.project.clinicbookingmanagementsystem.annotation;
+package khanhnq.project.clinicbookingmanagementsystem.common.annotation;
 
 import jakarta.validation.Constraint;
 import jakarta.validation.Payload;

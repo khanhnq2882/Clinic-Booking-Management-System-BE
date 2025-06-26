@@ -19,6 +19,9 @@ public class MedicalRecord extends BaseEntity{
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long medicalRecordId;
 
+    @Column(nullable = false, unique = true)
+    private String medicalRecordCode;
+
     @Column(nullable = false)
     private LocalDateTime visitDate;
 

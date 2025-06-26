@@ -1,6 +1,6 @@
 package khanhnq.project.clinicbookingmanagementsystem.model.request;
 
-import khanhnq.project.clinicbookingmanagementsystem.annotation.PasswordConstraint;
+import khanhnq.project.clinicbookingmanagementsystem.common.annotation.PasswordConstraint;
 import lombok.*;
 
 @Data

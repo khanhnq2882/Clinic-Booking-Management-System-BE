@@ -1,8 +1,8 @@
 package khanhnq.project.clinicbookingmanagementsystem.model.request;
 
 import jakarta.validation.constraints.NotNull;
-import khanhnq.project.clinicbookingmanagementsystem.annotation.EmailConstraint;
-import khanhnq.project.clinicbookingmanagementsystem.annotation.PasswordConstraint;
+import khanhnq.project.clinicbookingmanagementsystem.common.annotation.EmailConstraint;
+import khanhnq.project.clinicbookingmanagementsystem.common.annotation.PasswordConstraint;
 import lombok.*;
 import org.hibernate.validator.constraints.Length;
 import java.util.Set;

@@ -1,7 +1,7 @@
 package khanhnq.project.clinicbookingmanagementsystem.model.request;
 
 import jakarta.validation.constraints.NotNull;
-import khanhnq.project.clinicbookingmanagementsystem.annotation.EmailConstraint;
+import khanhnq.project.clinicbookingmanagementsystem.common.annotation.EmailConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import org.hibernate.validator.constraints.Length;

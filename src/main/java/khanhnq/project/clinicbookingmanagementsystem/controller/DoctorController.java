@@ -111,4 +111,11 @@ public class DoctorController {
     public ResponseEntity<ResponseEntityBase> getMedicalRecordByBookingId(@PathVariable("bookingId") Long bookingId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(doctorService.getMedicalRecordByBookingId(bookingId));
     }
+
+    @PostMapping(value = "/add-medical-images-to-medical-record", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ADMIN') or hasRole('DOCTOR')")
+    public ResponseEntity<ResponseEntityBase> addMedicalImagesToMedicalRecord(@RequestPart("medicalImageRequest") MedicalImageRequest medicalImageRequest,
+                                                            @Valid @RequestPart(value = "medicalImages") List<MultipartFile> medicalImages) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(doctorService.addMedicalImagesToMedicalRecord(medicalImageRequest, medicalImages));
+    }
 }

@@ -1,15 +1,11 @@
 package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.regions.Regions;
+import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
-import jakarta.annotation.PostConstruct;
 import khanhnq.project.clinicbookingmanagementsystem.common.MessageConstants;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.DoctorMapper;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.WorkExperienceMapper;
@@ -17,7 +13,6 @@ import khanhnq.project.clinicbookingmanagementsystem.model.dto.*;
 import khanhnq.project.clinicbookingmanagementsystem.model.projection.BookingDetailsInfoProjection;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.exception.SystemException;
-import khanhnq.project.clinicbookingmanagementsystem.exception.FileUploadFailedException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceAlreadyExistException;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.UserMapper;
 import khanhnq.project.clinicbookingmanagementsystem.model.projection.DoctorDetailsInfoProjection;
@@ -37,7 +32,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
-import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -65,29 +59,14 @@ public class CommonServiceImpl {
     private FileRepository fileRepository;
     @Autowired
     private DoctorRepository doctorRepository;
-
+    @Autowired
     private AmazonS3 s3Client;
 
     @Value("${aws.s3.bucketName}")
     private String bucketName;
 
-    @Value("${aws.s3.accessKey}")
-    private String accessKey;
-
-    @Value("${aws.s3.secretKey}")
-    private String secretKey;
-
     @Value("${aws.s3.region}")
     private String awsS3Region;
-
-    @PostConstruct
-    private void initialize() {
-        BasicAWSCredentials awsCredentials = new BasicAWSCredentials(accessKey, secretKey);
-        s3Client = AmazonS3ClientBuilder.standard()
-                .withCredentials(new AWSStaticCredentialsProvider(awsCredentials))
-                .withRegion(Regions.AP_SOUTHEAST_1)
-                .build();
-    }
 
     public FileResponse getFileFromS3(String fileType, String fileName, String filePath) {
         String fileS3Url = "https://" +bucketName+ ".s3." +awsS3Region+ ".amazonaws.com/" + filePath;
@@ -351,7 +330,7 @@ public class CommonServiceImpl {
     }
 
     public void uploadFile(MultipartFile multipartFile, String fileType, User currentUser) {
-        File file = new File();
+        String filePath = "";
         try {
             String folderPath = currentUser.getUsername() + "/" + fileType + "/";
             ListObjectsV2Request listRequest = new ListObjectsV2Request().withBucketName(bucketName).withPrefix(folderPath);
@@ -363,8 +342,9 @@ public class CommonServiceImpl {
             ObjectMetadata objectMetadata = new ObjectMetadata();
             objectMetadata.setContentType(multipartFile.getContentType());
             objectMetadata.setContentLength(multipartFile.getSize());
-            String filePath = folderPath + multipartFile.getOriginalFilename();
+            filePath = folderPath + multipartFile.getOriginalFilename();
             s3Client.putObject(bucketName, filePath, multipartFile.getInputStream(), objectMetadata);
+            File file = new File();
             file.setFileName(StringUtils.cleanPath(Objects.requireNonNull(multipartFile.getOriginalFilename())));
             file.setFileType(fileType);
             file.setFilePath(filePath);
@@ -377,8 +357,13 @@ public class CommonServiceImpl {
                 file.setCreatedBy(currentUser.getUsername());
             }
             fileRepository.save(file);
-        } catch (IOException e) {
-            throw new FileUploadFailedException("Error occurred in file upload : "+e.getMessage());
+        } catch (Exception e) {
+            try {
+                s3Client.deleteObject(bucketName, filePath);
+            } catch (AmazonClientException deleteEx) {
+                log.error("S3 rollback failed: {}", deleteEx.getMessage());
+            }
+            throw new SystemException(MessageConstants.ERROR_SAVE_OR_ROLLBACK_MEDICAL_IMAGE_TO_S3);
         }
     }
 
