@@ -21,6 +21,9 @@ public class DaysOfWeek extends BaseEntity {
     @Column(nullable = false)
     private Date workingDay;
 
+    @Column(nullable = false)
+    private Double examinationFee;
+
     @OneToMany(mappedBy = "daysOfWeek", cascade = CascadeType.ALL)
     private List<WorkSchedule> workSchedules = new ArrayList<>();
 

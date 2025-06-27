@@ -166,7 +166,6 @@ public class AdminServiceImpl implements AdminService {
         ServicesDTO servicesDTO =  ServicesDTO.builder()
                 .serviceId(service.getServiceId())
                 .serviceName(service.getServiceName())
-                .servicePrice(service.getServicePrice())
                 .description(service.getDescription())
                 .status(service.getStatus().name())
                 .specializationName(service.getSpecialization().getSpecializationName())
@@ -186,7 +185,6 @@ public class AdminServiceImpl implements AdminService {
         if (service.getStatus().name().equals("INACTIVE") || service.getStatus().name().equals("DRAFT")) {
             service.setSpecialization(specialization);
             service.setServiceName(serviceRequest.getServiceName());
-            service.setServicePrice(serviceRequest.getServicePrice());
             service.setDescription(serviceRequest.getDescription());
             service.setUpdatedBy(currentUser.getUsername());
             servicesRepository.save(service);
@@ -565,8 +563,6 @@ public class AdminServiceImpl implements AdminService {
                             });
                             service.setServiceName(serviceName);
                         }
-                        case "Price" ->
-                                service.setServicePrice(commonServiceImpl.checkNumericType(cells.get(indexCell), indexRow, colName).getNumericCellValue());
                         case "Description" ->
                                 service.setDescription(commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue());
                         case "Service Category" -> {

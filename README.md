@@ -55,11 +55,31 @@ hợp khiếu nại xảy ra và không lưu lịch sử bệnh án trên hệ t
 * ROLE ADMIN
 - Quản lý danh sách người dùng -> OK
 - Quản lý danh sách bác sĩ -> OK
-- Quản lý gói dịch vụ -> OK
+- Quản lý các loại dịch vụ (tư vấn, xét nghiệm, chẩn đoán hình ảnh, gói sức khỏe, thủ thuật, vắc xin,... )
 - Quản lý danh sách lịch khám
 - Quản lý doanh thu
 - Quản lý thuốc, vật tư y tế
 - Thống kê tổng quan hệ thống: số lượt khám, doanh thu, tỉ lệ từ chối,...
 - Xử lý các khiếu nại của người dùng (liên quan đến hủy lịch,...).
 - Gửi thông báo hệ thống đến tất cả người dùng hoặc theo role.
+
+**********NHỮNG CHỨC NĂNG CÓ THỂ TRIỂN KHAI THÀNH CÁC SERVICE RIÊNG THEO MÔ HÌNH MICROSERVICES**********
+- Thanh toán online (VNPay, Momo,...) -> Tách thành Payment Service
+- Thông báo , nhắc lịch khám (Qua email và giao diện) -> Tách thành Notification Service
+- Gửi thông báo đến bệnh nhân (nếu lịch thay đổi hoặc có đề xuất khác). -> Tách thành Notification Service
+- Gửi thông báo hệ thống đến tất cả người dùng hoặc theo role. -> Tách thành Notification Service
+
+
+### **💡 Quy trình kỹ thuật thực tế (áp dụng với Payment Service):**
+1.Người dùng đặt dịch vụ/lịch khám → tạo hóa đơn (bill).
+2.CBMS gửi thông tin hóa đơn sang Payment Service.
+3.Payment Service tích hợp với cổng thanh toán (VNPay, Momo, ZaloPay...) để:
+* Tạo link thanh toán hoặc mã QR động.
+* Gửi link/QR về cho frontend hiển thị cho người dùng.
+4.Người dùng quét mã/thanh toán qua app.
+5.Cổng thanh toán callback (webhook) về Payment Service sau khi thanh toán thành công.
+6.Payment Service thông báo lại cho CBMS qua Kafka/REST để:
+* Cập nhật trạng thái hóa đơn.
+* Cho phép sử dụng dịch vụ (VD: xác nhận đặt lịch, gửi thông báo...).
+
 
