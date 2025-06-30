@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class ImagingServiceRequest {
     private String imagingServiceName;
-    private Double imagingServicePrice;
+    private String imagingServicePrice;
     private String description;
     private Integer estimatedMinutes;
     private String preparationRequirements;

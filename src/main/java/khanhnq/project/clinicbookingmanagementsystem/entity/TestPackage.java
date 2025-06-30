@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.ETestPackageStatus;
 import lombok.*;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,7 +28,7 @@ public class TestPackage extends BaseEntity{
     private String testPackageName;
 
     @Column(nullable = false)
-    private Double testPackagePrice;
+    private BigDecimal testPackagePrice;
 
     @NotBlank
     @Size(max = 255)

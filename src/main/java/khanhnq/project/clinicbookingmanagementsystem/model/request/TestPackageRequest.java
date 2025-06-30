@@ -13,7 +13,7 @@ import java.util.*;
 @Builder
 public class TestPackageRequest {
     private String testPackageName;
-    private Double testPackagePrice;
+    private String testPackagePrice;
     private String testPreparationRequirements;
     private String testDescription;
     private Long serviceId;

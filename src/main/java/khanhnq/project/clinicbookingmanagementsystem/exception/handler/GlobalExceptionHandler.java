@@ -48,6 +48,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
     }
 
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<ResponseEntityBase> handlerBadRequestException(BadRequestException exception) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.BAD_REQUEST.value(), exception.getMessage(), null);
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+
     @ExceptionHandler(SystemException.class)
     public ResponseEntity<ResponseEntityBase> handlerSystemException(SystemException exception) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.INTERNAL_SERVER_ERROR.value(), exception.getMessage(), null);

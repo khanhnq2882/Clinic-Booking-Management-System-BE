@@ -29,6 +29,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -190,7 +191,7 @@ public class AdminServiceImpl implements AdminService {
             servicesRepository.save(service);
             response.setData(MessageConstants.UPDATE_SERVICE_SUCCESS);
         } else {
-            throw new SystemException("Service that has been " +service.getStatus().name()+ " can't be updated.");
+            throw new BadRequestException("Service that has been " +service.getStatus().name()+ " can't be updated.");
         }
         return response;
     }
@@ -274,7 +275,8 @@ public class AdminServiceImpl implements AdminService {
         TestPackage testPackage = new TestPackage();
         testPackage.setTestPackageCode(generateTestPackageCode());
         testPackage.setTestPackageName(testPackageName);
-        testPackage.setTestPackagePrice(testPackageRequest.getTestPackagePrice());
+        BigDecimal testPackagePrice = commonServiceImpl.validateAndConvertAmount(testPackageRequest.getTestPackagePrice());
+        testPackage.setTestPackagePrice(testPackagePrice);
         testPackage.setTestPreparationRequirements(testPackageRequest.getTestPreparationRequirements());
         testPackage.setTestDescription(testPackageRequest.getTestDescription());
         testPackage.setService(service);
@@ -314,7 +316,8 @@ public class AdminServiceImpl implements AdminService {
                 throw new ResourceAlreadyExistException("Test package name", testPackageName);
             }
             testPackage.setTestPackageName(testPackageName);
-            testPackage.setTestPackagePrice(testPackageRequest.getTestPackagePrice());
+            BigDecimal testPackagePrice = commonServiceImpl.validateAndConvertAmount(testPackageRequest.getTestPackagePrice());
+            testPackage.setTestPackagePrice(testPackagePrice);
             testPackage.setTestPreparationRequirements(testPackageRequest.getTestPreparationRequirements());
             testPackage.setTestDescription(testPackageRequest.getTestDescription());
             testPackage.setService(service);
@@ -325,7 +328,7 @@ public class AdminServiceImpl implements AdminService {
             testPackageRepository.save(testPackage);
             response.setData(MessageConstants.UPDATE_TEST_PACKAGE_SUCCESS);
         } else {
-            throw new SystemException("Test package that has been " +testPackage.getStatus().name()+ " can't be updated.");
+            throw new BadRequestException("Test package that has been " +testPackage.getStatus().name()+ " can't be updated.");
         }
         return response;
     }
@@ -349,7 +352,7 @@ public class AdminServiceImpl implements AdminService {
             default -> false;
         };
         if (!isValid) {
-            throw new SystemException("The test package cannot change status from " + testPackageStatus + " to " + newStatus);
+            throw new BadRequestException("The test package cannot change status from " + testPackageStatus + " to " + newStatus);
         }
         testPackage.setStatus(newStatus);
         testPackage.setUpdatedBy(user.getUsername());
@@ -370,6 +373,8 @@ public class AdminServiceImpl implements AdminService {
             throw new ResourceNotFoundException("Imaging Service Type", imagingServiceType);
         }
         imagingServiceRequest.setImagingServiceType(imagingServiceType.toUpperCase());
+        BigDecimal imagingServicePrice = commonServiceImpl.validateAndConvertAmount(imagingServiceRequest.getImagingServicePrice());
+        imagingServiceRequest.setImagingServicePrice(imagingServicePrice.toString());
         ImagingService imagingService = ImagingServiceMapper.IMAGING_SERVICE_MAPPER.mapToImagingService(imagingServiceRequest);
         imagingService.setImagingServiceCode(generateImagingServiceCode(imagingServiceType.toUpperCase()));
         imagingService.setService(service);
@@ -404,7 +409,7 @@ public class AdminServiceImpl implements AdminService {
             imagingServiceRepository.save(imagingService);
             response.setData(MessageConstants.UPDATE_IMAGING_SERVICE_SUCCESS);
         } else {
-            throw new SystemException("Imaging service that has been " +imagingServiceStatus+ " can't be updated.");
+            throw new BadRequestException("Imaging service that has been " +imagingServiceStatus+ " can't be updated.");
         }
         return response;
     }
@@ -428,7 +433,7 @@ public class AdminServiceImpl implements AdminService {
             default -> false;
         };
         if (!isValid) {
-            throw new SystemException("The imaging service cannot change status from " + imagingServiceStatus + " to " + newStatus);
+            throw new BadRequestException("The imaging service cannot change status from " + imagingServiceStatus + " to " + newStatus);
         }
         imagingService.setStatus(newStatus);
         imagingService.setUpdatedBy(user.getUsername());
@@ -570,7 +575,7 @@ public class AdminServiceImpl implements AdminService {
                         case "Status" -> {
                             String serviceStatus = commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue();
                             if (Arrays.stream(EServiceStatus.values()).noneMatch(eServiceStatus -> eServiceStatus.name().equalsIgnoreCase(serviceStatus))) {
-                                throw new SystemException(MessageConstants.INVALID_SERVICE_STATUS);
+                                throw new BadRequestException(MessageConstants.INVALID_SERVICE_STATUS);
                             }
                             service.setStatus(EServiceStatus.valueOf(serviceStatus.toUpperCase()));
                         }
@@ -618,7 +623,7 @@ public class AdminServiceImpl implements AdminService {
                         case "Appointment Date" -> {
                             Date appointmentDate = checkFormatDate(cells.get(indexCell), indexRow, colName);
                             if (appointmentDate.before(Date.from(LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant()))) {
-                                throw new SystemException("Appointment date must be start from today.");
+                                throw new BadRequestException("Appointment date must be start from today.");
                             }
                             bookingExcelResponse.getBookingExcelDTO().setAppointmentDate(appointmentDate);
                         }
@@ -710,7 +715,7 @@ public class AdminServiceImpl implements AdminService {
         Date date = commonServiceImpl.checkDateType(cell, indexRow, colName).getDateCellValue();
         DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
         if (!dateFormat.format(date).matches("^\\d{4}-(0?[1-9]|1[012])-(0?[1-9]|[12][0-9]|3[01])$")) {
-            throw new SystemException("Import failed. "+ colName +" in row " + (indexRow + 1) + " must be yyyy-MM-dd format.");
+            throw new BadRequestException("Import failed. "+ colName +" in row " + (indexRow + 1) + " must be yyyy-MM-dd format.");
         }
         return date;
     }
@@ -724,7 +729,7 @@ public class AdminServiceImpl implements AdminService {
     private void checkGender (Cell cell, int indexRow, String colName, BookingExcelResponse bookingExcelResponse) {
         String gender = commonServiceImpl.checkStringType(cell, indexRow, colName).getStringCellValue();
         if (!gender.equalsIgnoreCase("Male") && !gender.equalsIgnoreCase("Female")) {
-            throw new SystemException("Import failed. "+ colName +" in row " + (indexRow + 1) + " must be 'Male' or 'Female'.");
+            throw new BadRequestException("Import failed. "+ colName +" in row " + (indexRow + 1) + " must be 'Male' or 'Female'.");
         }
         bookingExcelResponse.getBookingExcelDTO().setGender(gender.equalsIgnoreCase("Male") ? 1 : 0);
     }
@@ -733,7 +738,7 @@ public class AdminServiceImpl implements AdminService {
         String specializationName = commonServiceImpl.checkStringType(cell, indexRow, colName).getStringCellValue();
         Specialization specialization = specializationRepository.getSpecializationBySpecializationName(specializationName);
         if (Objects.isNull(specialization)) {
-            throw new SystemException("Import failed. Specialization named " + specializationName + " is not exist.");
+            throw new BadRequestException("Import failed. Specialization named " + specializationName + " is not exist.");
         }
         bookingExcelResponse.getBookingExcelDTO().setSpecializationName(specializationName);
     }
@@ -811,22 +816,22 @@ public class AdminServiceImpl implements AdminService {
                 requireNonNull(normalRange.getMinValue(), "Min value is required for RANGE.");
                 requireNonNull(normalRange.getMaxValue(), "Max value is required for RANGE.");
                 if (testPackageAttributeUnit == null || testPackageAttributeUnit.equals(""))
-                    throw new SystemException("Unit is required for RANGE.");
+                    throw new BadRequestException("Unit is required for RANGE.");
             }
             case LESS_THAN, LESS_THAN_EQUAL-> {
                 requireNonNull(normalRange.getMaxValue(), normalRangeType + " requires max value.");
                 if (testPackageAttributeUnit == null || testPackageAttributeUnit.equals(""))
-                    throw new SystemException(normalRangeType + " requires unit value.");
+                    throw new BadRequestException(normalRangeType + " requires unit value.");
             }
             case GREATER_THAN, GREATER_THAN_EQUAL-> {
                 requireNonNull(normalRange.getMinValue(), normalRangeType + " requires min value.");
                 if (testPackageAttributeUnit == null || testPackageAttributeUnit.equals(""))
-                    throw new SystemException(normalRangeType + " requires unit value.");
+                    throw new BadRequestException(normalRangeType + " requires unit value.");
             }
             case EQUAL -> {
                 requireNonNull(normalRange.getEqualValue(), normalRangeType + " requires equal value.");
                 if (testPackageAttributeUnit == null || testPackageAttributeUnit.equals(""))
-                    throw new SystemException(normalRangeType + " requires unit value.");
+                    throw new BadRequestException(normalRangeType + " requires unit value.");
             }
             case QUALITATIVE -> requireNonNull(normalRange.getExpectedValue(), "Expected value is required for QUALITATIVE.");
             case SEMI_QUALITATIVE -> {
@@ -839,7 +844,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     private void requireNonNull(Object value, String message) {
-        if (value == null) throw new SystemException(message);
+        if (value == null) throw new BadRequestException(message);
     }
 
     private List<TestPackageAttribute> createTestPackageAttributes(TestPackageRequest testPackageRequest, TestPackage testPackage, User currentUser) {
@@ -855,11 +860,11 @@ public class AdminServiceImpl implements AdminService {
             String testPackageAttributeUnit = testPackageAttributeDTO.getUnit();
             Map<String, String> attributeMetaData = testPackageAttributeDTO.getAttributeMetadata();
             if (attributeMetaData.containsKey("name") || attributeMetaData.containsKey("unit")) {
-                throw new SystemException(MessageConstants.ERROR_ADD_NAME_OR_UNIT_ATTRIBUTE);
+                throw new BadRequestException(MessageConstants.ERROR_ADD_NAME_OR_UNIT_ATTRIBUTE);
             }
             testPackageAttribute.setAttributeMetadata(attributeMetaData);
             if (testPackageAttributeDTO.getNormalRanges() == null || testPackageAttributeDTO.getNormalRanges().size() == 0) {
-                throw new SystemException(MessageConstants.ERROR_NORMAL_RANGE_BLANK);
+                throw new BadRequestException(MessageConstants.ERROR_NORMAL_RANGE_BLANK);
             }
             List<NormalRange> normalRanges = testPackageAttributeDTO.getNormalRanges()
                     .stream()

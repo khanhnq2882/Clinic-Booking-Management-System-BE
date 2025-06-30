@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Size;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EImagingServiceStatus;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EImagingServiceType;
 import lombok.*;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,7 +29,7 @@ public class ImagingService extends BaseEntity{
     private String imagingServiceName;
 
     @Column(nullable = false)
-    private Double imagingServicePrice;
+    private BigDecimal imagingServicePrice;
 
     @Column(nullable = false)
     private String description;

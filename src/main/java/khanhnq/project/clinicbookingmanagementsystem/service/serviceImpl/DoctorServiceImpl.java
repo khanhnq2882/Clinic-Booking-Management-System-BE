@@ -7,10 +7,11 @@ import jakarta.transaction.Transactional;
 import khanhnq.project.clinicbookingmanagementsystem.common.MessageConstants;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.*;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceNotFoundException;
+import khanhnq.project.clinicbookingmanagementsystem.exception.SystemException;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.*;
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.*;
 import khanhnq.project.clinicbookingmanagementsystem.model.projection.BookingDetailsInfoProjection;
-import khanhnq.project.clinicbookingmanagementsystem.exception.SystemException;
+import khanhnq.project.clinicbookingmanagementsystem.exception.BadRequestException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ForbiddenException;
 import khanhnq.project.clinicbookingmanagementsystem.model.projection.BookingTimeInfoProjection;
 import khanhnq.project.clinicbookingmanagementsystem.model.projection.MedicalRecordDetailsProjection;
@@ -30,6 +31,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
+import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
@@ -158,14 +160,14 @@ public class DoctorServiceImpl implements DoctorService {
 
     @Override
     @Transactional
-    public ResponseEntityBase registerWorkSchedules(RegisterWorkScheduleRequest registerWorkSchedule) {
+    public ResponseEntityBase registerWorkSchedules(RegisterWorkScheduleRequest registerWorkScheduleRequest) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         User currentUser = authService.getCurrentUser();
         Doctor doctor = doctorRepository.findDoctorByUserId(currentUser.getUserId());
         if (Objects.isNull(doctor.getSpecialization())) {
-            throw new SystemException(MessageConstants.SPECIALIZATION_NOT_FOUND);
+            throw new BadRequestException(MessageConstants.SPECIALIZATION_NOT_FOUND);
         }
-        Date workingDay = registerWorkSchedule.getWorkingDay();
+        Date workingDay = registerWorkScheduleRequest.getWorkingDay();
         LocalDate workingDayLocalDate = workingDay.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
         LocalDate nowLocalDate = new Date().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
         LocalDate startOfWeek = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
@@ -173,23 +175,23 @@ public class DoctorServiceImpl implements DoctorService {
         if (workingDayLocalDate.isBefore(nowLocalDate) ||
                 workingDayLocalDate.isBefore(startOfWeek) ||
                 workingDayLocalDate.isAfter(endOfWeek)) {
-            throw new SystemException(MessageConstants.INVALID_WORKING_DAY);
+            throw new BadRequestException(MessageConstants.INVALID_WORKING_DAY);
         }
-        DaysOfWeek existDayOfWeek = dayOfWeekRepository.getDayOfWeekByWorkingDay(doctor.getDoctorId(), registerWorkSchedule.getWorkingDay());
+        DaysOfWeek existDayOfWeek = dayOfWeekRepository.getDayOfWeekByWorkingDay(doctor.getDoctorId(), registerWorkScheduleRequest.getWorkingDay());
         DaysOfWeek newDayOfWeek = Objects.nonNull(existDayOfWeek) ? existDayOfWeek : new DaysOfWeek();
         List<Doctor> doctors = doctorRepository.getDoctorsBySpecializationId(doctor.getSpecialization().getSpecializationId())
                 .stream().filter(dt -> !dt.equals(doctor)).toList();
-        List<WorkScheduleDTO> invalidWorkSchedules = invalidWorkSchedules(doctors, registerWorkSchedule).stream().toList();
-        List<WorkScheduleDTO> filterValidWorkSchedules = registerWorkSchedule.getWorkSchedules()
+        List<WorkScheduleDTO> invalidWorkSchedules = invalidWorkSchedules(doctors, registerWorkScheduleRequest).stream().toList();
+        List<WorkScheduleDTO> filterValidWorkSchedules = registerWorkScheduleRequest.getWorkSchedules()
                 .stream()
                 .filter(workScheduleDTO -> !invalidWorkSchedules.contains(workScheduleDTO))
                 .toList();
         List<WorkSchedule> workSchedulesNotInBooking = workScheduleRepository.getWorkSchedulesNotInBooking(
-                doctor.getDoctorId(), registerWorkSchedule.getWorkingDay());
+                doctor.getDoctorId(), registerWorkScheduleRequest.getWorkingDay());
         if (workSchedulesNotInBooking.size() > 0) {
             workScheduleRepository.deleteAll(workSchedulesNotInBooking);
             List<WorkSchedule> workSchedulesInBooking = workScheduleRepository.getWorkSchedulesInBooking(
-                    doctor.getDoctorId(), registerWorkSchedule.getWorkingDay());
+                    doctor.getDoctorId(), registerWorkScheduleRequest.getWorkingDay());
             filterValidWorkSchedules = filterValidWorkSchedules.stream()
                     .filter(workScheduleDTO -> workSchedulesInBooking.stream()
                             .noneMatch(workSchedule ->
@@ -210,6 +212,8 @@ public class DoctorServiceImpl implements DoctorService {
                 .toList();
         if (validWorkSchedules.size() != 0) {
             newDayOfWeek.setWorkingDay(workingDay);
+            BigDecimal examinationFee = commonServiceImpl.validateAndConvertAmount(registerWorkScheduleRequest.getExaminationFee());
+            newDayOfWeek.setExaminationFee(examinationFee);
             newDayOfWeek.setDoctor(doctor);
             newDayOfWeek.getWorkSchedules().addAll(validWorkSchedules);
             newDayOfWeek.setWorkSchedules(newDayOfWeek.getWorkSchedules());
@@ -220,7 +224,7 @@ public class DoctorServiceImpl implements DoctorService {
             doctorRepository.save(doctor);
             response.setData(workSchedulesMessage(invalidWorkSchedules, workingDay));
         } else {
-            throw new SystemException(MessageConstants.ALL_WORK_SCHEDULES_INVALID);
+            throw new BadRequestException(MessageConstants.ALL_WORK_SCHEDULES_INVALID);
         }
         return response;
     }
@@ -232,7 +236,7 @@ public class DoctorServiceImpl implements DoctorService {
         Booking booking = validateChangeBookingStatus(bookingId);
         String bookingStatus = booking.getStatus().toString();
         if (!bookingStatus.equals("PENDING")) {
-            throw new SystemException("Your appointment has been " + bookingStatus + " and cannot be confirmed.");
+            throw new BadRequestException("Your appointment has been " + bookingStatus + " and cannot be confirmed.");
         }
         booking.setStatus(EBookingStatus.CONFIRMED);
         booking.setUpdatedBy(currentUser.getUsername());
@@ -248,7 +252,7 @@ public class DoctorServiceImpl implements DoctorService {
         Booking booking = validateChangeBookingStatus(bookingId);
         String bookingStatus = booking.getStatus().toString();
         if (!bookingStatus.equals("PENDING") && !bookingStatus.equals("CONFIRMED")) {
-            throw new SystemException("Your appointment has been " + bookingStatus + " and cannot be cancelled.");
+            throw new BadRequestException("Your appointment has been " + bookingStatus + " and cannot be cancelled.");
         }
         booking.setStatus(EBookingStatus.CANCELLED);
         booking.setUpdatedBy(currentUser.getUsername());
@@ -264,7 +268,7 @@ public class DoctorServiceImpl implements DoctorService {
         Booking booking = validateChangeBookingStatus(bookingId);
         String bookingStatus = booking.getStatus().toString();
         if (!bookingStatus.equals("CONFIRMED") && !bookingStatus.equals("CANCELLED")) {
-            throw new SystemException("Your appointment has been " + bookingStatus + " and cannot be cancelled.");
+            throw new BadRequestException("Your appointment has been " + bookingStatus + " and cannot be cancelled.");
         }
         booking.setStatus(EBookingStatus.COMPLETED);
         booking.setUpdatedBy(currentUser.getUsername());
@@ -308,7 +312,7 @@ public class DoctorServiceImpl implements DoctorService {
         Booking booking = bookingRepository.findById(bookingId).orElseThrow(()
                 -> new ResourceNotFoundException("Booking id", bookingId.toString()));
         if (medicalRecordRepository.findMedicalRecordByBooking(bookingId) != null)
-            throw new SystemException("A medical record for booking " + booking.getBookingCode() + " has been created. Please update it.");
+            throw new BadRequestException("A medical record for booking " + booking.getBookingCode() + " has been created. Please update it.");
         validateMedicalRecord(currentUser, booking, medicalRecordRequest);
         MedicalRecord medicalRecord = MedicalRecordMapper.MEDICAL_RECORD_MAPPER.mapToMedicalRecord(medicalRecordRequest);
         medicalRecord.setMedicalRecordCode(generateMedicalRecordCode());
@@ -352,7 +356,7 @@ public class DoctorServiceImpl implements DoctorService {
             TestPackage testPackage = testPackageRepository.findById(testPackageId).orElseThrow(
                     () -> new ResourceNotFoundException("Test Package ID", testPackageId.toString()));
             if (!testPackage.getStatus().name().equals("ACTIVE")) {
-                throw new SystemException(MessageConstants.ERROR_TEST_PACKAGE_NOT_ACTIVE);
+                throw new BadRequestException(MessageConstants.ERROR_TEST_PACKAGE_NOT_ACTIVE);
             }
             Doctor doctorPrescribed = doctorRepository.findById(doctorId).orElseThrow(
                     () -> new ResourceNotFoundException("Doctor ID", doctorId.toString()));
@@ -363,14 +367,14 @@ public class DoctorServiceImpl implements DoctorService {
             if (sampleCollectionTime.isAfter(sampleReceptionTime)
                     || sampleReceptionTime.isAfter(testDate)
                     || testDate.isAfter(resultDeliveryDate)) {
-                throw new SystemException(MessageConstants.ERROR_TEST_TIME_ORDER);
+                throw new BadRequestException(MessageConstants.ERROR_TEST_TIME_ORDER);
             }
             LabResult labResult = LabResultMapper.LAB_RESULT_MAPPER.mapToLabResult(labResultRequest);
             List<TestResult> testResults = new ArrayList<>();
             List<TestResultDTO> testResultDTOS = labResultRequest.getTestResults();
             Set<Long> attributesId = testResultDTOS.stream().map(TestResultDTO::getTestPackageAttributeId).collect(Collectors.toSet());
             if (attributesId.size() != testResultDTOS.size()) {
-                throw new SystemException(MessageConstants.ERROR_ADD_RESULT_FOR_SAME_ATTRIBUTE);
+                throw new BadRequestException(MessageConstants.ERROR_ADD_RESULT_FOR_SAME_ATTRIBUTE);
             }
             testResultDTOS.forEach(testResultDTO -> {
                 Long testPackageAttributeId = testResultDTO.getTestPackageAttributeId();
@@ -378,7 +382,7 @@ public class DoctorServiceImpl implements DoctorService {
                         () -> new ResourceNotFoundException("Test Package Attribute ID", testPackageAttributeId.toString()));
                 List<Long> testPackageAttributesId = testPackageAttributeRepository.getTestPackageAttributeIdsByTestPackageId(testPackageId);
                 if (testPackageAttributesId.stream().noneMatch(id -> id.equals(testPackageAttributeId))) {
-                    throw new SystemException(MessageConstants.ERROR_ATTRIBUTE_NOT_IN_TEST_PACKAGE);
+                    throw new BadRequestException(MessageConstants.ERROR_ATTRIBUTE_NOT_IN_TEST_PACKAGE);
                 }
                 TestResult testResult = new TestResult();
                 Booking booking = medicalRecord.getBooking();
@@ -408,7 +412,7 @@ public class DoctorServiceImpl implements DoctorService {
                     testResult.setTestPackageAttribute(testPackageAttribute);
                     testResults.add(testResult);
                 } else {
-                    throw new SystemException(MessageConstants.ERROR_TEST_RESULT);
+                    throw new BadRequestException(MessageConstants.ERROR_TEST_RESULT);
                 }
             });
             labResult.setMedicalRecord(medicalRecord);
@@ -541,7 +545,7 @@ public class DoctorServiceImpl implements DoctorService {
         if (!checkAdmin && doctor != null && !doctor.getDoctorId().equals(doctorId))
             throw new ForbiddenException(MessageConstants.FORBIDDEN_ADD_MEDICAL_RECORD);
         if (!booking.getStatus().equals(EBookingStatus.COMPLETED))
-             throw new SystemException("Booking status is "+booking.getStatus().name()+". Booking status must be completed to be allowed to create medical records.");
+             throw new BadRequestException("Booking status is "+booking.getStatus().name()+". Booking status must be completed to be allowed to create medical records.");
         BookingTimeInfoProjection bookingTime = bookingRepository.getBookingInfoByBookingId(booking.getBookingId());
         LocalDateTime visitDate = medicalRecordRequest.getVisitDate();
         LocalDate workingDay = bookingTime.getWorkingDay().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
@@ -549,11 +553,11 @@ public class DoctorServiceImpl implements DoctorService {
         if (!checkVisitDate) {
             String formatWorkingDay = new SimpleDateFormat("dd-MM-yyyy").format(bookingTime.getWorkingDay());
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
-            throw new SystemException("The visit date must be within day " + formatWorkingDay + " , booking time from "
+            throw new BadRequestException("The visit date must be within day " + formatWorkingDay + " , booking time from "
                     + bookingTime.getStartTime().format(formatter) + " to "+ bookingTime.getEndTime().format(formatter) +".");
         }
         if (!isValidNextAppointmentDate(medicalRecordRequest.getNextAppointmentDate())) {
-            throw new SystemException(MessageConstants.ERROR_NEXT_APPOINTMENT_DATE);
+            throw new BadRequestException(MessageConstants.ERROR_NEXT_APPOINTMENT_DATE);
         }
     }
 

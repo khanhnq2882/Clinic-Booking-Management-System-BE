@@ -2,6 +2,7 @@ package khanhnq.project.clinicbookingmanagementsystem.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -22,7 +23,7 @@ public class DaysOfWeek extends BaseEntity {
     private Date workingDay;
 
     @Column(nullable = false)
-    private Double examinationFee;
+    private BigDecimal examinationFee;
 
     @OneToMany(mappedBy = "daysOfWeek", cascade = CascadeType.ALL)
     private List<WorkSchedule> workSchedules = new ArrayList<>();

@@ -2,12 +2,11 @@ package khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl;
 
 import khanhnq.project.clinicbookingmanagementsystem.common.MessageConstants;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ForbiddenException;
-import khanhnq.project.clinicbookingmanagementsystem.exception.UnauthorizedException;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.DoctorMapper;
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EBookingStatus;
-import khanhnq.project.clinicbookingmanagementsystem.exception.SystemException;
+import khanhnq.project.clinicbookingmanagementsystem.exception.BadRequestException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceNotFoundException;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.BookingMapper;
 import khanhnq.project.clinicbookingmanagementsystem.model.projection.BookingDetailsInfoProjection;
@@ -27,6 +26,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.*;
@@ -46,7 +46,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public ResponseEntityBase updateProfile(UserProfileRequest profileRequest, MultipartFile avatar) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        User currentUser = checkAccess();
+        User currentUser = authService.getCurrentUser();
         commonServiceImpl.updateProfile(profileRequest, currentUser, avatar);
         userRepository.save(currentUser);
         response.setData(MessageConstants.UPDATE_PROFILE_SUCCESS);
@@ -56,7 +56,8 @@ public class UserServiceImpl implements UserService {
     @Override
     public ResponseEntityBase getUserProfile() {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        UserDTO userDTO = commonServiceImpl.getUserDetails(checkAccess());
+        User currentUser = authService.getCurrentUser();
+        UserDTO userDTO = commonServiceImpl.getUserDetails(currentUser);
         response.setData(userDTO);
         return response;
     }
@@ -99,14 +100,16 @@ public class UserServiceImpl implements UserService {
     @Override
     public ResponseEntityBase bookingAppointment(BookingAppointmentRequest bookingAppointmentRequest) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        User currentUser = checkAccess();
+        User currentUser = authService.getCurrentUser();
         Long workScheduleId = bookingAppointmentRequest.getWorkScheduleId();
         WorkSchedule workSchedule = validateWorkSchedule(workScheduleId);
         Address address = createAddress(bookingAppointmentRequest.getWardId(), bookingAppointmentRequest.getSpecificAddress());
+        BigDecimal examinationFee = workSchedule.getDaysOfWeek().getExaminationFee();
         Booking bookingAppointment = BookingMapper.BOOKING_MAPPER.mapToBooking(bookingAppointmentRequest);
         bookingAppointment.setAddress(address);
         bookingAppointment.setBookingCode(commonServiceImpl.bookingCode());
         bookingAppointment.setWorkSchedule(workSchedule);
+        bookingAppointment.setExaminationFee(examinationFee);
         bookingAppointment.setStatus(EBookingStatus.PENDING);
         bookingAppointment.setUser(currentUser);
         bookingAppointment.setCreatedBy(currentUser.getUsername());
@@ -136,7 +139,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public ResponseEntityBase updateBookedAppointment(Long bookingId, BookingAppointmentRequest bookingAppointmentRequest) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        User currentUser = checkAccess();
+        User currentUser = authService.getCurrentUser();
         Optional<Booking> bookingOptional = bookingRepository.findById(bookingId);
         if (bookingOptional.isEmpty()) {
             throw new ResourceNotFoundException("Booking id", bookingId.toString());
@@ -144,7 +147,7 @@ public class UserServiceImpl implements UserService {
         Booking booking = bookingOptional.get();
         String bookingStatus = booking.getStatus().toString();
         if (!bookingStatus.equals("PENDING")) {
-            throw new SystemException("Your appointment has been " + bookingStatus + " and cannot be updated. Contact to admin.");
+            throw new BadRequestException("Your appointment has been " + bookingStatus + " and cannot be updated. Contact to admin.");
         }
         Long workScheduleId = bookingAppointmentRequest.getWorkScheduleId();
         WorkSchedule workSchedule = validateWorkSchedule(workScheduleId);
@@ -164,7 +167,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public ResponseEntityBase cancelAppointment(Long bookingId) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        User currentUser = checkAccess();
+        User currentUser = authService.getCurrentUser();
         Optional<Booking> bookingOptional = bookingRepository.findById(bookingId);
         if (bookingOptional.isEmpty()) {
             throw new ResourceNotFoundException("Booking id", bookingId.toString());
@@ -179,7 +182,7 @@ public class UserServiceImpl implements UserService {
         }
         String bookingStatus = booking.getStatus().toString();
         if (bookingStatus.equals("CONFIRMED") || bookingStatus.equals("COMPLETED") || bookingStatus.equals("CANCELLED")) {
-            throw new SystemException("Your appointment has been " + bookingStatus + " and cannot be cancelled.");
+            throw new BadRequestException("Your appointment has been " + bookingStatus + " and cannot be cancelled.");
         }
         BookingTimeInfoProjection bookingTimeInfoProjection = bookingRepository.getBookingInfoByBookingId(bookingId);
         if (bookingTimeInfoProjection != null) {
@@ -189,10 +192,10 @@ public class UserServiceImpl implements UserService {
                 LocalDateTime workingDayDateTime = LocalDateTime.of(workingDay, bookingTimeInfoProjection.getStartTime());
                 if (LocalDateTime.now().isAfter(workingDayDateTime.minusHours(24)) &&
                         Duration.between(bookingTimeInfoProjection.getCreatedAt(), LocalDateTime.now()).toMinutes() > 60) {
-                    throw new SystemException(MessageConstants.CANCELLATION_APPOINTMENT_TIME_ERROR);
+                    throw new BadRequestException(MessageConstants.CANCELLATION_APPOINTMENT_TIME_ERROR);
                 }
             } catch (ParseException exception) {
-                throw new SystemException(MessageConstants.SOMETHING_WENT_WRONG);
+                throw new BadRequestException(MessageConstants.SOMETHING_WENT_WRONG);
             }
         }
         booking.setStatus(EBookingStatus.CANCELLED);
@@ -206,7 +209,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public ResponseEntityBase getAllBookings(int page, int size, String[] sorts) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        User currentUser = checkAccess();
+        User currentUser = authService.getCurrentUser();
         Pageable pageable = commonServiceImpl.pagingSort(page, size, sorts);
         Page<BookingDetailsInfoProjection> bookingDetailsPage = bookingRepository.getBookingDetailsByUserId(currentUser.getUserId(), pageable);
         BookingResponse bookingResponse = BookingResponse.builder()
@@ -219,17 +222,6 @@ public class UserServiceImpl implements UserService {
         return response;
     }
 
-    public User checkAccess() {
-        User currentUser = authService.getCurrentUser();
-        if (Objects.isNull(currentUser)) {
-            throw new UnauthorizedException(MessageConstants.UNAUTHORIZED_ACCESS);
-        }
-        if (currentUser.getRoles().stream().noneMatch(role -> role.getRoleName().name().equals("ROLE_USER"))) {
-            throw new ForbiddenException(MessageConstants.FORBIDDEN_ACCESS);
-        }
-        return currentUser;
-    }
-
     private WorkSchedule validateWorkSchedule(Long workScheduleId) {
         WorkSchedule workSchedule = workScheduleRepository.findById(workScheduleId).orElseThrow(()
                 -> new ResourceNotFoundException("Work schedule id", workScheduleId.toString()));
@@ -238,7 +230,7 @@ public class UserServiceImpl implements UserService {
             BookingTimeInfoProjection bookingTimeInfoProjection = bookingTimeInfoProjections.get(0);
             String formatAppointmentDate = new SimpleDateFormat("dd-MM-yyyy").format(bookingTimeInfoProjection.getWorkingDay());
             String workScheduleTime = bookingTimeInfoProjection.getStartTime() + "-" + bookingTimeInfoProjection.getEndTime();
-            throw new SystemException("You cannot booking an appointment at time " + workScheduleTime
+            throw new BadRequestException("You cannot booking an appointment at time " + workScheduleTime
                     + " on day " + formatAppointmentDate + " because someone has already booked.");
         }
         return workSchedule;

@@ -262,7 +262,7 @@ public class AuthServiceImpl implements AuthService {
         }
         if (passwordEncoder.matches(changePasswordRequest.getCurrentPassword(), currentUser.getPassword())) {
             if (!changePasswordRequest.getNewPassword().equals(changePasswordRequest.getConfirmPassword())) {
-                throw new SystemException(MessageConstants.NOT_MATCH_PASSWORD);
+                throw new BadRequestException(MessageConstants.NOT_MATCH_PASSWORD);
             }
             currentUser.setPassword(passwordEncoder.encode(changePasswordRequest.getNewPassword()));
             currentUser.setUpdatedBy(username);

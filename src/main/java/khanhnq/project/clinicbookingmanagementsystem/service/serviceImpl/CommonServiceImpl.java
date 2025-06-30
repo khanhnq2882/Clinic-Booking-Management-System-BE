@@ -7,12 +7,13 @@ import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import khanhnq.project.clinicbookingmanagementsystem.common.MessageConstants;
+import khanhnq.project.clinicbookingmanagementsystem.exception.SystemException;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.DoctorMapper;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.WorkExperienceMapper;
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.*;
 import khanhnq.project.clinicbookingmanagementsystem.model.projection.BookingDetailsInfoProjection;
 import khanhnq.project.clinicbookingmanagementsystem.entity.*;
-import khanhnq.project.clinicbookingmanagementsystem.exception.SystemException;
+import khanhnq.project.clinicbookingmanagementsystem.exception.BadRequestException;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceAlreadyExistException;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.UserMapper;
 import khanhnq.project.clinicbookingmanagementsystem.model.projection.DoctorDetailsInfoProjection;
@@ -32,6 +33,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -151,6 +153,26 @@ public class CommonServiceImpl {
         }
     }
 
+    public BigDecimal validateAndConvertAmount(String amountStr) {
+        if (amountStr == null || amountStr.trim().isEmpty()) {
+            throw new BadRequestException("Amount can't be empty.");
+        }
+        String cleaned = amountStr.replace(",", "").trim();
+        if (!cleaned.matches("^\\d+(\\.\\d{1,2})?$")) {
+            throw new BadRequestException("Invalid amount. Amount only allows up to 2 decimal places.");
+        }
+        BigDecimal amount;
+        try {
+            amount = new BigDecimal(cleaned);
+        } catch (NumberFormatException e) {
+            throw new BadRequestException("Amount is not convertible.");
+        }
+        if (amount.compareTo(BigDecimal.ZERO) < 0) {
+            throw new BadRequestException("Amount is not negative.");
+        }
+        return amount;
+    }
+
     public Pageable pagingSort(int page, int size, String[] sorts) {
         List<Sort.Order> orders = new ArrayList<>();
         if (sorts[0].contains(",")) {
@@ -224,31 +246,31 @@ public class CommonServiceImpl {
 
     public Cell checkBlankType (Cell cell, int rowIndex, String colName) {
         if (cell.getCellType() == CellType.BLANK) {
-            throw new SystemException("Import data failed. The value of column named '" + colName + "' in row " + (rowIndex + 1) + " can't be blank.");
+            throw new BadRequestException("Import data failed. The value of column named '" + colName + "' in row " + (rowIndex + 1) + " can't be blank.");
         }
         return cell;
     }
 
     public Cell checkStringType (Cell cell, int rowIndex, String colName) {
         if (!cell.getCellType().equals(CellType.STRING)) {
-            throw new SystemException("Import data failed. The value of column named '" + colName + "' in row " + (rowIndex + 1) + " must be string type.");
+            throw new BadRequestException("Import data failed. The value of column named '" + colName + "' in row " + (rowIndex + 1) + " must be string type.");
         }
         if (cell.getStringCellValue().length() > 255) {
-            throw new SystemException("Import data failed. The value of column named '" + colName + "' in row " + (rowIndex + 1) + " has a maximum of 255 characters.");
+            throw new BadRequestException("Import data failed. The value of column named '" + colName + "' in row " + (rowIndex + 1) + " has a maximum of 255 characters.");
         }
         return cell;
     }
 
     public Cell checkNumericType (Cell cell, int rowIndex, String colName) {
         if (!cell.getCellType().equals(CellType.NUMERIC)) {
-            throw new SystemException("Import data failed. The value of column named '" + colName + "' in row " + (rowIndex + 1) + " must be numeric type.");
+            throw new BadRequestException("Import data failed. The value of column named '" + colName + "' in row " + (rowIndex + 1) + " must be numeric type.");
         }
         return cell;
     }
 
     public Cell checkDateType (Cell cell, int rowIndex, String colName) {
         if (!DateUtil.isCellDateFormatted(checkNumericType(cell, rowIndex, colName))) {
-            throw new SystemException("Import data failed. The value of column named '" + colName + "' in row " + (rowIndex + 1) + " must be date type.");
+            throw new BadRequestException("Import data failed. The value of column named '" + colName + "' in row " + (rowIndex + 1) + " must be date type.");
         }
         return cell;
     }
@@ -270,7 +292,7 @@ public class CommonServiceImpl {
     public String getPhoneNumberFromExcel (Cell cell, int indexRow, String colName) {
         String phoneNumber = checkStringType(cell, indexRow, colName).getStringCellValue();
         if (!phoneNumber.matches("^0[2|3|5|7|8|9][0-9]{8}$")) {
-            throw new SystemException("Import failed. Phone number is in wrong format.");
+            throw new BadRequestException("Import failed. Phone number is in wrong format.");
         }
         return phoneNumber;
     }
@@ -278,22 +300,22 @@ public class CommonServiceImpl {
     public Address getAddressFromExcel (Cell cell, int indexRow, String colName) {
         List<String> strings = Arrays.asList(checkStringType(cell, indexRow, colName).getStringCellValue().split(","));
         if (strings.size() < 3) {
-            throw new SystemException("Invalid address. Must contain at least information about wards, districts, and cities of Vietnam and separated by commas.");
+            throw new BadRequestException("Invalid address. Must contain at least information about wards, districts, and cities of Vietnam and separated by commas.");
         }
         String wardName = strings.get(strings.size() - 3).trim();
         String districtName = strings.get(strings.size() - 2).trim();
         String cityName = strings.get(strings.size() - 1).trim();
         List<Ward> wards = wardRepository.getWardsByWardName(wardName);
         if (wards.size() == 0) {
-            throw new SystemException("Ward named '"+ wardName +"' of column "+ colName +", row "+ indexRow +" doesn't exist.");
+            throw new BadRequestException("Ward named '"+ wardName +"' of column "+ colName +", row "+ indexRow +" doesn't exist.");
         }
         List<District> districts = districtRepository.getDistrictsByDistrictName(districtName);
         if (districts.size() == 0) {
-            throw new SystemException("District named '"+ districtName +"' of column "+ colName +", row "+ indexRow +" doesn't exist.");
+            throw new BadRequestException("District named '"+ districtName +"' of column "+ colName +", row "+ indexRow +" doesn't exist.");
         }
         List<City> cities = cityRepository.getCitiesByCityName(cityName);
         if (cities.size() == 0) {
-            throw new SystemException("City named '"+ cityName +"' of column "+ colName +", row "+ indexRow +" doesn't exist.");
+            throw new BadRequestException("City named '"+ cityName +"' of column "+ colName +", row "+ indexRow +" doesn't exist.");
         }
         Address address = wards.stream()
                 .flatMap(ward -> districts.stream()
@@ -391,7 +413,7 @@ public class CommonServiceImpl {
     public void checkExcelFormat(MultipartFile file) {
         String excelType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
         if (!excelType.equals(file.getContentType())) {
-            throw new SystemException(MessageConstants.INVALID_EXCEL_FORMAT);
+            throw new BadRequestException(MessageConstants.INVALID_EXCEL_FORMAT);
         }
     }
 

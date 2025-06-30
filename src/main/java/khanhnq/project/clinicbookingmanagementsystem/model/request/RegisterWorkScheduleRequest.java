@@ -12,5 +12,6 @@ import java.util.List;
 @AllArgsConstructor
 public class RegisterWorkScheduleRequest {
     private Date workingDay;
+    private String examinationFee;
     private List<WorkScheduleDTO> workSchedules;
 }

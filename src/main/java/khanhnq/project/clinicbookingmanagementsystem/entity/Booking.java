@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Size;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EBookingStatus;
 import lombok.*;
 import org.springframework.format.annotation.DateTimeFormat;
+import java.math.BigDecimal;
 import java.util.Date;
 
 @Entity
@@ -56,6 +57,9 @@ public class Booking extends BaseEntity{
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
     private EBookingStatus status;
+
+    @Column(nullable = false)
+    private BigDecimal examinationFee;
 
     @ManyToOne
     @JoinColumn(name = "user_id")
