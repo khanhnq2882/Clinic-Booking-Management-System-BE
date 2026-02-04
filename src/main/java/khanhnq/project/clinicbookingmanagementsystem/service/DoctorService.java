@@ -11,9 +11,8 @@ public interface DoctorService {
     ResponseEntityBase getDoctorCareerInfo();
     ResponseEntityBase updateDoctorInformation(DoctorInformationRequest doctorInformationRequest, MultipartFile specialtyDegree);
     ResponseEntityBase registerWorkSchedules(RegisterWorkScheduleRequest registerWorkScheduleRequest);
-    ResponseEntityBase confirmedBooking (Long bookingId);
-    ResponseEntityBase cancelledBooking (Long bookingId);
-    ResponseEntityBase completedBooking (Long bookingId);
+    ResponseEntityBase changeBookingStatus(Long bookingId, String bookingStatus);
+    ResponseEntityBase registerTimeOff (DoctorTimeOffRequest doctorTimeOffRequest);
     ResponseEntityBase getBookingDetail (Long bookingId);
     ResponseEntityBase getAllBookings(int page, int size, String[] sorts);
     ResponseEntityBase addMedicalRecord(Long bookingId, MedicalRecordRequest medicalRecordRequest);

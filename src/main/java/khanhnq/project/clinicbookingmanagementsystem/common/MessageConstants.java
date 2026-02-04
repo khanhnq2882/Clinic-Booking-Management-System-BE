@@ -21,8 +21,7 @@ public class MessageConstants {
     public static final String UPDATE_DOCTOR_INFORMATION_SUCCESS = "Successfully updated doctor information.";
     public static final String BOOKING_SUCCESS = "Successfully booked an appointment.";
     public static final String CONFIRM_BOOKING_SUCCESS = "Successful confirm booking.";
-    public static final String CANCELED_BOOKING_SUCCESS = "Successful canceled booking.";
-    public static final String COMPLETED_BOOKING_SUCCESS = "Successful completed booking.";
+    public static final String RACE_CONDITION_ERROR = "Concurrent update detected. Your action could not be completed. Try again.";
     public static final String INVALID_EXCEL_FORMAT = "Invalid excel file format.";
     public static final String ADD_SERVICE_SUCCESS = "Add service successfully.";
     public static final String UPDATE_SERVICE_SUCCESS = "Update service successfully.";

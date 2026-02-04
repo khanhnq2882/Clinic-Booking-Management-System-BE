@@ -7,7 +7,6 @@ import jakarta.transaction.Transactional;
 import khanhnq.project.clinicbookingmanagementsystem.common.MessageConstants;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.*;
 import khanhnq.project.clinicbookingmanagementsystem.exception.ResourceNotFoundException;
-import khanhnq.project.clinicbookingmanagementsystem.exception.SystemException;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.*;
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.*;
 import khanhnq.project.clinicbookingmanagementsystem.model.projection.BookingDetailsInfoProjection;
@@ -23,11 +22,11 @@ import khanhnq.project.clinicbookingmanagementsystem.repository.*;
 import khanhnq.project.clinicbookingmanagementsystem.service.AuthService;
 import khanhnq.project.clinicbookingmanagementsystem.service.DoctorService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -44,54 +43,73 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 public class DoctorServiceImpl implements DoctorService {
-    @Autowired
     private AuthService authService;
-    @Autowired
     private SpecializationRepository specializationRepository;
-    @Autowired
     private BookingRepository bookingRepository;
-    @Autowired
     private UserRepository userRepository;
-    @Autowired
     private DoctorRepository doctorRepository;
-    @Autowired
     private WorkScheduleRepository workScheduleRepository;
-    @Autowired
     private DayOfWeekRepository dayOfWeekRepository;
-    @Autowired
     private WorkExperienceRepository workExperienceRepository;
-    @Autowired
     private MedicalRecordRepository medicalRecordRepository;
-    @Autowired
     private LabResultRepository labResultRepository;
-    @Autowired
     private TestPackageRepository testPackageRepository;
-    @Autowired
     private TestPackageAttributeRepository testPackageAttributeRepository;
-    @Autowired
     private TestResultRepository testResultRepository;
-    @Autowired
     private ImagingServiceRepository imagingServiceRepository;
-    @Autowired
     private MedicalImageRepository medicalImageRepository;
-    @Autowired
-    private FileRepository fileRepository;
-    @Autowired
-    private CommonServiceImpl commonServiceImpl;
-    @Autowired
+    private CommonService commonService;
     private AmazonS3 s3Client;
-
+    private final JavaMailSender mailSender;
     @Value("${aws.s3.bucketName}")
     private String bucketName;
 
     @Value("${aws.s3.region}")
     private String awsS3Region;
 
+    public DoctorServiceImpl(AuthService authService,
+                             SpecializationRepository specializationRepository,
+                             BookingRepository bookingRepository,
+                             UserRepository userRepository,
+                             DoctorRepository doctorRepository,
+                             WorkScheduleRepository workScheduleRepository,
+                             DayOfWeekRepository dayOfWeekRepository,
+                             WorkExperienceRepository workExperienceRepository,
+                             MedicalRecordRepository medicalRecordRepository,
+                             LabResultRepository labResultRepository,
+                             TestPackageRepository testPackageRepository,
+                             TestPackageAttributeRepository testPackageAttributeRepository,
+                             TestResultRepository testResultRepository,
+                             ImagingServiceRepository imagingServiceRepository,
+                             MedicalImageRepository medicalImageRepository,
+                             CommonService commonService,
+                             AmazonS3 s3Client,
+                             JavaMailSender mailSender) {
+        this.authService = authService;
+        this.specializationRepository = specializationRepository;
+        this.bookingRepository = bookingRepository;
+        this.userRepository = userRepository;
+        this.doctorRepository = doctorRepository;
+        this.workScheduleRepository = workScheduleRepository;
+        this.dayOfWeekRepository = dayOfWeekRepository;
+        this.workExperienceRepository = workExperienceRepository;
+        this.medicalRecordRepository = medicalRecordRepository;
+        this.labResultRepository = labResultRepository;
+        this.testPackageRepository = testPackageRepository;
+        this.testPackageAttributeRepository = testPackageAttributeRepository;
+        this.testResultRepository = testResultRepository;
+        this.imagingServiceRepository = imagingServiceRepository;
+        this.medicalImageRepository = medicalImageRepository;
+        this.commonService = commonService;
+        this.s3Client = s3Client;
+        this.mailSender = mailSender;
+    }
+
     @Override
     public ResponseEntityBase updateProfile(UserProfileRequest userProfileRequest, MultipartFile avatar) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         User currentUser = authService.getCurrentUser();
-        commonServiceImpl.updateProfile(userProfileRequest, currentUser, avatar);
+        commonService.updateProfile(userProfileRequest, currentUser, avatar);
         userRepository.save(currentUser);
         response.setData(MessageConstants.UPDATE_PROFILE_SUCCESS);
         return response;
@@ -101,7 +119,7 @@ public class DoctorServiceImpl implements DoctorService {
     public ResponseEntityBase getUserProfile() {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         User currentUser = authService.getCurrentUser();
-        UserDTO userDTO = commonServiceImpl.getUserDetails(currentUser);
+        UserDTO userDTO = commonService.getUserDetails(currentUser);
         response.setData(userDTO);
         return response;
     }
@@ -112,7 +130,7 @@ public class DoctorServiceImpl implements DoctorService {
         User currentUser = authService.getCurrentUser();
         Doctor doctor = doctorRepository.findDoctorByUserId(currentUser.getUserId());
         if (doctor != null) {
-            response.setData(commonServiceImpl.getDoctorDetails(doctor.getDoctorId()));
+            response.setData(commonService.getDoctorDetails(doctor.getDoctorId()));
         }
         return response;
     }
@@ -147,12 +165,13 @@ public class DoctorServiceImpl implements DoctorService {
         savedDoctor.setBiography(doctorInformationRequest.getBiography());
         savedDoctor.setCareerDescription(doctorInformationRequest.getCareerDescription());
         savedDoctor.setEducationLevel(validateEducationLevel(doctorInformationRequest.getEducationLevel()));
+        savedDoctor.setDoctorVerificationStatus(EDoctorVerificationStatus.PENDING_APPROVAL);
         savedDoctor.setUser(currentUser);
         savedDoctor.setUpdatedBy(currentUser.getUsername());
         savedDoctor.setUpdatedAt(LocalDateTime.now());
         doctorRepository.save(savedDoctor);
         if (Objects.nonNull(specialtyDegree)) {
-            commonServiceImpl.uploadFile(specialtyDegree, "specialty-degree", currentUser);
+            commonService.uploadFile(specialtyDegree, "specialty-degree", currentUser);
         }
         response.setData(MessageConstants.UPDATE_DOCTOR_INFORMATION_SUCCESS);
         return response;
@@ -160,38 +179,35 @@ public class DoctorServiceImpl implements DoctorService {
 
     @Override
     @Transactional
-    public ResponseEntityBase registerWorkSchedules(RegisterWorkScheduleRequest registerWorkScheduleRequest) {
+    public ResponseEntityBase registerWorkSchedules(RegisterWorkScheduleRequest registerWorkSchedule) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         User currentUser = authService.getCurrentUser();
         Doctor doctor = doctorRepository.findDoctorByUserId(currentUser.getUserId());
-        if (Objects.isNull(doctor.getSpecialization())) {
+        if (Objects.isNull(doctor.getSpecialization()))
             throw new BadRequestException(MessageConstants.SPECIALIZATION_NOT_FOUND);
-        }
-        Date workingDay = registerWorkScheduleRequest.getWorkingDay();
+        Date workingDay = registerWorkSchedule.getWorkingDay();
         LocalDate workingDayLocalDate = workingDay.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
         LocalDate nowLocalDate = new Date().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
         LocalDate startOfWeek = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         LocalDate endOfWeek = LocalDate.now().with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
-        if (workingDayLocalDate.isBefore(nowLocalDate) ||
-                workingDayLocalDate.isBefore(startOfWeek) ||
-                workingDayLocalDate.isAfter(endOfWeek)) {
+        if (workingDayLocalDate.isBefore(nowLocalDate) || workingDayLocalDate.isBefore(startOfWeek) || workingDayLocalDate.isAfter(endOfWeek)) {
             throw new BadRequestException(MessageConstants.INVALID_WORKING_DAY);
         }
-        DaysOfWeek existDayOfWeek = dayOfWeekRepository.getDayOfWeekByWorkingDay(doctor.getDoctorId(), registerWorkScheduleRequest.getWorkingDay());
+        DaysOfWeek existDayOfWeek = dayOfWeekRepository.getDayOfWeekByWorkingDay(doctor.getDoctorId(), registerWorkSchedule.getWorkingDay());
         DaysOfWeek newDayOfWeek = Objects.nonNull(existDayOfWeek) ? existDayOfWeek : new DaysOfWeek();
         List<Doctor> doctors = doctorRepository.getDoctorsBySpecializationId(doctor.getSpecialization().getSpecializationId())
                 .stream().filter(dt -> !dt.equals(doctor)).toList();
-        List<WorkScheduleDTO> invalidWorkSchedules = invalidWorkSchedules(doctors, registerWorkScheduleRequest).stream().toList();
-        List<WorkScheduleDTO> filterValidWorkSchedules = registerWorkScheduleRequest.getWorkSchedules()
+        List<WorkScheduleDTO> invalidWorkSchedules = invalidWorkSchedules(doctors, registerWorkSchedule).stream().toList();
+        List<WorkScheduleDTO> filterValidWorkSchedules = registerWorkSchedule.getWorkSchedules()
                 .stream()
                 .filter(workScheduleDTO -> !invalidWorkSchedules.contains(workScheduleDTO))
                 .toList();
         List<WorkSchedule> workSchedulesNotInBooking = workScheduleRepository.getWorkSchedulesNotInBooking(
-                doctor.getDoctorId(), registerWorkScheduleRequest.getWorkingDay());
+                doctor.getDoctorId(), registerWorkSchedule.getWorkingDay());
         if (workSchedulesNotInBooking.size() > 0) {
             workScheduleRepository.deleteAll(workSchedulesNotInBooking);
             List<WorkSchedule> workSchedulesInBooking = workScheduleRepository.getWorkSchedulesInBooking(
-                    doctor.getDoctorId(), registerWorkScheduleRequest.getWorkingDay());
+                    doctor.getDoctorId(), registerWorkSchedule.getWorkingDay());
             filterValidWorkSchedules = filterValidWorkSchedules.stream()
                     .filter(workScheduleDTO -> workSchedulesInBooking.stream()
                             .noneMatch(workSchedule ->
@@ -212,11 +228,10 @@ public class DoctorServiceImpl implements DoctorService {
                 .toList();
         if (validWorkSchedules.size() != 0) {
             newDayOfWeek.setWorkingDay(workingDay);
-            BigDecimal examinationFee = commonServiceImpl.validateAndConvertAmount(registerWorkScheduleRequest.getExaminationFee());
-            newDayOfWeek.setExaminationFee(examinationFee);
             newDayOfWeek.setDoctor(doctor);
             newDayOfWeek.getWorkSchedules().addAll(validWorkSchedules);
             newDayOfWeek.setWorkSchedules(newDayOfWeek.getWorkSchedules());
+            newDayOfWeek.setExaminationFee(registerWorkSchedule.getExaminationFee());
             newDayOfWeek.setCreatedBy(currentUser.getUsername());
             newDayOfWeek.setCreatedAt(LocalDateTime.now());
             doctor.getDaysOfWeeks().add(newDayOfWeek);
@@ -230,50 +245,82 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
-    public ResponseEntityBase confirmedBooking(Long bookingId) {
+    @Transactional
+    public ResponseEntityBase changeBookingStatus(Long bookingId, String bookingStatus) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         User currentUser = authService.getCurrentUser();
         Booking booking = validateChangeBookingStatus(bookingId);
-        String bookingStatus = booking.getStatus().toString();
-        if (!bookingStatus.equals("PENDING")) {
-            throw new BadRequestException("Your appointment has been " + bookingStatus + " and cannot be confirmed.");
+        EBookingStatus newBookingStatus = validateBookingStatus(bookingStatus);
+        String oldBookingStatus = booking.getBookingStatus().toString();
+        switch (newBookingStatus) {
+            case CONFIRMED -> {
+                if (!oldBookingStatus.equals("PENDING") && !oldBookingStatus.equals("PENDING_CHANGE"))
+                    throw new BadRequestException("Booking status conversion from "+ oldBookingStatus +" to "+ newBookingStatus.name() +" is invalid.");
+                booking.setBookingStatus(EBookingStatus.CONFIRMED);
+            }
+            case REJECTED -> {
+                if (!oldBookingStatus.equals("PENDING"))
+                    throw new BadRequestException("Booking status conversion from "+ oldBookingStatus +" to "+ newBookingStatus.name() +" is invalid.");
+                booking.setBookingStatus(EBookingStatus.REJECTED);
+            }
+            case PENDING_CHANGE -> {
+                if (!oldBookingStatus.equals("CONFIRMED"))
+                    throw new BadRequestException("Booking status conversion from "+ oldBookingStatus +" to "+ newBookingStatus.name() +" is invalid.");
+                booking.setBookingStatus(EBookingStatus.PENDING_CHANGE);
+            }
+            case CANCELLED_BY_PATIENT -> {
+                if (!oldBookingStatus.equals("PENDING") && !oldBookingStatus.equals("PENDING_CHANGE") && !oldBookingStatus.equals("CONFIRMED")) {
+                    throw new BadRequestException("Booking status conversion from " + oldBookingStatus + " to " + newBookingStatus.name() + " is invalid.");
+                }
+                booking.setBookingStatus(EBookingStatus.CANCELLED_BY_PATIENT);
+            }
+            case CANCELLED_BY_ADMIN -> {
+                if (!oldBookingStatus.equals("CONFIRMED"))
+                    throw new BadRequestException("Booking status conversion from "+ oldBookingStatus +" to "+ newBookingStatus.name() +" is invalid.");
+                booking.setBookingStatus(EBookingStatus.CANCELLED_BY_ADMIN);
+            }
+            case COMPLETED -> {
+                if (!oldBookingStatus.equals("CONFIRMED"))
+                    throw new BadRequestException("Booking status conversion from "+ oldBookingStatus +" to "+ newBookingStatus.name() +" is invalid.");
+                booking.setBookingStatus(EBookingStatus.COMPLETED);
+            }
+            case NO_SHOW -> {
+                if (!oldBookingStatus.equals("CONFIRMED"))
+                    throw new BadRequestException("Booking status conversion from "+ oldBookingStatus +" to "+ newBookingStatus.name() +" is invalid.");
+                booking.setBookingStatus(EBookingStatus.NO_SHOW);
+            }
         }
-        booking.setStatus(EBookingStatus.CONFIRMED);
         booking.setUpdatedBy(currentUser.getUsername());
+        booking.setUpdatedAt(LocalDateTime.now());
         bookingRepository.save(booking);
         response.setData(MessageConstants.CONFIRM_BOOKING_SUCCESS);
         return response;
     }
 
     @Override
-    public ResponseEntityBase cancelledBooking(Long bookingId) {
+    public ResponseEntityBase registerTimeOff(DoctorTimeOffRequest doctorTimeOffRequest) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
         User currentUser = authService.getCurrentUser();
-        Booking booking = validateChangeBookingStatus(bookingId);
-        String bookingStatus = booking.getStatus().toString();
-        if (!bookingStatus.equals("PENDING") && !bookingStatus.equals("CONFIRMED")) {
-            throw new BadRequestException("Your appointment has been " + bookingStatus + " and cannot be cancelled.");
-        }
-        booking.setStatus(EBookingStatus.CANCELLED);
-        booking.setUpdatedBy(currentUser.getUsername());
-        bookingRepository.save(booking);
-        response.setData(MessageConstants.CANCELED_BOOKING_SUCCESS);
-        return response;
-    }
+        Doctor doctor = doctorRepository.findDoctorByUserId(currentUser.getUserId());
+        LocalDateTime timeOffStart = doctorTimeOffRequest.getTimeOffStart();
+        LocalDateTime timeOffEnd = doctorTimeOffRequest.getTimeOffEnd();
+        List<BookingTimeInfoProjection> bookingTimeInfoProjections =
+                bookingRepository.findBookingsOverlappingDoctorTimeOff(doctor.getDoctorId(), timeOffStart, timeOffEnd);
+        bookingTimeInfoProjections.forEach(bookingTimeInfoProjection -> {
+            Long bookingId = bookingTimeInfoProjection.getBookingId();
+            LocalDate workingLocalDate = bookingTimeInfoProjection.getWorkingDay()
+                    .toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+            LocalDateTime slotStartTime = LocalDateTime.of(workingLocalDate, bookingTimeInfoProjection.getStartTime());
+            Long hoursDiff = Duration.between(timeOffStart, slotStartTime).toHours();
+            if (hoursDiff >= 24) {
+                Booking booking = bookingRepository.findById(bookingId).orElseThrow(()
+                        -> new ResourceNotFoundException("Booking id", bookingId.toString()));
+                booking.setBookingStatus(EBookingStatus.PENDING_CHANGE);
+                booking.setUpdatedBy(currentUser.getUsername());
+                booking.setUpdatedAt(LocalDateTime.now());
+            }
+        });
 
-    @Override
-    public ResponseEntityBase completedBooking(Long bookingId) {
-        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        User currentUser = authService.getCurrentUser();
-        Booking booking = validateChangeBookingStatus(bookingId);
-        String bookingStatus = booking.getStatus().toString();
-        if (!bookingStatus.equals("CONFIRMED") && !bookingStatus.equals("CANCELLED")) {
-            throw new BadRequestException("Your appointment has been " + bookingStatus + " and cannot be cancelled.");
-        }
-        booking.setStatus(EBookingStatus.COMPLETED);
-        booking.setUpdatedBy(currentUser.getUsername());
-        bookingRepository.save(booking);
-        response.setData(MessageConstants.COMPLETED_BOOKING_SUCCESS);
         return response;
     }
 
@@ -283,7 +330,7 @@ public class DoctorServiceImpl implements DoctorService {
         User currentUser = authService.getCurrentUser();
         Doctor doctor = doctorRepository.findDoctorByUserId(currentUser.getUserId());
         if (Objects.nonNull(doctor)) {
-            Pageable pageable = commonServiceImpl.pagingSort(page, size, sorts);
+            Pageable pageable = commonService.pagingSort(page, size, sorts);
             Page<BookingDetailsInfoProjection> bookingDetailsPage =
                     bookingRepository.getBookingDetailsByDoctorId(doctor.getDoctorId(), pageable);
             BookingResponse bookingResponse = BookingResponse.builder()
@@ -482,7 +529,7 @@ public class DoctorServiceImpl implements DoctorService {
                 } catch (AmazonClientException deleteEx) {
                     log.error("S3 rollback failed: {}", deleteEx.getMessage());
                 }
-                throw new SystemException(MessageConstants.ERROR_SAVE_OR_ROLLBACK_MEDICAL_IMAGE_TO_S3);
+                throw new BadRequestException(MessageConstants.ERROR_SAVE_OR_ROLLBACK_MEDICAL_IMAGE_TO_S3);
             }
         });
         medicalImageRepository.save(medicalImage);
@@ -544,8 +591,8 @@ public class DoctorServiceImpl implements DoctorService {
         Doctor doctor = doctorRepository.findDoctorByUserId(currentUser.getUserId());
         if (!checkAdmin && doctor != null && !doctor.getDoctorId().equals(doctorId))
             throw new ForbiddenException(MessageConstants.FORBIDDEN_ADD_MEDICAL_RECORD);
-        if (!booking.getStatus().equals(EBookingStatus.COMPLETED))
-             throw new BadRequestException("Booking status is "+booking.getStatus().name()+". Booking status must be completed to be allowed to create medical records.");
+        if (!booking.getBookingStatus().equals(EBookingStatus.COMPLETED))
+             throw new BadRequestException("Booking status is "+booking.getBookingStatus().name()+". Booking status must be completed to be allowed to create medical records.");
         BookingTimeInfoProjection bookingTime = bookingRepository.getBookingInfoByBookingId(booking.getBookingId());
         LocalDateTime visitDate = medicalRecordRequest.getVisitDate();
         LocalDate workingDay = bookingTime.getWorkingDay().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
@@ -663,6 +710,28 @@ public class DoctorServiceImpl implements DoctorService {
         return EEducationLevel.valueOf(enumValue);
     }
 
+    private EBookingStatus validateBookingStatus(String bookingStatus) {
+        String enumValue;
+        if (bookingStatus.equalsIgnoreCase("CONFIRMED")) {
+            enumValue = "CONFIRMED";
+        } else if (bookingStatus.equalsIgnoreCase("REJECTED")) {
+            enumValue = "REJECTED";
+        } else if (bookingStatus.equalsIgnoreCase("COMPLETED")) {
+            enumValue = "COMPLETED";
+        } else if (bookingStatus.equalsIgnoreCase("PENDING_CHANGE")) {
+            enumValue = "PENDING_CHANGE";
+        } else if (bookingStatus.equalsIgnoreCase("CANCELLED_BY_PATIENT")) {
+            enumValue = "CANCELLED_BY_PATIENT";
+        } else if (bookingStatus.equalsIgnoreCase("CANCELLED_BY_ADMIN")) {
+            enumValue = "CANCELLED_BY_ADMIN";
+        } else if (bookingStatus.equalsIgnoreCase("NO_SHOW")) {
+            enumValue = "NO_SHOW";
+        } else {
+            throw new ResourceNotFoundException("Booking status", bookingStatus);
+        }
+        return EBookingStatus.valueOf(enumValue);
+    }
+
     public boolean isVisitDateValid(LocalDateTime visitDate, LocalDate workingDayDate,
                                     LocalTime startTime, LocalTime endTime) {
         LocalDate visitDateOnly = visitDate.toLocalDate();
@@ -753,11 +822,12 @@ public class DoctorServiceImpl implements DoctorService {
                     int seq = Integer.parseInt(parts[2]);
                     maxCodeValue = Math.max(maxCodeValue, seq);
                 } catch (NumberFormatException ignored) {
-                    throw new SystemException(MessageConstants.SOMETHING_WENT_WRONG);
+                    throw new BadRequestException(MessageConstants.SOMETHING_WENT_WRONG);
                 }
             }
         }
         String formattedDate = LocalDateTime.now().toLocalDate().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         return String.format("MR-%s-%05d", formattedDate, maxCodeValue + 1);
     }
+
 }

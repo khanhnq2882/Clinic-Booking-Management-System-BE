@@ -243,8 +243,7 @@ public class AuthServiceImpl implements AuthService {
         if (!authentication.isAuthenticated() || authentication.getName() == null) {
             return null;
         }
-        User user = userRepository.findUserByUsername(authentication.getName());
-        return user;
+        return userRepository.findUserByUsername(authentication.getName());
     }
 
     @Override

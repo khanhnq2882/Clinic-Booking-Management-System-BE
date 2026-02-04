@@ -8,7 +8,7 @@ import khanhnq.project.clinicbookingmanagementsystem.model.response.*;
 import khanhnq.project.clinicbookingmanagementsystem.repository.ServicesRepository;
 import khanhnq.project.clinicbookingmanagementsystem.model.request.ServiceRequest;
 import khanhnq.project.clinicbookingmanagementsystem.service.AdminService;
-import khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl.CommonServiceImpl;
+import khanhnq.project.clinicbookingmanagementsystem.service.serviceImpl.CommonService;
 import lombok.AllArgsConstructor;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
@@ -28,9 +28,8 @@ import java.util.List;
 @AllArgsConstructor
 @RequestMapping(path = "/admin", produces = {MediaType.APPLICATION_JSON_VALUE})
 public class AdminController {
-
     private final AdminService adminService;
-    private final CommonServiceImpl commonService;
+    private final CommonService commonService;
     private final ServicesRepository serviceRepository;
 
     @PostMapping("/reset-password/{email}")
@@ -53,12 +52,31 @@ public class AdminController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllUsers(page, size, sorts));
     }
 
+    @GetMapping("/get-user-information/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResponseEntityBase> geUserInformation(@PathVariable("userId") Long userId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getUserInformation(userId));
+    }
+
     @GetMapping("/get-all-doctors")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ResponseEntityBase> getAllDoctors(@RequestParam(defaultValue = "0") int page,
                                                         @RequestParam(defaultValue = "3") int size,
                                                         @RequestParam(defaultValue = "doctorId,asc") String[] sorts) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getAllDoctors(page, size, sorts));
+    }
+
+    @GetMapping("/get-doctor-information/{doctorId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResponseEntityBase> getDoctorInformation(@PathVariable("doctorId") Long doctorId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.getDoctorInformation(doctorId));
+    }
+
+    @PostMapping("/verification-doctor-information/{doctorId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResponseEntityBase> getDoctorInformation(@PathVariable("doctorId") Long doctorId,
+                                                                   @RequestParam String verificationStatus) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(adminService.verificationDoctorInformation(doctorId, verificationStatus));
     }
 
     @GetMapping("/get-bookings")

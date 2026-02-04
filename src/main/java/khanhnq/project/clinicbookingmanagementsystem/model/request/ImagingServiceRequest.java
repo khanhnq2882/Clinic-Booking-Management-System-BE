@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
 
 @Data
 @AllArgsConstructor
@@ -11,7 +12,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class ImagingServiceRequest {
     private String imagingServiceName;
-    private String imagingServicePrice;
+    private BigDecimal imagingServicePrice;
     private String description;
     private Integer estimatedMinutes;
     private String preparationRequirements;

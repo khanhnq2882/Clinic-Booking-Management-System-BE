@@ -29,7 +29,6 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -59,7 +58,7 @@ public class AdminServiceImpl implements AdminService {
     private final TestPackageAttributeRepository testPackageAttributeRepository;
     private final NormalRangeRepository normalRangeRepository;
     private final ImagingServiceRepository imagingServiceRepository;
-    private final CommonServiceImpl commonServiceImpl;
+    private final CommonService commonService;
     private final Workbook workbook = new XSSFWorkbook();
     private final JavaMailSender mailSender;
     private PasswordEncoder passwordEncoder;
@@ -113,8 +112,8 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public ResponseEntityBase getAllUsers(int page, int size, String[] sorts) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        Page<User> userPage = userRepository.getAllUsers(commonServiceImpl.pagingSort(page, size, sorts));
-        List<UserDTO> users = userPage.getContent().stream().map(commonServiceImpl::getUserDetails).toList();
+        Page<User> userPage = userRepository.getAllUsers(commonService.pagingSort(page, size, sorts));
+        List<UserDTO> users = userPage.getContent().stream().map(commonService::getUserDetails).toList();
         UserResponse userResponse = UserResponse.builder()
                 .totalItems(userPage.getTotalElements())
                 .totalPages(userPage.getTotalPages())
@@ -126,21 +125,64 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    public ResponseEntityBase getUserInformation(Long userId) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        User user = userRepository.findById(userId).orElseThrow(()
+               -> new BadRequestException("Doctor with id " +userId +" does not exist."));
+        response.setData(commonService.getUserDetails(user));
+        return response;
+    }
+
+    @Override
     public ResponseEntityBase getAllDoctors(int page, int size, String[] sorts) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        Page<DoctorInfoProjection> doctorPage = doctorRepository.getDoctorsInfo(commonServiceImpl.pagingSort(page, size, sorts));
+        Page<DoctorInfoProjection> doctorPage = doctorRepository.getDoctorsInfo(commonService.pagingSort(page, size, sorts));
         List<DoctorInfoDTO> doctors = doctorPage.getContent().stream()
                 .filter(doctorInfoProjection -> doctorInfoProjection.getFileType() == null || doctorInfoProjection.getFileType().equals("avatar"))
                 .map(doctorInfoProjection -> {
                     DoctorInfoDTO doctorInfoDTO = DoctorMapper.DOCTOR_MAPPER.mapToDoctorInfo(doctorInfoProjection);
                     if (doctorInfoProjection.getFileType() != null) {
-                        FileResponse fileResponse = commonServiceImpl.getFileFromS3(
+                        FileResponse fileResponse = commonService.getFileFromS3(
                                 "avatar", doctorInfoProjection.getFileName(), doctorInfoProjection.getFilePath());
                         doctorInfoDTO.setAvatar(fileResponse);
                     }
                     return doctorInfoDTO;
                 }).toList();
         response.setData(doctors);
+        return response;
+    }
+
+    @Override
+    public ResponseEntityBase getDoctorInformation(Long doctorId) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        DoctorInfoProjection doctorInfoProjection = doctorRepository.getDoctorInfo(doctorId);
+        if (Objects.isNull(doctorInfoProjection))
+            throw new BadRequestException("Doctor with id " + doctorId +" does not exist.");
+        DoctorInfoDTO doctorInfoDTO = DoctorMapper.DOCTOR_MAPPER.mapToDoctorInfo(doctorInfoProjection);
+        if (doctorInfoProjection.getFileType() != null) {
+            FileResponse fileResponse = commonService.getFileFromS3(
+                    "avatar", doctorInfoProjection.getFileName(), doctorInfoProjection.getFilePath());
+            doctorInfoDTO.setAvatar(fileResponse);
+        }
+        response.setData(doctorInfoDTO);
+        return response;
+    }
+
+    @Override
+    public ResponseEntityBase verificationDoctorInformation(Long doctorId, String verificationStatus) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
+        User currentUser = authService.getCurrentUser();
+        Doctor doctor = doctorRepository.findById(doctorId).orElseThrow(() ->
+                new BadRequestException("Doctor with id " + doctorId +" does not exist."));
+        if (!doctor.getDoctorVerificationStatus().name().equals("PENDING_APPROVAL"))
+            throw new BadRequestException("Doctor information with "+ doctorId +" already verified.");
+        if (!verificationStatus.equalsIgnoreCase("APPROVED") && !verificationStatus.equalsIgnoreCase("REJECTED"))
+            throw new ResourceNotFoundException("Doctor verification status", verificationStatus);
+        doctor.setDoctorVerificationStatus(EDoctorVerificationStatus.valueOf(verificationStatus));
+        doctor.setUpdatedBy(currentUser.getUsername());
+        doctor.setUpdatedAt(LocalDateTime.now());
+        doctorRepository.save(doctor);
+        response.setData("Doctor "+ doctorId +" information verification successful.");
         return response;
     }
 
@@ -154,6 +196,7 @@ public class AdminServiceImpl implements AdminService {
         services.setStatus(EServiceStatus.DRAFT);
         services.setSpecialization(specialization);
         services.setCreatedBy(currentUser.getUsername());
+        services.setCreatedAt(LocalDateTime.now());
         servicesRepository.save(services);
         response.setData(MessageConstants.ADD_SERVICE_SUCCESS);
         return response;
@@ -211,7 +254,7 @@ public class AdminServiceImpl implements AdminService {
         return userRepository.getUsers().stream()
                 .map(user -> {
                     UserDTO userDTO = UserMapper.USER_MAPPER.mapToUserDTO(user);
-                    userDTO.setUserAddress(commonServiceImpl.getAddress(user));
+                    userDTO.setUserAddress(commonService.getAddress(user));
                     return userDTO;
                 }).toList();
     }
@@ -228,7 +271,7 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public ResponseEntityBase getAllServices(int page, int size, String[] sorts) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        Page<Services> servicesPage = servicesRepository.findAll(commonServiceImpl.pagingSort(page, size, sorts));
+        Page<Services> servicesPage = servicesRepository.findAll(commonService.pagingSort(page, size, sorts));
         List<ServicesDTO> servicesResponses = servicesPage.getContent().stream()
                 .map(services -> {
                     ServicesDTO servicesResponse = ServicesMapper.SERVICES_MAPPER.mapToServicesResponse(services);
@@ -248,7 +291,7 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public ResponseEntityBase getAllBookings(int page, int size, String[] sorts) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.OK.value(), null, null);
-        Pageable pageable = commonServiceImpl.pagingSort(page, size, sorts);
+        Pageable pageable = commonService.pagingSort(page, size, sorts);
         Page<BookingDetailsInfoProjection> bookingsPage = bookingRepository.getAllBookings(pageable);
         BookingResponse bookingResponse = BookingResponse.builder()
                 .totalItems(bookingsPage.getTotalElements())
@@ -275,14 +318,13 @@ public class AdminServiceImpl implements AdminService {
         TestPackage testPackage = new TestPackage();
         testPackage.setTestPackageCode(generateTestPackageCode());
         testPackage.setTestPackageName(testPackageName);
-        BigDecimal testPackagePrice = commonServiceImpl.validateAndConvertAmount(testPackageRequest.getTestPackagePrice());
-        testPackage.setTestPackagePrice(testPackagePrice);
+        testPackage.setTestPackagePrice(testPackageRequest.getTestPackagePrice());
         testPackage.setTestPreparationRequirements(testPackageRequest.getTestPreparationRequirements());
         testPackage.setTestDescription(testPackageRequest.getTestDescription());
         testPackage.setService(service);
         List<TestPackageAttribute> testPackageAttributes = createTestPackageAttributes(testPackageRequest, testPackage, currentUser);
         testPackage.setTestPackageAttributes(testPackageAttributes);
-        testPackage.setStatus(ETestPackageStatus.DRAFT);
+        testPackage.setStatus(EServiceStatus.DRAFT);
         testPackage.setCreatedBy(currentUser.getUsername());
         testPackageRepository.save(testPackage);
         response.setData(MessageConstants.ADD_TEST_PACKAGE_SUCCESS);
@@ -316,14 +358,13 @@ public class AdminServiceImpl implements AdminService {
                 throw new ResourceAlreadyExistException("Test package name", testPackageName);
             }
             testPackage.setTestPackageName(testPackageName);
-            BigDecimal testPackagePrice = commonServiceImpl.validateAndConvertAmount(testPackageRequest.getTestPackagePrice());
-            testPackage.setTestPackagePrice(testPackagePrice);
+            testPackage.setTestPackagePrice(testPackageRequest.getTestPackagePrice());
             testPackage.setTestPreparationRequirements(testPackageRequest.getTestPreparationRequirements());
             testPackage.setTestDescription(testPackageRequest.getTestDescription());
             testPackage.setService(service);
             List<TestPackageAttribute> savedTestPackageAttributes = createTestPackageAttributes(testPackageRequest, testPackage, currentUser);
             testPackage.setTestPackageAttributes(savedTestPackageAttributes);
-            testPackage.setStatus(ETestPackageStatus.DRAFT);
+            testPackage.setStatus(EServiceStatus.DRAFT);
             testPackage.setUpdatedBy(currentUser.getUsername());
             testPackageRepository.save(testPackage);
             response.setData(MessageConstants.UPDATE_TEST_PACKAGE_SUCCESS);
@@ -339,20 +380,20 @@ public class AdminServiceImpl implements AdminService {
         User user = authService.getCurrentUser();
         TestPackage testPackage = testPackageRepository.findById(testPackageId)
                 .orElseThrow(() -> new ResourceNotFoundException("Test Package Id", testPackageId.toString()));
-        ETestPackageStatus testPackageStatus = testPackage.getStatus();
-        List<String> testPackageStatusList = Arrays.stream(ETestPackageStatus.values()).map(Enum::name).toList();
+        EServiceStatus serviceStatus = testPackage.getStatus();
+        List<String> testPackageStatusList = Arrays.stream(EServiceStatus.values()).map(Enum::name).toList();
         if (testPackageStatusList.stream().noneMatch(s -> s.equalsIgnoreCase(status))) {
             throw new ResourceNotFoundException("Test Package Status", status);
         }
-        ETestPackageStatus newStatus = ETestPackageStatus.valueOf(status.toUpperCase());
-        boolean isValid = switch (testPackageStatus) {
-            case DRAFT -> newStatus == ETestPackageStatus.ACTIVE;
-            case ACTIVE -> newStatus == ETestPackageStatus.INACTIVE;
-            case INACTIVE -> newStatus == ETestPackageStatus.ACTIVE || newStatus == ETestPackageStatus.DEPRECATED;
+        EServiceStatus newStatus = EServiceStatus.valueOf(status.toUpperCase());
+        boolean isValid = switch (serviceStatus) {
+            case DRAFT -> newStatus == EServiceStatus.ACTIVE;
+            case ACTIVE -> newStatus == EServiceStatus.INACTIVE;
+            case INACTIVE -> newStatus == EServiceStatus.ACTIVE || newStatus == EServiceStatus.DEPRECATED;
             default -> false;
         };
         if (!isValid) {
-            throw new BadRequestException("The test package cannot change status from " + testPackageStatus + " to " + newStatus);
+            throw new BadRequestException("The test package cannot change status from " + serviceStatus + " to " + newStatus);
         }
         testPackage.setStatus(newStatus);
         testPackage.setUpdatedBy(user.getUsername());
@@ -373,12 +414,11 @@ public class AdminServiceImpl implements AdminService {
             throw new ResourceNotFoundException("Imaging Service Type", imagingServiceType);
         }
         imagingServiceRequest.setImagingServiceType(imagingServiceType.toUpperCase());
-        BigDecimal imagingServicePrice = commonServiceImpl.validateAndConvertAmount(imagingServiceRequest.getImagingServicePrice());
-        imagingServiceRequest.setImagingServicePrice(imagingServicePrice.toString());
+        imagingServiceRequest.setImagingServicePrice(imagingServiceRequest.getImagingServicePrice());
         ImagingService imagingService = ImagingServiceMapper.IMAGING_SERVICE_MAPPER.mapToImagingService(imagingServiceRequest);
         imagingService.setImagingServiceCode(generateImagingServiceCode(imagingServiceType.toUpperCase()));
         imagingService.setService(service);
-        imagingService.setStatus(EImagingServiceStatus.DRAFT);
+        imagingService.setStatus(EServiceStatus.DRAFT);
         imagingService.setCreatedBy(currentUser.getUsername());
         imagingServiceRepository.save(imagingService);
         response.setData(MessageConstants.ADD_IMAGING_SERVICE_SUCCESS);
@@ -404,7 +444,7 @@ public class AdminServiceImpl implements AdminService {
             ImagingServiceMapper.IMAGING_SERVICE_MAPPER.updateImagingService(imagingService, imagingServiceRequest);
             imagingService.setImagingServiceCode(generateImagingServiceCode(imagingServiceType.toUpperCase()));
             imagingService.setService(service);
-            imagingService.setStatus(EImagingServiceStatus.DRAFT);
+            imagingService.setStatus(EServiceStatus.DRAFT);
             imagingService.setUpdatedBy(currentUser.getUsername());
             imagingServiceRepository.save(imagingService);
             response.setData(MessageConstants.UPDATE_IMAGING_SERVICE_SUCCESS);
@@ -420,20 +460,20 @@ public class AdminServiceImpl implements AdminService {
         User user = authService.getCurrentUser();
         ImagingService imagingService = imagingServiceRepository.findById(imagingServiceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Imaging Service ID", imagingServiceId.toString()));
-        EImagingServiceStatus imagingServiceStatus = imagingService.getStatus();
-        List<String> imagingServiceStatusList = Arrays.stream(EImagingServiceStatus.values()).map(Enum::name).toList();
+        EServiceStatus serviceStatus = imagingService.getStatus();
+        List<String> imagingServiceStatusList = Arrays.stream(EServiceStatus.values()).map(Enum::name).toList();
         if (imagingServiceStatusList.stream().noneMatch(s -> s.equalsIgnoreCase(status))) {
             throw new ResourceNotFoundException("Imaging Service Status", status);
         }
-        EImagingServiceStatus newStatus = EImagingServiceStatus.valueOf(status.toUpperCase());
-        boolean isValid = switch (imagingServiceStatus) {
-            case DRAFT -> newStatus == EImagingServiceStatus.ACTIVE;
-            case ACTIVE -> newStatus == EImagingServiceStatus.INACTIVE;
-            case INACTIVE -> newStatus == EImagingServiceStatus.ACTIVE || newStatus == EImagingServiceStatus.DEPRECATED;
+        EServiceStatus newStatus = EServiceStatus.valueOf(status.toUpperCase());
+        boolean isValid = switch (serviceStatus) {
+            case DRAFT -> newStatus == EServiceStatus.ACTIVE;
+            case ACTIVE -> newStatus == EServiceStatus.INACTIVE;
+            case INACTIVE -> newStatus == EServiceStatus.ACTIVE || newStatus == EServiceStatus.DEPRECATED;
             default -> false;
         };
         if (!isValid) {
-            throw new BadRequestException("The imaging service cannot change status from " + imagingServiceStatus + " to " + newStatus);
+            throw new BadRequestException("The imaging service cannot change status from " + serviceStatus + " to " + newStatus);
         }
         imagingService.setStatus(newStatus);
         imagingService.setUpdatedBy(user.getUsername());
@@ -449,7 +489,7 @@ public class AdminServiceImpl implements AdminService {
             Sheet sheet = workbook.createSheet("Users");
             String[] headers = {"User ID", "User Code", "Full Name", "Email", "Date Of Birth",
                     "Gender", "Phone Number",  "Address", "Status", "Created At"};
-            commonServiceImpl.createHeader(workbook, sheet, headers);
+            commonService.createHeader(workbook, sheet, headers);
             int firstRow = 1;
             for (UserDTO user : users) {
                 Row currentRow = sheet.createRow(firstRow++);
@@ -470,21 +510,21 @@ public class AdminServiceImpl implements AdminService {
                 DateTimeFormatter createdAtFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
                 LocalDateTime createdAt = LocalDateTime.parse(user.getCreatedAt());
                 user.setCreatedAt(createdAt.format(createdAtFormatter));
-                commonServiceImpl.createCell(workbook, currentRow, 0, user.getUserId());
-                commonServiceImpl.createCell(workbook, currentRow, 1, user.getUserCode());
-                commonServiceImpl.createCell(workbook, currentRow, 2, fullName);
-                commonServiceImpl.createCell(workbook, currentRow, 3, user.getEmail());
-                commonServiceImpl.createCell(workbook, currentRow, 4, dateOfBirth);
-                commonServiceImpl.createCell(workbook, currentRow, 5, gender);
-                commonServiceImpl.createCell(workbook, currentRow, 6, Objects.isNull(user.getPhoneNumber()) ? "" : user.getPhoneNumber());
-                commonServiceImpl.createCell(workbook, currentRow, 7, address);
-                commonServiceImpl.createCell(workbook, currentRow, 8, user.getStatus());
-                commonServiceImpl.createCell(workbook, currentRow, 9, user.getCreatedAt());
+                commonService.createCell(workbook, currentRow, 0, user.getUserId());
+                commonService.createCell(workbook, currentRow, 1, user.getUserCode());
+                commonService.createCell(workbook, currentRow, 2, fullName);
+                commonService.createCell(workbook, currentRow, 3, user.getEmail());
+                commonService.createCell(workbook, currentRow, 4, dateOfBirth);
+                commonService.createCell(workbook, currentRow, 5, gender);
+                commonService.createCell(workbook, currentRow, 6, Objects.isNull(user.getPhoneNumber()) ? "" : user.getPhoneNumber());
+                commonService.createCell(workbook, currentRow, 7, address);
+                commonService.createCell(workbook, currentRow, 8, user.getStatus());
+                commonService.createCell(workbook, currentRow, 9, user.getCreatedAt());
             }
             workbook.write(outputStream);
             return new ByteArrayInputStream(outputStream.toByteArray());
         } catch (IOException ex) {
-            throw new SystemException(MessageConstants.FAILED_EXPORT_DATA_EXCEL);
+            throw new BadRequestException(MessageConstants.FAILED_EXPORT_DATA_EXCEL);
         }
     }
 
@@ -494,20 +534,20 @@ public class AdminServiceImpl implements AdminService {
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             Sheet sheet = workbook.createSheet("Services");
             String[] headers = {"Service Name", "Price", "Description", "Service Category", "Status"};
-            commonServiceImpl.createHeader(workbook, sheet, headers);
+            commonService.createHeader(workbook, sheet, headers);
             int firstRow = 1;
             for (ServicesDTO service : services) {
                 Row currentRow = sheet.createRow(firstRow++);
-                commonServiceImpl.createCell(workbook, currentRow, 0, Objects.isNull(service.getServiceName()) ? " " : service.getServiceName());
-                commonServiceImpl.createCell(workbook, currentRow, 1, service.getServicePrice());
-                commonServiceImpl.createCell(workbook, currentRow, 2, Objects.isNull(service.getDescription()) ? " " : service.getDescription());
-                commonServiceImpl.createCell(workbook, currentRow, 3, Objects.isNull(service.getSpecializationName()) ? " " : service.getSpecializationName());
-                commonServiceImpl.createCell(workbook, currentRow, 4, Objects.isNull(service.getStatus()) ? " " : service.getStatus());
+                commonService.createCell(workbook, currentRow, 0, Objects.isNull(service.getServiceName()) ? " " : service.getServiceName());
+                commonService.createCell(workbook, currentRow, 1, service.getServicePrice());
+                commonService.createCell(workbook, currentRow, 2, Objects.isNull(service.getDescription()) ? " " : service.getDescription());
+                commonService.createCell(workbook, currentRow, 3, Objects.isNull(service.getSpecializationName()) ? " " : service.getSpecializationName());
+                commonService.createCell(workbook, currentRow, 4, Objects.isNull(service.getStatus()) ? " " : service.getStatus());
             }
             workbook.write(outputStream);
             return new ByteArrayInputStream(outputStream.toByteArray());
         } catch (IOException ex) {
-            throw new SystemException(MessageConstants.FAILED_EXPORT_DATA_EXCEL);
+            throw new BadRequestException(MessageConstants.FAILED_EXPORT_DATA_EXCEL);
         }
     }
 
@@ -518,28 +558,28 @@ public class AdminServiceImpl implements AdminService {
             Sheet sheet = workbook.createSheet("Bookings");
             String[] headers = {"Full Name", "Date Of Birth", "Gender", "Phone Number", "Address",
                     "Appointment Date", "Start Time", "End Time", "Specialization", "Describe Symptoms"};
-            commonServiceImpl.createHeader(workbook, sheet, headers);
+            commonService.createHeader(workbook, sheet, headers);
             int firstRow = 1;
             for (BookingDetailsInfoProjection booking : bookings) {
                 Row currentRow = sheet.createRow(firstRow++);
                 String fullName = booking.getFirstName() + " " + booking.getLastName();
 //                AddressResponse userAddress = booking.getUserAddress();
 //                String address = userAddress.getSpecificAddress() + ", " + userAddress.getWardName() + ", " + userAddress.getDistrictName() + ", " + userAddress.getCityName();
-                commonServiceImpl.createCell(workbook, currentRow, 0, (Objects.isNull(booking.getFirstName()) && Objects.isNull(booking.getLastName())) ? " " : fullName);
-                commonServiceImpl.createCell(workbook, currentRow, 1, Objects.isNull(booking.getDateOfBirth()) ? " " : booking.getDateOfBirth());
+                commonService.createCell(workbook, currentRow, 0, (Objects.isNull(booking.getFirstName()) && Objects.isNull(booking.getLastName())) ? " " : fullName);
+                commonService.createCell(workbook, currentRow, 1, Objects.isNull(booking.getDateOfBirth()) ? " " : booking.getDateOfBirth());
 //                commonServiceImpl.createCell(workbook, currentRow, 2, booking.getGender() == 1 ? "Male" : "Female");
-                commonServiceImpl.createCell(workbook, currentRow, 3, Objects.isNull(booking.getPhoneNumber()) ? " " : booking.getPhoneNumber());
+                commonService.createCell(workbook, currentRow, 3, Objects.isNull(booking.getPhoneNumber()) ? " " : booking.getPhoneNumber());
 //                commonServiceImpl.createCell(workbook, currentRow, 4, Objects.isNull(booking.getUserAddress().getSpecificAddress()) ? " " : address);
 //                commonServiceImpl.createCell(workbook, currentRow, 5, Objects.isNull(booking.getAppointmentDate()) ? " " : booking.getAppointmentDate());
-                commonServiceImpl.createCell(workbook, currentRow, 6, Objects.isNull(booking.getStartTime()) ? " " : booking.getStartTime());
-                commonServiceImpl.createCell(workbook, currentRow, 7, Objects.isNull(booking.getEndTime()) ? " " : booking.getEndTime());
+                commonService.createCell(workbook, currentRow, 6, Objects.isNull(booking.getStartTime()) ? " " : booking.getStartTime());
+                commonService.createCell(workbook, currentRow, 7, Objects.isNull(booking.getEndTime()) ? " " : booking.getEndTime());
 //                commonServiceImpl.createCell(workbook, currentRow, 8, Objects.isNull(booking.getSpecialization()) ? " " : booking.getSpecialization());
-                commonServiceImpl.createCell(workbook, currentRow, 9, Objects.isNull(booking.getDescribeSymptoms()) ? " " : booking.getDescribeSymptoms());
+                commonService.createCell(workbook, currentRow, 9, Objects.isNull(booking.getDescribeSymptoms()) ? " " : booking.getDescribeSymptoms());
             }
             workbook.write(outputStream);
             return new ByteArrayInputStream(outputStream.toByteArray());
         } catch (IOException ex) {
-            throw new SystemException(MessageConstants.FAILED_EXPORT_DATA_EXCEL);
+            throw new BadRequestException(MessageConstants.FAILED_EXPORT_DATA_EXCEL);
         }
     }
 
@@ -554,13 +594,13 @@ public class AdminServiceImpl implements AdminService {
             List<Row> rows = Lists.newArrayList(sheet.rowIterator());
             for (int indexRow = 1; indexRow < rows.size(); indexRow++) {
                 Services service = new Services();
-                List<Cell> cells = commonServiceImpl.getAllCells(rows.get(indexRow));
+                List<Cell> cells = commonService.getAllCells(rows.get(indexRow));
                 for (int indexCell = 0; indexCell < cells.size(); indexCell++) {
                     String colName = serviceHeaderCellIndex(rows.get(0)).get(indexCell);
-                    commonServiceImpl.checkBlankType(cells.get(indexCell), indexRow, colName);
+                    commonService.checkBlankType(cells.get(indexCell), indexRow, colName);
                     switch (colName) {
                         case "Service Name" -> {
-                            String serviceName = commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue();
+                            String serviceName = commonService.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue();
                             List<String> servicesName = servicesRepository.findAll().stream().map(Services::getServiceName).toList();
                             servicesName.forEach(name -> {
                                 if (serviceName.equals(name))
@@ -569,11 +609,11 @@ public class AdminServiceImpl implements AdminService {
                             service.setServiceName(serviceName);
                         }
                         case "Description" ->
-                                service.setDescription(commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue());
+                                service.setDescription(commonService.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue());
                         case "Service Category" -> {
                         }
                         case "Status" -> {
-                            String serviceStatus = commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue();
+                            String serviceStatus = commonService.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue();
                             if (Arrays.stream(EServiceStatus.values()).noneMatch(eServiceStatus -> eServiceStatus.name().equalsIgnoreCase(serviceStatus))) {
                                 throw new BadRequestException(MessageConstants.INVALID_SERVICE_STATUS);
                             }
@@ -587,7 +627,7 @@ public class AdminServiceImpl implements AdminService {
             }
             return services;
         } catch (IOException e) {
-            throw new SystemException(MessageConstants.FAILED_IMPORT_DATA_EXCEL);
+            throw new BadRequestException(MessageConstants.FAILED_IMPORT_DATA_EXCEL);
         }
     }
 
@@ -604,11 +644,11 @@ public class AdminServiceImpl implements AdminService {
             for (int indexRow = 1; indexRow < rows.size(); indexRow++) {
                 BookingExcelResponse bookingExcelResponse = new BookingExcelResponse();
                 bookingExcelResponse.setRowIndex(indexRow);
-                List<Cell> cells = commonServiceImpl.getAllCells(rows.get(indexRow));
+                List<Cell> cells = commonService.getAllCells(rows.get(indexRow));
                 for (int indexCell = 0; indexCell < cells.size(); indexCell++) {
                     Map<Integer, String> headerCellIndex = bookingHeaderCellIndex(rows.get(0));
                     String colName = headerCellIndex.get(indexCell);
-                    commonServiceImpl.checkBlankType(cells.get(indexCell), indexRow, colName);
+                    commonService.checkBlankType(cells.get(indexCell), indexRow, colName);
                     switch (colName) {
                         case "Full Name" ->
                                 checkFullName(cells.get(indexCell), indexRow, colName, bookingExcelResponse);
@@ -617,9 +657,9 @@ public class AdminServiceImpl implements AdminService {
                         case "Gender" ->
                                 checkGender(cells.get(indexCell), indexRow, colName, bookingExcelResponse);
                         case "Phone Number" ->
-                                bookingExcelResponse.getBookingExcelDTO().setPhoneNumber(commonServiceImpl.getPhoneNumberFromExcel(cells.get(indexCell), indexRow, colName));
+                                bookingExcelResponse.getBookingExcelDTO().setPhoneNumber(commonService.getPhoneNumberFromExcel(cells.get(indexCell), indexRow, colName));
                         case "Address" ->
-                                bookingExcelResponse.getBookingExcelDTO().setAddress(commonServiceImpl.getAddressFromExcel(cells.get(indexCell), indexRow, colName));
+                                bookingExcelResponse.getBookingExcelDTO().setAddress(commonService.getAddressFromExcel(cells.get(indexCell), indexRow, colName));
                         case "Appointment Date" -> {
                             Date appointmentDate = checkFormatDate(cells.get(indexCell), indexRow, colName);
                             if (appointmentDate.before(Date.from(LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant()))) {
@@ -630,11 +670,11 @@ public class AdminServiceImpl implements AdminService {
                         case "Specialization" ->
                                 checkSpecificationName(cells.get(indexCell), indexRow, colName, bookingExcelResponse);
                         case "Start Time" ->
-                                bookingExcelResponse.getBookingExcelDTO().setStartTime(commonServiceImpl.checkNumericType(cells.get(indexCell), indexRow, colName).getLocalDateTimeCellValue().toLocalTime());
+                                bookingExcelResponse.getBookingExcelDTO().setStartTime(commonService.checkNumericType(cells.get(indexCell), indexRow, colName).getLocalDateTimeCellValue().toLocalTime());
                         case "End Time" ->
-                                bookingExcelResponse.getBookingExcelDTO().setEndTime(commonServiceImpl.checkNumericType(cells.get(indexCell), indexRow, colName).getLocalDateTimeCellValue().toLocalTime());
+                                bookingExcelResponse.getBookingExcelDTO().setEndTime(commonService.checkNumericType(cells.get(indexCell), indexRow, colName).getLocalDateTimeCellValue().toLocalTime());
                         case "Describe Symptoms" ->
-                                bookingExcelResponse.getBookingExcelDTO().setDescribeSymptoms(commonServiceImpl.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue());
+                                bookingExcelResponse.getBookingExcelDTO().setDescribeSymptoms(commonService.checkStringType(cells.get(indexCell), indexRow, colName).getStringCellValue());
                         default -> {
                         }
                     }
@@ -659,7 +699,7 @@ public class AdminServiceImpl implements AdminService {
             response.setData(responseMessage.toString());
             return response;
         } catch (IOException e) {
-            throw new SystemException(MessageConstants.FAILED_IMPORT_DATA_EXCEL);
+            throw new BadRequestException(MessageConstants.FAILED_IMPORT_DATA_EXCEL);
         }
     }
 
@@ -674,7 +714,7 @@ public class AdminServiceImpl implements AdminService {
 
     public Map<Integer, String> serviceHeaderCellIndex (Row row) {
         Map <Integer, String> headerCellIndex = new HashMap<>();
-        List<Cell> cellsHeader = commonServiceImpl.getAllCells(row);
+        List<Cell> cellsHeader = commonService.getAllCells(row);
         for (int i = 0; i < cellsHeader.size(); i++) {
             switch (cellsHeader.get(i).getStringCellValue()) {
                 case "Service Name" -> headerCellIndex.put(i, "Service Name");
@@ -691,7 +731,7 @@ public class AdminServiceImpl implements AdminService {
 
     public Map<Integer, String> bookingHeaderCellIndex (Row row) {
         Map <Integer, String> headerCellIndex = new HashMap<>();
-        List<Cell> cellsHeader = commonServiceImpl.getAllCells(row);
+        List<Cell> cellsHeader = commonService.getAllCells(row);
         for (int i = 0; i < cellsHeader.size(); i++) {
             switch (cellsHeader.get(i).getStringCellValue()) {
                 case "Full Name" -> headerCellIndex.put(i, "Full Name");
@@ -712,7 +752,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     private Date checkFormatDate (Cell cell, int indexRow, String colName) {
-        Date date = commonServiceImpl.checkDateType(cell, indexRow, colName).getDateCellValue();
+        Date date = commonService.checkDateType(cell, indexRow, colName).getDateCellValue();
         DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
         if (!dateFormat.format(date).matches("^\\d{4}-(0?[1-9]|1[012])-(0?[1-9]|[12][0-9]|3[01])$")) {
             throw new BadRequestException("Import failed. "+ colName +" in row " + (indexRow + 1) + " must be yyyy-MM-dd format.");
@@ -721,13 +761,13 @@ public class AdminServiceImpl implements AdminService {
     }
 
     private void checkFullName (Cell cell, int indexRow, String colName, BookingExcelResponse bookingExcelResponse) {
-        String fullName = commonServiceImpl.checkStringType(cell, indexRow, colName).getStringCellValue();
+        String fullName = commonService.checkStringType(cell, indexRow, colName).getStringCellValue();
         bookingExcelResponse.getBookingExcelDTO().setFirstName(fullName.split(" ")[0]);
         bookingExcelResponse.getBookingExcelDTO().setLastName(fullName.substring(fullName.split(" ")[0].length() + 1));
     }
 
     private void checkGender (Cell cell, int indexRow, String colName, BookingExcelResponse bookingExcelResponse) {
-        String gender = commonServiceImpl.checkStringType(cell, indexRow, colName).getStringCellValue();
+        String gender = commonService.checkStringType(cell, indexRow, colName).getStringCellValue();
         if (!gender.equalsIgnoreCase("Male") && !gender.equalsIgnoreCase("Female")) {
             throw new BadRequestException("Import failed. "+ colName +" in row " + (indexRow + 1) + " must be 'Male' or 'Female'.");
         }
@@ -735,7 +775,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     private void checkSpecificationName (Cell cell, int indexRow, String colName, BookingExcelResponse bookingExcelResponse) {
-        String specializationName = commonServiceImpl.checkStringType(cell, indexRow, colName).getStringCellValue();
+        String specializationName = commonService.checkStringType(cell, indexRow, colName).getStringCellValue();
         Specialization specialization = specializationRepository.getSpecializationBySpecializationName(specializationName);
         if (Objects.isNull(specialization)) {
             throw new BadRequestException("Import failed. Specialization named " + specializationName + " is not exist.");
@@ -784,7 +824,7 @@ public class AdminServiceImpl implements AdminService {
 //                            bookingExcelResponse.getBookingExcelDTO().getSpecializationName(), appointmentDate.getDayOfWeek(),
 //                            bookingExcelResponse.getBookingExcelDTO().getStartTime(), bookingExcelResponse.getBookingExcelDTO().getEndTime());
 //                    booking.setWorkSchedule(workSchedule);
-                    booking.setStatus(EBookingStatus.PENDING);
+                    booking.setBookingStatus(EBookingStatus.PENDING);
                     return booking;
                 }).toList();
         setBookingCode(bookings);

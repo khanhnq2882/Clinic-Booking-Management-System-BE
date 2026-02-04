@@ -20,6 +20,7 @@ public class DaysOfWeek extends BaseEntity {
     private Long dayOfWeekId;
 
     @Column(nullable = false)
+    @Temporal(TemporalType.DATE)
     private Date workingDay;
 
     @Column(nullable = false)

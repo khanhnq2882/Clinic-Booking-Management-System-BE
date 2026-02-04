@@ -13,7 +13,12 @@ import java.util.Date;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "booking")
+@Table(
+        name = "booking",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uq_booking_work_schedule", columnNames = {"work_schedule_id"})
+        }
+)
 @Builder
 public class Booking extends BaseEntity{
     @Id
@@ -56,7 +61,7 @@ public class Booking extends BaseEntity{
 
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
-    private EBookingStatus status;
+    private EBookingStatus bookingStatus;
 
     @Column(nullable = false)
     private BigDecimal examinationFee;
@@ -64,5 +69,4 @@ public class Booking extends BaseEntity{
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
-
 }

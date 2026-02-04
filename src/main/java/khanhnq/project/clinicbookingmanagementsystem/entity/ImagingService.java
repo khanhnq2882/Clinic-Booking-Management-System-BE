@@ -3,8 +3,8 @@ package khanhnq.project.clinicbookingmanagementsystem.entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EImagingServiceStatus;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EImagingServiceType;
+import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EServiceStatus;
 import lombok.*;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -48,7 +48,7 @@ public class ImagingService extends BaseEntity{
 
     @Enumerated(EnumType.STRING)
     @Column(length = 20, nullable = false)
-    private EImagingServiceStatus status;
+    private EServiceStatus status;
 
     @OneToMany(mappedBy = "imagingService")
     private List<MedicalImage> medicalImages = new ArrayList<>();

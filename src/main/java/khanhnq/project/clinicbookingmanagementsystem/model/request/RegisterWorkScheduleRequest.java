@@ -4,6 +4,7 @@ import khanhnq.project.clinicbookingmanagementsystem.model.dto.WorkScheduleDTO;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 
@@ -12,6 +13,6 @@ import java.util.List;
 @AllArgsConstructor
 public class RegisterWorkScheduleRequest {
     private Date workingDay;
-    private String examinationFee;
+    private BigDecimal examinationFee;
     private List<WorkScheduleDTO> workSchedules;
 }

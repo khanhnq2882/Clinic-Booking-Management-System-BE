@@ -2,6 +2,7 @@ package khanhnq.project.clinicbookingmanagementsystem.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
+import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EDoctorVerificationStatus;
 import khanhnq.project.clinicbookingmanagementsystem.entity.enums.EEducationLevel;
 import lombok.*;
 import java.util.ArrayList;
@@ -30,6 +31,9 @@ public class Doctor extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private EEducationLevel educationLevel;
 
+    @Enumerated(EnumType.STRING)
+    private EDoctorVerificationStatus doctorVerificationStatus;
+
     @ManyToOne
     @JoinColumn(name = "specialization_id")
     private Specialization specialization;
@@ -39,6 +43,9 @@ public class Doctor extends BaseEntity {
 
     @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL)
     private List<DaysOfWeek> daysOfWeeks = new ArrayList<>();
+
+    @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL)
+    private List<DoctorTimeOff> doctorTimeOffs = new ArrayList<>();
 
     @OneToMany(mappedBy = "doctorPrescribed", cascade = CascadeType.ALL)
     private List<LabResult> labResults;

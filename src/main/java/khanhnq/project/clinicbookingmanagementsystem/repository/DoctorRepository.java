@@ -130,4 +130,27 @@ public interface DoctorRepository extends JpaRepository<Doctor, Long> {
             , nativeQuery = true)
     Page<DoctorInfoProjection> getDoctorsInfo(Pageable pageable);
 
+    @Query(value = "SELECT\n" +
+            "    d.doctor_id AS doctorId,\n" +
+            "    u.user_code AS userCode,\n" +
+            "    u.first_name AS firstName,\n" +
+            "    u.last_name AS lastName,\n" +
+            "    u.email AS email,\n" +
+            "    u.phone_number AS phoneNumber,\n" +
+            "    d.education_level AS educationLevel,\n" +
+            "    s.specialization_name AS specializationName,\n" +
+            "    u.status AS status,\n" +
+            "    f.file_id AS fileId,\n" +
+            "    f.file_type AS fileType,\n" +
+            "    f.file_name AS fileName,\n" +
+            "    f.file_path AS filePath,\n" +
+            "    DATE_FORMAT(d.created_at, '%d-%m-%Y %H:%i:%s') AS createdAt\n" +
+            "FROM doctor AS d\n" +
+            "LEFT JOIN user AS u ON d.user_id = u.user_id\n" +
+            "LEFT JOIN specialization AS s ON d.specialization_id = s.specialization_id\n" +
+            "LEFT JOIN file AS f ON u.user_id = f.user_id\n" +
+            "WHERE d.doctor_id = :doctorId"
+            , nativeQuery = true)
+    DoctorInfoProjection getDoctorInfo(@Param("doctorId") Long doctorId);
+
 }

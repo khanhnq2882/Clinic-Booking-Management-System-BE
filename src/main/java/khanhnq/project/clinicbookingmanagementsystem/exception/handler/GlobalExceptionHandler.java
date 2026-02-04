@@ -49,15 +49,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler(BadRequestException.class)
-    public ResponseEntity<ResponseEntityBase> handlerBadRequestException(BadRequestException exception) {
+    public ResponseEntity<ResponseEntityBase> handlerSystemException(BadRequestException exception) {
         ResponseEntityBase response = new ResponseEntityBase(HttpStatus.BAD_REQUEST.value(), exception.getMessage(), null);
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(SystemException.class)
-    public ResponseEntity<ResponseEntityBase> handlerSystemException(SystemException exception) {
-        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.INTERNAL_SERVER_ERROR.value(), exception.getMessage(), null);
-        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+    @ExceptionHandler(RaceConditionException.class)
+    public ResponseEntity<ResponseEntityBase> handlerRaceConditionException(RaceConditionException exception) {
+        ResponseEntityBase response = new ResponseEntityBase(HttpStatus.CONFLICT.value(), exception.getMessage(), null);
+        return new ResponseEntity<>(response, HttpStatus.CONFLICT);
     }
 
     @Override

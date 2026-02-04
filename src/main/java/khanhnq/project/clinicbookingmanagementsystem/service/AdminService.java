@@ -17,7 +17,10 @@ public interface AdminService {
     ResponseEntityBase resetPassword (String email) throws MessagingException;
     ResponseEntityBase unlockAccount (String username);
     ResponseEntityBase getAllUsers(int page, int size, String[] sorts);
+    ResponseEntityBase getUserInformation(Long userId);
     ResponseEntityBase getAllDoctors(int page, int size, String[] sorts);
+    ResponseEntityBase getDoctorInformation(Long doctorId);
+    ResponseEntityBase verificationDoctorInformation (Long doctorId, String verificationStatus);
     ResponseEntityBase getAllSpecializations();
     List<ServicesDTO> getServices();
     ResponseEntityBase getAllServices(int page, int size, String[] sorts);

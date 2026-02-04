@@ -7,7 +7,6 @@ import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import khanhnq.project.clinicbookingmanagementsystem.common.MessageConstants;
-import khanhnq.project.clinicbookingmanagementsystem.exception.SystemException;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.DoctorMapper;
 import khanhnq.project.clinicbookingmanagementsystem.mapper.WorkExperienceMapper;
 import khanhnq.project.clinicbookingmanagementsystem.model.dto.*;
@@ -33,7 +32,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -44,7 +42,7 @@ import java.util.stream.Stream;
 
 @Component
 @Slf4j
-public class CommonServiceImpl {
+public class CommonService {
     @Autowired
     private UserRepository userRepository;
     @Autowired
@@ -151,26 +149,6 @@ public class CommonServiceImpl {
             newDay.setWorkSchedules(sorted);
             daysOfWeek.add(newDay);
         }
-    }
-
-    public BigDecimal validateAndConvertAmount(String amountStr) {
-        if (amountStr == null || amountStr.trim().isEmpty()) {
-            throw new BadRequestException("Amount can't be empty.");
-        }
-        String cleaned = amountStr.replace(",", "").trim();
-        if (!cleaned.matches("^\\d+(\\.\\d{1,2})?$")) {
-            throw new BadRequestException("Invalid amount. Amount only allows up to 2 decimal places.");
-        }
-        BigDecimal amount;
-        try {
-            amount = new BigDecimal(cleaned);
-        } catch (NumberFormatException e) {
-            throw new BadRequestException("Amount is not convertible.");
-        }
-        if (amount.compareTo(BigDecimal.ZERO) < 0) {
-            throw new BadRequestException("Amount is not negative.");
-        }
-        return amount;
     }
 
     public Pageable pagingSort(int page, int size, String[] sorts) {
@@ -385,7 +363,7 @@ public class CommonServiceImpl {
             } catch (AmazonClientException deleteEx) {
                 log.error("S3 rollback failed: {}", deleteEx.getMessage());
             }
-            throw new SystemException(MessageConstants.ERROR_SAVE_OR_ROLLBACK_MEDICAL_IMAGE_TO_S3);
+            throw new BadRequestException(MessageConstants.ERROR_SAVE_OR_ROLLBACK_MEDICAL_IMAGE_TO_S3);
         }
     }
 

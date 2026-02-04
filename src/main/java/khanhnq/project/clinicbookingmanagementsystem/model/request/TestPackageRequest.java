@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
 import java.util.*;
 
 @Data
@@ -13,7 +14,7 @@ import java.util.*;
 @Builder
 public class TestPackageRequest {
     private String testPackageName;
-    private String testPackagePrice;
+    private BigDecimal testPackagePrice;
     private String testPreparationRequirements;
     private String testDescription;
     private Long serviceId;

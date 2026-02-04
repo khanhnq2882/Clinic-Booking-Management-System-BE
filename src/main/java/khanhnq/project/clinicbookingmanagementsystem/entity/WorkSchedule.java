@@ -29,5 +29,4 @@ public class WorkSchedule extends BaseEntity{
 
     @OneToMany(mappedBy = "workSchedule", cascade = CascadeType.PERSIST)
     private Set<Booking> bookings;
-
 }

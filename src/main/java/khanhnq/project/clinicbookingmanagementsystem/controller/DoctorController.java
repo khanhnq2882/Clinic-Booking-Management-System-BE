@@ -16,7 +16,6 @@ import java.util.List;
 @AllArgsConstructor
 @RequestMapping(path = "/doctor", produces = {MediaType.APPLICATION_JSON_VALUE})
 public class DoctorController {
-
     private final DoctorService doctorService;
 
     @PostMapping(value = "/update-profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -57,25 +56,15 @@ public class DoctorController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(doctorService.getAllBookings(page, size, sort));
     }
 
-    @PostMapping("/confirmed-booking/{bookingId}")
+    @PostMapping("/change-booking-status/{bookingId}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('DOCTOR')")
-    public ResponseEntity<ResponseEntityBase> confirmedBooking(@PathVariable("bookingId") Long bookingId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(doctorService.confirmedBooking(bookingId));
-    }
-
-    @PostMapping("/cancelled-booking/{bookingId}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('DOCTOR')")
-    public ResponseEntity<ResponseEntityBase> cancelledBooking(@PathVariable("bookingId") Long bookingId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(doctorService.cancelledBooking(bookingId));
-    }
-
-    @PostMapping("/completed-booking/{bookingId}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('DOCTOR')")
-    public ResponseEntity<ResponseEntityBase> completedBooking(@PathVariable("bookingId") Long bookingId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(doctorService.completedBooking(bookingId));
+    public ResponseEntity<ResponseEntityBase> changeBookingStatus(@PathVariable("bookingId") Long bookingId,
+                                                                  @RequestParam("bookingStatus") String bookingStatus) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(doctorService.changeBookingStatus(bookingId, bookingStatus));
     }
 
     @GetMapping("/booking-detail/{bookingId}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('DOCTOR')")
     public ResponseEntity<ResponseEntityBase> getUserProfile(@PathVariable("bookingId") Long bookingId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(doctorService.getBookingDetail(bookingId));
     }
